@@ -141,3 +141,50 @@ ax.plot(time, sz, label="sz")
 
 plt.show()
 
+
+
+# %%
+data_DMI_equi_ferri = np.loadtxt("/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI_ferri-2/AM_Teq-99-999.dat")
+data_DMI_equi = np.loadtxt("/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI-2/AM_Teq-99-999.dat")
+data_DMI_equi_ferri_large = np.loadtxt("/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI_large_ferri/AM_Teq-99-999.dat")
+data_DMI_equi_large = np.loadtxt("/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI_large/AM_Teq-99-999.dat")
+
+fig, ax = plt.subplots()
+temp = data_DMI_equi_ferri
+ax.set_title("DMI equi ferri")
+ax.plot(temp[:, 0], temp[:,3], label="sx")
+ax.plot(temp[:, 0], temp[:,4], label="sy")
+ax.plot(temp[:, 0], temp[:,5], label="sz")
+ax.legend()
+plt.show()
+
+fig, ax = plt.subplots()
+temp = data_DMI_equi
+ax.set_title("DMI equi")
+ax.plot(temp[:, 0], temp[:,3], label="sx")
+ax.plot(temp[:, 0], temp[:,4], label="sy")
+ax.plot(temp[:, 0], temp[:,5], label="sz")
+ax.legend()
+plt.show()
+
+fig, ax = plt.subplots()
+temp = data_DMI_equi_ferri_large
+ax.set_title("DMI equi ferri large")
+ax.plot(temp[:, 0], temp[:,3], label="sx")
+ax.plot(temp[:, 0], temp[:,4], label="sy")
+ax.plot(temp[:, 0], temp[:,5], label="sz")
+ax.legend()
+plt.show()
+
+fig, ax = plt.subplots()
+temp = data_DMI_equi_large
+ax.set_title("DMI equi large")
+ax.plot(temp[:, 0], temp[:,3], label="sx")
+ax.plot(temp[:, 0], temp[:,4], label="sy")
+ax.plot(temp[:, 0], temp[:,5], label="sz")
+ax.legend()
+plt.show()
+
+# %%
+import utility as util
+util.plot_spin_xyz_over_t("/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI_ferri-2/AM_Teq-99-999.dat", "DMI ferri")
