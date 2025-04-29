@@ -260,5 +260,6 @@ fabric.properties
 # Custom flags
 # ignore data directory because files are too large
 data/
-
+# ignore result directory because I am scared files could be too large (unlikely), also one can just create these files locally...
+out/
 

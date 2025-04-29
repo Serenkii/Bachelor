@@ -11,11 +11,23 @@ N = 512
 
 
 # %%
+data_string = ""
 
-dataA = np.loadtxt("data/temp/mag-profile-99-999.altermagnetA.dat")
+# dataA = np.loadtxt("data/temp/mag-profile-99-999.altermagnetA.dat")
 # dataA = np.loadtxt("data/temp/mag-profile-99-999.altermagnetA-3.dat")
-dataB = np.loadtxt("data/temp/mag-profile-99-999.altermagnetB.dat")
+# dataB = np.loadtxt("data/temp/mag-profile-99-999.altermagnetB.dat")
 # dataB = np.loadtxt("data/temp/mag-profile-99-999.altermagnetB-3.dat")
+
+# more z layers quick and dirty...
+dataA = np.loadtxt("data/temp/morezlayers/mag-profile-ABC_A.dat")
+dataB = np.loadtxt("data/temp/morezlayers/mag-profile-ABC_B.dat")
+data_string = "Tstep=7meV, more z layers with ABC in upper y, 000"
+save_string_suffix = "morez_ABC"
+
+# dataA = np.loadtxt("data/temp/morezlayers/mag-profile-noABC_A.dat")
+# dataB = np.loadtxt("data/temp/morezlayers/mag-profile-noABC_B.dat")
+# data_string = "Tstep=7meV, more z layers without ABCs, 000"
+# save_string_suffix = "morez_noABC"
 
 data_eq_7meV = np.loadtxt("data/temp/altermagnet-equilibrium-7meV.dat")
 
@@ -62,17 +74,23 @@ magn_0eq = 0
 # TODO
 
 # %% Plot neel and magn
+delta = 4
+x = np.arange(delta, neel.size - delta, 1.0)
 
 fig, ax = plt.subplots()
-ax.set_title("Neel")
-ax.plot(neel)
-
+ax.set_xlabel("position (index)")
+ax.set_ylabel("magnitude (au)")
+ax.set_title(f"Neel (~SzA-SzB) ({data_string})")
+ax.plot(x, neel[delta:-delta])
+plt.savefig(f"out/Neel_{save_string_suffix}.png")
 plt.show()
 
 fig, ax = plt.subplots()
-ax.set_title("Magn")
-ax.plot(magn)
-
+ax.set_xlabel("position (index)")
+ax.set_ylabel("magnitude (au)")
+ax.set_title(f"Magn (~SzA+SzB) ({data_string})")
+ax.plot(x, magn[delta:-delta])
+plt.savefig(f"out/Magn_{save_string_suffix}.png")
 plt.show()
 
 
@@ -93,66 +111,56 @@ j_intra_B = - (np.average(spin_x_B[:, :-1] * spin_y_B[:, 1:], axis=0)
 # %%
 
 fig, ax = plt.subplots()
-ax.set_title("j_inter_+")
-ax.plot(j_inter_1)
-
-plt.show()
-
-fig, ax = plt.subplots()
-ax.set_title("j_inter_-")
-ax.plot(j_inter_2)
-
-plt.show()
-
-fig, ax = plt.subplots()
-ax.set_title("j_intra_A")
-ax.plot(j_intra_A)
-
-plt.show()
-
-fig, ax = plt.subplots()
-ax.set_title("j_intra_B")
-ax.plot(j_intra_B)
-
+ax.set_title(f"Spin currents ({data_string})")
+ax.set_xlabel("spin index = position")
+ax.set_ylabel("magnitude [au]")
+ax.plot(j_inter_1, label="j_inter_+", linewidth=0.6)
+ax.plot(j_inter_2, label="j_inter_-", linewidth=0.6)
+ax.plot(j_intra_A, label="j_intra_A", linewidth=0.6)
+ax.plot(j_intra_B, label="j_intra_B", linewidth=0.6)
+ax.legend()
+plt.savefig(f"out/spin_current_{save_string_suffix}.png")
 plt.show()
 
 # %% quick and ugly plotting of time dependent for equilibrium
 
-data_quick_DMI = np.loadtxt("data/temp/AM_DMI_quick_avg.dat")
-
-time = data_quick_DMI[:, 0]
-sx = data_quick_DMI[:, 3]
-sy = data_quick_DMI[:, 4]
-sz = data_quick_DMI[:, 5]
-
-fig, ax = plt.subplots()
-
-ax.set_title("DMI")
-ax.plot(time, sx, label="sx")
-ax.plot(time, sy, label="sy")
-
-ax.legend()
-
-plt.show()
-
-fig, ax = plt.subplots()
-ax.set_title("DMI, sz")
-ax.plot(time, sz, label="sz")
-
-plt.show()
+# data_quick_DMI = np.loadtxt("data/temp/AM_DMI_quick_avg.dat")
+#
+# time = data_quick_DMI[:, 0]
+# sx = data_quick_DMI[:, 3]
+# sy = data_quick_DMI[:, 4]
+# sz = data_quick_DMI[:, 5]
+#
+# fig, ax = plt.subplots()
+#
+# ax.set_title("DMI")
+# ax.plot(time, sx, label="sx")
+# ax.plot(time, sy, label="sy")
+#
+# ax.legend()
+#
+# plt.show()
+#
+# fig, ax = plt.subplots()
+# ax.set_title("DMI, sz")
+# ax.plot(time, sz, label="sz")
+#
+# plt.show()
 
 
 
 # %%
 import utility as util
-util.plot_spin_xyz_over_t("/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI_ferri-2/AM_Teq-99-999.dat",
-                          "DMI equi ferri")
+# util.plot_spin_xyz_over_t("/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI_ferri-2/AM_Teq-99-999.dat",
+#                           "DMI equi ferri")
+#
+# util.plot_spin_xyz_over_t("/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI-2/AM_Teq-99-999.dat",
+#                           "DMI equi")
+#
+# util.plot_spin_xyz_over_t("/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI_large_ferri/AM_Teq-99-999.dat",
+#                           "DMI equi ferri large")
+#
+# util.plot_spin_xyz_over_t("/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI_large/AM_Teq-99-999.dat",
+#                           "DMI equi large")
 
-util.plot_spin_xyz_over_t("/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI-2/AM_Teq-99-999.dat",
-                          "DMI equi")
 
-util.plot_spin_xyz_over_t("/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI_large_ferri/AM_Teq-99-999.dat",
-                          "DMI equi ferri large")
-
-util.plot_spin_xyz_over_t("/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI_large/AM_Teq-99-999.dat",
-                          "DMI equi large")
