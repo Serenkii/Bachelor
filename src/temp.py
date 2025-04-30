@@ -19,15 +19,15 @@ data_string = ""
 # dataB = np.loadtxt("data/temp/mag-profile-99-999.altermagnetB-3.dat")
 
 # more z layers quick and dirty...
-dataA = np.loadtxt("data/temp/morezlayers/mag-profile-ABC_A.dat")
-dataB = np.loadtxt("data/temp/morezlayers/mag-profile-ABC_B.dat")
-data_string = "Tstep=7meV, more z layers with ABC in upper y, 000"
-save_string_suffix = "morez_ABC"
+# dataA = np.loadtxt("data/temp/morezlayers/mag-profile-ABC_A.dat")
+# dataB = np.loadtxt("data/temp/morezlayers/mag-profile-ABC_B.dat")
+# data_string = "Tstep=7meV, more z layers with ABC in upper y, 000"
+# save_string_suffix = "morez_ABC"
 
-# dataA = np.loadtxt("data/temp/morezlayers/mag-profile-noABC_A.dat")
-# dataB = np.loadtxt("data/temp/morezlayers/mag-profile-noABC_B.dat")
-# data_string = "Tstep=7meV, more z layers without ABCs, 000"
-# save_string_suffix = "morez_noABC"
+dataA = np.loadtxt("data/temp/morezlayers/mag-profile-noABC_A.dat")
+dataB = np.loadtxt("data/temp/morezlayers/mag-profile-noABC_B.dat")
+data_string = "Tstep=7meV, more z layers without ABCs, 000"
+save_string_suffix = "morez_noABC"
 
 data_eq_7meV = np.loadtxt("data/temp/altermagnet-equilibrium-7meV.dat")
 
@@ -108,6 +108,10 @@ j_intra_A = - (np.average(spin_x_A[:, :-1] * spin_y_A[:, 1:], axis=0)
 j_intra_B = - (np.average(spin_x_B[:, :-1] * spin_y_B[:, 1:], axis=0)
              - np.average(spin_y_B[:, :-1] * spin_x_B[:, 1:], axis=0))
 
+# other paper, other formula (Ulrike, p.86)
+j_otherpaper = - np.average(spin_x_A[:, :-1] * spin_y_A[:, 1:] - spin_y_B[:, :-1] * spin_x_B[:, 1:], axis=0)
+
+
 # %%
 
 fig, ax = plt.subplots()
@@ -118,6 +122,7 @@ ax.plot(j_inter_1, label="j_inter_+", linewidth=0.6)
 ax.plot(j_inter_2, label="j_inter_-", linewidth=0.6)
 ax.plot(j_intra_A, label="j_intra_A", linewidth=0.6)
 ax.plot(j_intra_B, label="j_intra_B", linewidth=0.6)
+ax.plot(j_otherpaper, label="j_otherpaper", linewidth=0.8)
 ax.legend()
 plt.savefig(f"out/spin_current_{save_string_suffix}.png")
 plt.show()
