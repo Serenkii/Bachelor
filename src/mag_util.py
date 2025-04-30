@@ -5,10 +5,3 @@ import matplotlib.pyplot as plt
 
 import scipy as sp
 
-import bulk_util
-import mag_util
-
-from bulk_util import plot_spin_xyz_over_t
-
-
-
