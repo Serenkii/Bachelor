@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 import scipy as sp
 
+import helper
 
 
 def plot_spin_xyz_over_t(file_path, title=""):
@@ -39,12 +40,7 @@ def get_spin_over_t(data, which='tz', skip_time_steps=0, squeeze=False):
     :param squeeze: Squeeze the data before returning it. That means, an array is reduced to be one-dimensional if only one axis was selected. Defaults to False.
     :return: The selected axes of the data.
     """
-    column_dict = {'t': 0, 'x': 3, 'y': 4, 'z': 5, '1': 3, '2': 4, '3': 5}
-    slice_list = []
-    for char in which:
-        if char not in column_dict.keys():
-            raise ValueError(f"Can't return {which}-component of spin.")
-        slice_list.append(column_dict[char])
+    slice_list = helper.create_slice_list(which)
     if squeeze:
         return np.squeeze(data[skip_time_steps:, slice_list])
     return data[skip_time_steps:, slice_list]
