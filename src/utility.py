@@ -104,3 +104,5 @@ def load_arrayjob_npy(save_file_prefix):
     return A, B
 
 
+def time_avg(spin_data):
+    return np.average(spin_data, axis=0)
