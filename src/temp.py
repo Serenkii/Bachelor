@@ -5,6 +5,11 @@ import matplotlib.pyplot as plt
 
 import scipy as sp
 
+import mag_util
+import bulk_util
+import utility
+import physics
+import plot_util
 
 # %%
 N = 512
@@ -31,29 +36,22 @@ save_string_suffix = "morez_noABC"
 
 data_eq_7meV = np.loadtxt("data/temp/altermagnet-equilibrium-7meV.dat")
 
-# %% select z components
+# %%
 
-# Select all z component of spins, select all time steps except the very first
-# because its values are weirdly a little bit higher
-spin_z_A = dataA[1:, 3::3]
-spin_z_B = dataB[1:, 3::3]
+spin_x_A, spin_y_A, spin_z_A = mag_util.get_components_as_tuple(dataA, which='xyz', skip_time_steps=1)
+spin_x_B, spin_y_B, spin_z_B = mag_util.get_components_as_tuple(dataB, which='xyz', skip_time_steps=1)
 
-# the following does not make any sense because we are measuring along y-axis and not x
+Sz_A = utility.time_avg(spin_z_A)
+Sz_B = utility.time_avg(spin_z_B)
 
-# %% select other components
-spin_x_A = dataA[1:, 1::3]
-spin_y_A = dataA[1:, 2::3]
-spin_x_B = dataB[1:, 1::3]
-spin_y_B = dataB[1:, 2::3]
+neel = physics.neel_vector(Sz_A, Sz_B)
+magn = physics.magnetizazion(Sz_A, Sz_B)
 
-# %% time average
+j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other = physics.spin_currents(spin_x_A, spin_y_A, spin_x_B, spin_y_B)
 
-Sz_A = np.average(spin_z_A, axis=0)
-Sz_B = np.average(spin_z_B, axis=0)
+plot_util.quick_plot_magn_neel(magn, neel, data_string, delta_x=4)
+plot_util.quick_plot_spin_currents(j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other, data_string)
 
-# %% neel vector and total magnetisation (z component)
-neel = 0.5 * (Sz_A - Sz_B)
-magn = 0.5 * (Sz_A + Sz_B)
 
 # %% equilibriums
 time_steps_for_avg = 100
@@ -69,63 +67,6 @@ magn_0eq = 0
 
 # TODO
 
-# %% subtracting equlibrium
-
-# TODO
-
-# %% Plot neel and magn
-delta = 4
-x = np.arange(delta, neel.size - delta, 1.0)
-
-fig, ax = plt.subplots()
-ax.set_xlabel("position (index)")
-ax.set_ylabel("magnitude (au)")
-ax.set_title(f"Neel (~SzA-SzB) ({data_string})")
-ax.plot(x, neel[delta:-delta])
-plt.savefig(f"out/Neel_{save_string_suffix}.png")
-plt.show()
-
-fig, ax = plt.subplots()
-ax.set_xlabel("position (index)")
-ax.set_ylabel("magnitude (au)")
-ax.set_title(f"Magn (~SzA+SzB) ({data_string})")
-ax.plot(x, magn[delta:-delta])
-plt.savefig(f"out/Magn_{save_string_suffix}.png")
-plt.show()
-
-
-# %% spin current
-
-# intersublattice spin current
-j_inter_1 = - (np.average(spin_x_A[:, :-1] * spin_y_A[:, 1:], axis=0)
-             + np.average(spin_y_B[:, :-1] * spin_x_B[:, 1:], axis=0))
-j_inter_2 = - (np.average(spin_x_A[:, :-1] * spin_y_A[:, 1:], axis=0)
-             - np.average(spin_y_B[:, :-1] * spin_x_B[:, 1:], axis=0))
-
-# inrtrasublattice spin current
-j_intra_A = - (np.average(spin_x_A[:, :-1] * spin_y_A[:, 1:], axis=0)
-             - np.average(spin_y_A[:, :-1] * spin_x_A[:, 1:], axis=0))
-j_intra_B = - (np.average(spin_x_B[:, :-1] * spin_y_B[:, 1:], axis=0)
-             - np.average(spin_y_B[:, :-1] * spin_x_B[:, 1:], axis=0))
-
-# other paper, other formula (Ulrike, p.86)
-j_otherpaper = - np.average(spin_x_A[:, :-1] * spin_y_A[:, 1:] - spin_y_B[:, :-1] * spin_x_B[:, 1:], axis=0)
-
-
-# %%
-
-fig, ax = plt.subplots()
-ax.set_title(f"Spin currents ({data_string})")
-ax.set_xlabel("spin index = position")
-ax.set_ylabel("magnitude [au]")
-ax.plot(j_inter_1, label="j_inter_+", linewidth=0.6)
-ax.plot(j_inter_2, label="j_inter_-", linewidth=0.6)
-ax.plot(j_intra_A, label="j_intra_A", linewidth=0.6)
-ax.plot(j_intra_B, label="j_intra_B", linewidth=0.6)
-ax.plot(j_otherpaper, label="j_otherpaper", linewidth=0.8)
-ax.legend()
-plt.savefig(f"out/spin_current_{save_string_suffix}.png")
-plt.show()
 
 # %% quick and ugly plotting of time dependent for equilibrium
 

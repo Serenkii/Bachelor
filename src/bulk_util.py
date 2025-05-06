@@ -7,6 +7,8 @@ import scipy as sp
 
 import helper
 
+default_slice_dict = {'t': 0, 'x': 3, 'y': 4, 'z': 5, '1': 3, '2': 4, '3': 5}
+# TODO: FIx this, because this will always only return for sublattice A
 
 def plot_spin_xyz_over_t(file_path, title=""):
     """
@@ -31,7 +33,8 @@ def plot_spin_xyz_over_t(file_path, title=""):
 
 
 # TODO: Test and maybe adjust name
-def get_spin_over_t(data, which='tz', skip_time_steps=0, squeeze=False):
+# TODO: FIx this, because this will always only return for sublattice A
+def get_components(data, which='tz', skip_time_steps=0, squeeze=False):
     """
     Returns the selected axes of the bulk data as a two-dimensional array.
     :param data: Data of the bulk file, retrieved e.g. via np.loadtxt(file_path).
@@ -40,9 +43,14 @@ def get_spin_over_t(data, which='tz', skip_time_steps=0, squeeze=False):
     :param squeeze: Squeeze the data before returning it. That means, an array is reduced to be one-dimensional if only one axis was selected. Defaults to False.
     :return: The selected axes of the data.
     """
-    slice_list = helper.create_slice_list(which)
+    slice_list = helper.create_slice_list(which, default_slice_dict)
     if squeeze:
         return np.squeeze(data[skip_time_steps:, slice_list])
     return data[skip_time_steps:, slice_list]
 
+# TODO: Test
+# TODO: FIx this, because this will always only return for sublattice A
+def get_components_as_tuple(data, which='tz', skip_time_steps=0):
+    for component in which:
+        yield get_components(data, component, skip_time_steps=skip_time_steps, squeeze=True)
 

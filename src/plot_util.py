@@ -7,13 +7,16 @@ import scipy as sp
 
 
 def quick_plot_magn_neel(magnetization, neel_vector, info_string="", delta_x=0, save_suffix=None):
-    x = np.arange(delta_x, neel_vector - delta_x, 1.0)
+    x = np.arange(delta_x, neel_vector.size - delta_x, 1.0)
 
     fig, ax = plt.subplots()
     ax.set_xlabel("position (index)")
     ax.set_ylabel("magnitude (au)")
     ax.set_title(f"Neel (~SzA-SzB) ({info_string})")
-    ax.plot(x, neel_vector[delta_x:-delta_x])
+    if delta_x > 0:
+        ax.plot(x, neel_vector[delta_x:-delta_x])
+    else:
+        ax.plot(x, neel_vector)
     if save_suffix:
         print(f"Saving to 'out/Neel_{save_suffix}.png'")
         plt.savefig(f"out/Neel_{save_suffix}.png")
@@ -23,7 +26,10 @@ def quick_plot_magn_neel(magnetization, neel_vector, info_string="", delta_x=0, 
     ax.set_xlabel("position (index)")
     ax.set_ylabel("magnitude (au)")
     ax.set_title(f"Magn (~SzA+SzB) ({info_string})")
-    ax.plot(x, magnetization[delta_x:-delta_x])
+    if delta_x > 0:
+        ax.plot(x, magnetization[delta_x:-delta_x])
+    else:
+        ax.plot(x, magnetization)
     if save_suffix:
         print(f"Saving to 'out/Magn_{save_suffix}.png'")
         plt.savefig(f"out/Magn_{save_suffix}.png")
