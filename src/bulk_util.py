@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 import scipy as sp
 
-import helper
+import src.helper as helper
 
 default_slice_dict = {'t': 0, 'x': 3, 'y': 4, 'z': 5, '1': 3, '2': 4, '3': 5}
 # TODO: FIx this, because this will always only return for sublattice A
