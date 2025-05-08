@@ -51,3 +51,6 @@ def quick_plot_spin_currents(j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other
     plt.show()
 
 
+def quick_plot_components():
+    raise NotImplementedError
+

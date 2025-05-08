@@ -110,6 +110,52 @@ def dmi_ground_state_comparison():
     equi_path = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_T2meV/AM_Teq2meV-99-999.dat"
     equi_dmi_path = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI-2/AM_Teq-99-999.dat"
 
+    data_noDMI = np.loadtxt(equi_path)
+    data_DMI = np.loadtxt(equi_dmi_path)
+
+    spins_A = np.average(bulk_util.get_components(data_noDMI, 'A', 'xyz', 100), axis=0)
+    spins_B = np.average(bulk_util.get_components(data_noDMI, 'B', 'xyz', 100), axis=0)
+    spins_DMI_A = np.average(bulk_util.get_components(data_DMI, 'A', 'xyz', 100), axis=0)
+    spins_DMI_B = np.average(bulk_util.get_components(data_DMI, 'B', 'xyz', 100), axis=0)
+
+    print(f"Spins A: {spins_A}")
+    print(f"Spins B: {spins_B}")
+    print(f"Spins with DMI A: {spins_DMI_A}")
+    print(f"Spins with DMI B: {spins_DMI_B}")
+
+    # Example data: 4 types of values per group
+    types = ['SL A, no DMI', 'SL B, no DMI', 'SL A, DMI', 'SL B, DMI']
+
+    x_values = [spins_A[0], spins_B[0], spins_DMI_A[0], spins_DMI_B[0]]
+    y_values = [spins_A[1], spins_B[1], spins_DMI_A[1], spins_DMI_B[1]]
+    z_values = [spins_A[2], spins_B[2], spins_DMI_A[2], spins_DMI_B[2]]
+
+    # Combine them by type
+    data = {
+        'x': x_values,
+        'y': y_values,
+        'z': z_values
+    }
+
+    # Prepare plot
+    fig, ax = plt.subplots(figsize=(7, 5))
+
+    # Assign a color or marker for each type
+    markers = ['o', 's', '^', 'D']  # Circle, square, triangle, diamond
+    colors = ['red', 'green', 'blue', 'purple']
+
+    # Plot each type across all groups (x, y, z)
+    for i, t in enumerate(types):
+        group_labels = list(data.keys())  # ['x', 'y', 'z']
+        values = [data[label][i] for label in group_labels]  # Get i-th value for each group
+        ax.scatter(group_labels, values, label=f'Type {t}', marker=markers[i], color=colors[i])
+
+    # Labeling
+    ax.set_ylabel('Average value')
+    ax.set_title('Equilibrium 2meV: Spin components for different sublattices with and without DMI')
+    ax.legend()
+
+    plt.show()
 
 
 if __name__ == '__main__':
