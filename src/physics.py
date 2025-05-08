@@ -58,3 +58,7 @@ def spin_currents(spin_x_A, spin_y_A, spin_x_B, spin_y_B):
 
     return j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_otherpaper
 
+
+def seebeck():
+    pass
+

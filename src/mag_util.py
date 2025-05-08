@@ -111,8 +111,8 @@ def save_arrayjob_as_npz(base_path: str, npz_path: str, start: int, stop=None, s
     npz_path = npz_path[:-4] if npz_path[-4:] == ".npz" else npz_path
     if os.path.isfile(npz_path) and not force:
         print(f"File {npz_path} already exists, therefore nothing is saved.")
-        print(f"Returning empy arrays and empty index list instead as loading data might take very long.")
-        return np.empty(0), np.empty(0), [], npz_path
+        print(f"Returning empty dictionaries instead as loading data might take very long.")
+        return dict(), dict(), npz_path
 
     if stop is None:
         stop = start
