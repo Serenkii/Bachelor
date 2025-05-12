@@ -157,8 +157,92 @@ def dmi_ground_state_comparison():
 
     plt.show()
 
+    print("\n")
+
+
+def dmi_comparison(dmi_path_A, dmi_path_B, no_dmi_path_A, no_dmi_path_B, title="Comparison DMI", delta_x=0,
+                   save_path=None):
+    data_dmi_A = np.loadtxt(dmi_path_A)
+    data_dmi_B = np.loadtxt(dmi_path_B)
+    data_nodmi_A = np.loadtxt(no_dmi_path_A)
+    data_nodmi_B = np.loadtxt(no_dmi_path_B)
+
+    Sz_dmi_A = util.time_avg(mag_util.get_component(data_dmi_A, 'z', 1))
+    Sz_dmi_B = util.time_avg(mag_util.get_component(data_dmi_B, 'z', 1))
+    Sz_nodmi_A = util.time_avg(mag_util.get_component(data_nodmi_A, 'z', 1))
+    Sz_nodmi_B = util.time_avg(mag_util.get_component(data_nodmi_B, 'z', 1))
+
+    neel_dmi = physics.neel_vector(Sz_dmi_A, Sz_dmi_B)
+    magn_dmi = physics.magnetizazion(Sz_dmi_A, Sz_dmi_B)
+
+    neel_nodmi = physics.neel_vector(Sz_nodmi_A, Sz_nodmi_B)
+    magn_nodmi = physics.magnetizazion(Sz_nodmi_A, Sz_nodmi_B)
+
+    x = np.arange(delta_x, neel_dmi.size - delta_x, 1.0)
+
+    fig, (ax1, ax2) = plt.subplots(2, sharex=True)
+    fig.suptitle(title)
+    ax1.set_title("Neel-Vector")
+    ax2.set_title("Magnetization")
+    ax1.set_ylabel("magnitude (au)")
+    ax2.set_ylabel("magnitude (au)")
+    # ax1.set_xlabel('Grid position')
+    ax2.set_xlabel('Grid position')
+
+    if delta_x > 0:
+        ax1.plot(x, neel_dmi[delta_x:-delta_x], label="DMI")
+        ax1.plot(x, neel_nodmi[delta_x:-delta_x], label="no DMI")
+        ax2.plot(x, magn_dmi[delta_x:-delta_x], label="DMI")
+        ax2.plot(x, magn_nodmi[delta_x:-delta_x], label="no DMI")
+    else:
+        ax1.plot(x, neel_dmi, label="DMI")
+        ax1.plot(x, neel_nodmi, label="no DMI")
+        ax2.plot(x, magn_dmi, label="DMI")
+        ax2.plot(x, magn_nodmi, label="no DMI")
+
+    ax1.legend()
+    ax2.legend()
+
+    if save_path:
+        fig.savefig(f"{save_path}")
+
+    plt.show()
+
+
+def quick_seebeck_dmi_comparison():
+    print("Comparing the spin Seebeck effect with and without antisymmetric exchange at a temperature of 2 meV.")
+    dmi_comparison(
+        "/data/scc/marian.gunsch/AM-DMI_tilted_Tstep_seebeck/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "/data/scc/marian.gunsch/AM-DMI_tilted_Tstep_seebeck/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat",
+        "/data/scc/marian.gunsch/AM-tilted_Tstep_seebeck/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "/data/scc/marian.gunsch/AM-tilted_Tstep_seebeck/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat",
+        "Comparison Seebeck (no equilibriums were subtracted!)",
+        10,
+        "out/comparison_DMI_seebeck_.png"
+    )
+
+
+def quick_nernst_dmi_comparison():
+    print("Comparing the spin Nernst effect with and without antisymmetric exchange at a temperature of 2 meV. "
+          "It has to be noted that only the minimum amount of z-layers of 2 were used. That's why there was not much to"
+          "average and the result may be very noisy. Hopefully one can still qualitatively compare with and without "
+          "DMI")
+
+    dmi_comparison(
+        "/data/scc/marian.gunsch/AM-DMI_tilted_Tstep_nernst/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "/data/scc/marian.gunsch/AM-DMI_tilted_Tstep_nernst/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat",
+        "/data/scc/marian.gunsch/AM-tilted_Tstep_nernst/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "/data/scc/marian.gunsch/AM-tilted_Tstep_nernst/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat",
+        "Comparison Nernst",
+        10,
+        "out/comparison_DMI_nernst_.png"
+    )
+
+
 
 if __name__ == '__main__':
     #    temperature_dependent_nernst(save=True, save_path='out/T-dependent-nernst.png', delta_x=0)
     dmi_ground_state_comparison()
 
+    quick_seebeck_dmi_comparison()
+    quick_nernst_dmi_comparison()
