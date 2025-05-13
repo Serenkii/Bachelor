@@ -36,7 +36,7 @@ def get_components_as_tuple(data, which='xyz', skip_time_steps=0):
 
 
 
-# TODO: Test
+# TODO: Test PROBABLY INDEX ERROR
 def save_arrayjob_as_npy(base_path: str, npy_path: str, start: int, stop=None, step=1,
                          middle_path="spin-configs-99-999/mag-profile-99-999.altermagnet", suffix=".dat",
                          force=False):
@@ -65,8 +65,8 @@ def save_arrayjob_as_npy(base_path: str, npy_path: str, start: int, stop=None, s
 
     array_job_size = int(np.ceil((1 + (stop - start)) / step))
     print(f"Reading from original data file in {base_path}i...")
-    data_first_A = np.loadtxt(f"{base_path}{start}/{middle_path}A{suffix}")
-    data_first_B = np.loadtxt(f"{base_path}{start}/{middle_path}B{suffix}")
+    data_first_A = np.loadtxt(f"{base_path}{start}/{middle_path}A{suffix}")     # TODO: The / could be dangerous!
+    data_first_B = np.loadtxt(f"{base_path}{start}/{middle_path}B{suffix}")     # eg if the index is not at the end
     if data_first_A.shape != data_first_B.shape:
         raise ValueError(f"Somehow the dimensions of {base_path}{start}/{middle_path}X{suffix} differ for X=A and X=B.")
     data_arrA = np.empty((array_job_size,) + data_first_A.shape, dtype=data_first_A.dtype)
@@ -79,7 +79,7 @@ def save_arrayjob_as_npy(base_path: str, npy_path: str, start: int, stop=None, s
     for i in range(start + step, stop + 1, step):
         index_list.append(i)
         print(f"{i}", end="")
-        data_arrA[i] = np.loadtxt(f"{base_path}{i}/{middle_path}A{suffix}")
+        data_arrA[i] = np.loadtxt(f"{base_path}{i}/{middle_path}A{suffix}") # TODO: Just blindly choosing i does not work if start does not start with 0 and step is not 1 etc
         print("A", end="")
         data_arrB[i] = np.loadtxt(f"{base_path}{i}/{middle_path}B{suffix}")
         print("B")

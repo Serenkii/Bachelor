@@ -85,6 +85,29 @@ def save_spin_config_as_npy(dat_path, save_path, is_tilted=True):
     np.save(save_path, grid_data)
 
 
+# TODO: Fix
+def read_spin_config_arrjob(path_prefix, path_suffix, start, stop=None, step=1, average=True, is_tilted=True):
+    if stop is None:
+        stop = start
+        start = 1
+
+    array_job_size = int(np.ceil((1 + (stop - start)) / step))
+
+    data_first = read_spin_config_dat(f"{path_prefix}{start}{path_suffix}", is_tilted=is_tilted)
+
+    data_arr = np.empty((array_job_size,) + data_first.shape, dtype=data_first.dtype)
+    data_arr[start] = data_first
+
+    for i in range(start + step, stop + 1, step):
+        print(f"{i}.", end="")
+        data_arr[i-1] = read_spin_config_dat(f"{path_prefix}{i}{path_suffix}", is_tilted=is_tilted)
+    # TODO: Just blindly choosing i does not work if start does not start with 0 and step is not 1 etc
+
+    if average:
+        return np.mean(data_arr, axis=0)
+    return data_arr
+
+
 def plot_colormap(data_grid):
     X, Y = np.meshgrid(np.arange(0, data_grid.shape[0], 1, dtype=int),
                        np.arange(0, data_grid.shape[1], 1, dtype=int),
@@ -97,8 +120,11 @@ def plot_colormap(data_grid):
 
 # %% Testing
 
-path = "/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id2/spin-configs-99-999/spin-config-99-999-010000.dat"
-path = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
-data = read_spin_config_dat(path)
+path1 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
+path2 = "/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id2/spin-configs-99-999/spin-config-99-999-010000.dat"
+# data1 = read_spin_config_dat(path1)
+data2 = read_spin_config_arrjob("/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id",
+                                "/spin-configs-99-999/spin-config-99-999-010000.dat",
+                                10,)
 
-plot_colormap(select_SL_and_component(data, "A", "z"))
+plot_colormap(select_SL_and_component(data2, "A", "z"))
