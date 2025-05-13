@@ -29,41 +29,41 @@ data_string = ""
 # data_string = "Tstep=7meV, more z layers with ABC in upper y, 000"
 # save_string_suffix = "morez_ABC"
 
-dataA = np.loadtxt("data/temp/morezlayers/mag-profile-noABC_A.dat")
-dataB = np.loadtxt("data/temp/morezlayers/mag-profile-noABC_B.dat")
-data_string = "Tstep=7meV, more z layers without ABCs, 000"
-save_string_suffix = "morez_noABC"
-
-data_eq_7meV = np.loadtxt("data/temp/altermagnet-equilibrium-7meV.dat")
+# dataA = np.loadtxt("data/temp/morezlayers/mag-profile-noABC_A.dat")
+# dataB = np.loadtxt("data/temp/morezlayers/mag-profile-noABC_B.dat")
+# data_string = "Tstep=7meV, more z layers without ABCs, 000"
+# save_string_suffix = "morez_noABC"
+#
+# data_eq_7meV = np.loadtxt("data/temp/altermagnet-equilibrium-7meV.dat")
 
 # %%
-
-spin_x_A, spin_y_A, spin_z_A = mag_util.get_components_as_tuple(dataA, which='xyz', skip_time_steps=1)
-spin_x_B, spin_y_B, spin_z_B = mag_util.get_components_as_tuple(dataB, which='xyz', skip_time_steps=1)
-
-Sz_A = utility.time_avg(spin_z_A)
-Sz_B = utility.time_avg(spin_z_B)
-
-neel = physics.neel_vector(Sz_A, Sz_B)
-magn = physics.magnetizazion(Sz_A, Sz_B)
-
-j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other = physics.spin_currents(spin_x_A, spin_y_A, spin_x_B, spin_y_B)
-
-plot_util.quick_plot_magn_neel(magn, neel, data_string, delta_x=4)
-plot_util.quick_plot_spin_currents(j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other, data_string)
+#
+# spin_x_A, spin_y_A, spin_z_A = mag_util.get_components_as_tuple(dataA, which='xyz', skip_time_steps=1)
+# spin_x_B, spin_y_B, spin_z_B = mag_util.get_components_as_tuple(dataB, which='xyz', skip_time_steps=1)
+#
+# Sz_A = utility.time_avg(spin_z_A)
+# Sz_B = utility.time_avg(spin_z_B)
+#
+# neel = physics.neel_vector(Sz_A, Sz_B)
+# magn = physics.magnetizazion(Sz_A, Sz_B)
+#
+# j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other = physics.spin_currents(spin_x_A, spin_y_A, spin_x_B, spin_y_B)
+#
+# plot_util.quick_plot_magn_neel(magn, neel, data_string, delta_x=4)
+# plot_util.quick_plot_spin_currents(j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other, data_string)
 
 
 # %% equilibriums
-time_steps_for_avg = 100
-
-Sz_A_7eq = np.average(data_eq_7meV[-time_steps_for_avg:, 5], axis=0)
-Sz_B_7eq = np.average(data_eq_7meV[-time_steps_for_avg:, 8], axis=0)
-
-neel_7eq = 0.5 * (Sz_A_7eq - Sz_B_7eq)
-magn_7eq = 0.5 * (Sz_A_7eq + Sz_B_7eq)
-
-neel_0eq = 1
-magn_0eq = 0
+# time_steps_for_avg = 100
+#
+# Sz_A_7eq = np.average(data_eq_7meV[-time_steps_for_avg:, 5], axis=0)
+# Sz_B_7eq = np.average(data_eq_7meV[-time_steps_for_avg:, 8], axis=0)
+#
+# neel_7eq = 0.5 * (Sz_A_7eq - Sz_B_7eq)
+# magn_7eq = 0.5 * (Sz_A_7eq + Sz_B_7eq)
+#
+# neel_0eq = 1
+# magn_0eq = 0
 
 # TODO
 
@@ -109,4 +109,17 @@ import utility as util
 # util.plot_spin_xyz_over_t("/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI_large/AM_Teq-99-999.dat",
 #                           "DMI equi large")
 
+
+# %% quick diagnostics of spin config file
+
+path = "/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id2/spin-configs-99-999/spin-config-99-999-010000.dat"
+data = np.loadtxt(path)
+
+# %%
+SL_A = np.where(np.expand_dims(data[:, 3] == 1.0, 1), data[:, :4], np.nan)       # SL A
+SL_B = np.where(np.expand_dims(data[:, 3] == 2.0, 1), data[:, :4], np.nan)       # SL A
+SL_A_maxs = np.nanmax(SL_A, axis=0)
+SL_A_mins = np.nanmin(SL_A, axis=0)
+SL_B_maxs = np.nanmax(SL_B, axis=0)
+SL_B_mins = np.nanmin(SL_B, axis=0)
 
