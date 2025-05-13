@@ -5,28 +5,35 @@ import matplotlib.pyplot as plt
 
 import scipy as sp
 
+import src.utility as util
+import src.mag_util as mag_util
+import src.bulk_util as bulk_util
 
-def neel_vector(Sz_A, Sz_B):
+def neel_vector(Sz_A, Sz_B, do_time_avg=False):
     """
     Returns the neel vector (value) as an array, where each entry is the value for a specific layer index.
     :param Sz_A: Time averaged z-components of spin vectors, sublattice A.
     :param Sz_B: Time averaged z-components of spin vectors, sublattice B.
     :return: The neel vector (value) of the spin vectors for each layer where the index of the resulting array corresponds to the index of the lattice layer.
     """
+    if do_time_avg:
+        return 0.5 * (util.time_avg(Sz_A) - util.time_avg(Sz_B))
     return 0.5 * (Sz_A - Sz_B)
 
 
-def magnetizazion(Sz_A, Sz_B):
+def magnetizazion(Sz_A, Sz_B, do_time_avg=False):
     """
     Returns the magnetization as an array, where each entry is the value for a specific layer index.
     :param Sz_A: Time averaged z-components of spin vectors, sublattice A.
     :param Sz_B: Time averaged z-components of spin vectors, sublattice B.
     :return: The magnetization of the spin vectors for each layer where the index of the resulting array corresponds to the index of the lattice layer.
     """
+    if do_time_avg:
+        return 0.5 * (util.time_avg(Sz_A) + util.time_avg(Sz_B))
     return 0.5 * (Sz_A + Sz_B)
 
 
-# TODO: Test
+# Seems to be working
 def spin_currents(spin_x_A, spin_y_A, spin_x_B, spin_y_B):
     """
     Returns different spin currents according to different definitions. The spin currents are returned as an array.
@@ -59,6 +66,42 @@ def spin_currents(spin_x_A, spin_y_A, spin_x_B, spin_y_B):
     return j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_otherpaper
 
 
-def seebeck():
-    pass
+def seebeck(dataA, dataB, eq_data, rel_step_pos):
+    """
+
+    :param dataA: mag data
+    :param dataB: mag data
+    :param eq_dataA: bulk data
+    :param eq_dataB: bulk data
+    :param rel_step_pos:
+    :return:
+    """
+    Sz_A = mag_util.get_component(dataA, 'z', 1)
+    Sz_B = mag_util.get_component(dataB, 'z', 1)
+
+    Sz_A_eqH = bulk_util.get_components(eq_data, 'A', 'z', 1)
+    Sz_B_eqH = bulk_util.get_components(eq_data, 'B', 'z', 1)
+
+    neel = neel_vector(Sz_A, Sz_B, do_time_avg=True)
+    magn = magnetizazion(Sz_A, Sz_B, do_time_avg=True)
+    neel_eqH = neel_vector(Sz_A_eqH, Sz_B_eqH, do_time_avg=True)
+    magn_eqH = magnetizazion(Sz_A_eqH, Sz_B_eqH, do_time_avg=True)
+    neel_eqL = 1
+    magn_eqL = 0
+
+    print(f"Hot region: The equilibrium value of the neel vector is {neel_eqH}, of the magnetization is {magn_eqH}.")
+
+    N = magn.shape[0]
+    step_pos = int(np.floor(rel_step_pos * N))   # TODO: +1 might be needed depending on definitions
+    print(f"There are {N} layers. The temperature step is at {step_pos}.")
+
+    delta_neel = np.empty_like(neel)
+    delta_neel[:step_pos] = neel[:step_pos] - neel_eqH
+    delta_neel[step_pos:] = neel[step_pos:] - neel_eqL
+
+    magnon_accumulation = np.empty_like(magn)
+    magnon_accumulation[:step_pos] = magn[:step_pos] - magn_eqH
+    magnon_accumulation[step_pos:] = magn[step_pos:] - magn_eqL
+
+    return magn, neel, magnon_accumulation, delta_neel
 

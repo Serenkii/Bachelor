@@ -141,19 +141,39 @@ def dmi_ground_state_comparison():
     fig, ax = plt.subplots(figsize=(7, 5))
 
     # Assign a color or marker for each type
-    markers = ['o', 's', '^', 'D']  # Circle, square, triangle, diamond
-    colors = ['red', 'green', 'blue', 'purple']
+    markers = ['o', 's', 'o', 's']  # Circle, square, triangle, diamond
+    colors = ['red', 'orange', 'blue', 'purple']
 
     # Plot each type across all groups (x, y, z)
     for i, t in enumerate(types):
         group_labels = list(data.keys())  # ['x', 'y', 'z']
         values = [data[label][i] for label in group_labels]  # Get i-th value for each group
-        ax.scatter(group_labels, values, label=f'Type {t}', marker=markers[i], color=colors[i])
+        ax.scatter(group_labels, values, label=f'{t}', marker=markers[i], color=colors[i])
 
     # Labeling
     ax.set_ylabel('Average value')
     ax.set_title('Equilibrium 2meV: Spin components for different sublattices with and without DMI')
     ax.legend()
+
+    plt.show()
+
+    ## Neel and Magnetization
+    neel = physics.neel_vector(spins_A[2], spins_B[2])
+    neel_DMI = physics.neel_vector(spins_DMI_A[2], spins_DMI_B[2])
+    magn = physics.magnetizazion(spins_A[2], spins_B[2])
+    magn_DMI = physics.magnetizazion(spins_DMI_A[2], spins_DMI_B[2])
+
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    fig.suptitle("Equilibrium 2meV: Neel and Magn with and without DMI")
+    ax1.set_title('Magnetization')
+    ax1.set_ylabel('Magnitude (au)')
+    ax2.set_title('Neel-Vector')
+    # ax2.set_ylabel('Magnitude (au)')
+
+    label_list = ['no DMI', 'DMI']
+
+    ax1.plot(label_list, [magn, magn_DMI], linestyle='', marker='o')
+    ax2.plot(label_list, [neel, neel_DMI], linestyle='', marker='o')
 
     plt.show()
 
@@ -204,6 +224,7 @@ def dmi_comparison(dmi_path_A, dmi_path_B, no_dmi_path_A, no_dmi_path_B, title="
     ax2.legend()
 
     if save_path:
+        print(f"Saving to {save_path}")
         fig.savefig(f"{save_path}")
 
     plt.show()
@@ -211,15 +232,78 @@ def dmi_comparison(dmi_path_A, dmi_path_B, no_dmi_path_A, no_dmi_path_B, title="
 
 def quick_seebeck_dmi_comparison():
     print("Comparing the spin Seebeck effect with and without antisymmetric exchange at a temperature of 2 meV.")
+    dmi_path_A = "/data/scc/marian.gunsch/AM-DMI_tilted_Tstep_seebeck/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    dmi_path_B = "/data/scc/marian.gunsch/AM-DMI_tilted_Tstep_seebeck/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
+    no_dmi_path_A = "/data/scc/marian.gunsch/AM-tilted_Tstep_seebeck/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    no_dmi_path_B = "/data/scc/marian.gunsch/AM-tilted_Tstep_seebeck/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
+    delta_x = 10
+
+
     dmi_comparison(
-        "/data/scc/marian.gunsch/AM-DMI_tilted_Tstep_seebeck/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
-        "/data/scc/marian.gunsch/AM-DMI_tilted_Tstep_seebeck/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat",
-        "/data/scc/marian.gunsch/AM-tilted_Tstep_seebeck/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
-        "/data/scc/marian.gunsch/AM-tilted_Tstep_seebeck/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat",
+        dmi_path_A,
+        dmi_path_B,
+        no_dmi_path_A,
+        no_dmi_path_B,
         "Comparison Seebeck (no equilibriums were subtracted!)",
-        10,
-        "out/comparison_DMI_seebeck_.png"
+        delta_x,
+        #"out/comparison_DMI_seebeck_.png"
     )
+
+    save_path = None
+    # save_path = "out/comparison_DMI_magnon_accumulation_.png"
+
+    rel_step_pos = 0.49
+
+    data_dmi_A = np.loadtxt(dmi_path_A)
+    data_dmi_B = np.loadtxt(dmi_path_B)
+    data_nodmi_A = np.loadtxt(no_dmi_path_A)
+    data_nodmi_B = np.loadtxt(no_dmi_path_B)
+
+    data_nodmi_eq = np.loadtxt("/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_T2meV/AM_Teq2meV-99-999.dat")
+    data_dmi_eq = np.load("data/DMI/seebeck/equi_T2meV_DMI5.npy")
+
+    _, _, magnon_acc_dmi, delta_neel_dmi = physics.seebeck(
+        data_dmi_A,
+        data_dmi_B,
+        data_dmi_eq,
+        rel_step_pos
+    )
+    _, _, magnon_acc_nodmi, delta_neel_nodmi = physics.seebeck(
+        data_nodmi_A,
+        data_nodmi_B,
+        data_nodmi_eq,
+        rel_step_pos
+    )
+
+    fig, (ax1, ax2) = plt.subplots(2, sharex=True)
+    fig.suptitle("Comparison of magnon accumulation and delta neel with(out) DMI")
+    ax1.set_title('delta neel (equi subtracted)')
+    ax2.set_title('Magnon accumulation')
+    ax1.set_ylabel('Magnitude (au)')
+    ax2.set_ylabel('Magnitude (au)')
+    ax2.set_xlabel('Grid position')
+
+    x = np.arange(delta_x, delta_neel_dmi.size - delta_x, 1.0)
+
+    if delta_x > 0:
+        ax1.plot(x, delta_neel_dmi[delta_x:-delta_x], label="DMI")
+        ax1.plot(x, delta_neel_nodmi[delta_x:-delta_x], label="no DMI")
+        ax2.plot(x, magnon_acc_dmi[delta_x:-delta_x], label="DMI")
+        ax2.plot(x, magnon_acc_nodmi[delta_x:-delta_x], label="no DMI")
+    else:
+        ax1.plot(x, delta_neel_dmi, label="DMI")
+        ax1.plot(x, delta_neel_nodmi, label="no DMI")
+        ax2.plot(x, magnon_acc_dmi, label="DMI")
+        ax2.plot(x, magnon_acc_nodmi, label="no DMI")
+
+    ax1.legend()
+    ax2.legend()
+
+    if save_path:
+        print(f"Saving to {save_path}")
+        fig.savefig(f"{save_path}")
+
+    plt.show()
 
 
 def quick_nernst_dmi_comparison():
@@ -241,8 +325,8 @@ def quick_nernst_dmi_comparison():
 
 
 if __name__ == '__main__':
-    #    temperature_dependent_nernst(save=True, save_path='out/T-dependent-nernst.png', delta_x=0)
-    dmi_ground_state_comparison()
+    #  temperature_dependent_nernst(save=True, save_path='out/T-dependent-nernst.png', delta_x=0)
+    # dmi_ground_state_comparison()
 
     quick_seebeck_dmi_comparison()
-    quick_nernst_dmi_comparison()
+    # quick_nernst_dmi_comparison()
