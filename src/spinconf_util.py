@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 import scipy as sp
 
+import src.physics as physics
 
 def get_dimensions(path):
     lengths = dict()
@@ -25,9 +26,33 @@ def get_dimensions(path):
     return dimensions, lengths
 
 
+def select_SL_and_component(value_arr, sublattice, spin_component):
+    """
+
+    :param value_arr: data array as for example returned by read_spin_config_dat
+    :param sublattice: A or B?
+    :param spin_component: x, y, or z?
+    :return:
+    """
+    spin_dict = dict(x=0, y=1, z=2)
+    sl_dict = dict(A=0, B=1)
+    return value_arr[:, :, sl_dict[sublattice], spin_dict[spin_component]]
+
+
 def read_spin_config_dat(path, is_tilted=True):
+    """
+    Reads the data in a spin configuration file and formats it into a multidimensional array. The first two components
+    correspond to the x and y position of each spin. The average over all z components is already taken, as the z layers
+    are independent of each other anyway. When handling the returned array, one can select a sublattice and a spin
+    component via the select_SL_and_component function.
+    :param path: The path of the spin configuration file.
+    :param is_tilted: If the tilted configuration is used. This method has not been tested for the non-tilted setup.
+    :return: A multidimensional array containing the spin components, averaged over all z layers.
+    """
     if not is_tilted:
         raise NotImplementedError("Non-tilted is untested!")
+
+    number_sublattices = 2
 
     dimensions, lengths = get_dimensions(path)
     divisors = dict(x=int(dimensions['x']/lengths['x']), y=int(dimensions['y']/lengths['y']), z=int(dimensions['z']/lengths['z']))
@@ -37,48 +62,43 @@ def read_spin_config_dat(path, is_tilted=True):
     data_mins = np.min(data[:, :3], axis=0)
     data[:, :3] -= data_mins
 
-    SL_A = np.where(np.expand_dims(data[:, 3] == 1.0, 1), data, np.nan)
-    SL_A = SL_A[~np.isnan(SL_A).any(axis=1)]        # remove all rows that are not sublattice A
-    SL_B = np.where(np.expand_dims(data[:, 3] == 2.0, 1), data, np.nan)
-    SL_B = SL_B[~np.isnan(SL_B).any(axis=1)]
+    i, j, k, sl = (
+        data[:, 0].astype(int) // divisors['x'],
+        data[:, 1].astype(int) // divisors['y'],
+        data[:, 2].astype(int) // divisors['z'],        # z index
+        data[:, 3].astype(int) - 1      # sublattice 1 or 2 (now called SL 0 and 1)
+    )
 
-    # SL_A = np.where(np.expand_dims(data[:, 3] == 1.0, 1), data, np.nan)  # SL A
-    # SL_B = np.where(np.expand_dims(data[:, 3] == 2.0, 1), data, np.nan)  # SL A
-    # SL_A_maxs = np.nanmax(SL_A[:, :3], axis=0)
-    # SL_A_mins = np.nanmin(SL_A[:, :3], axis=0)
-    # SL_B_maxs = np.nanmax(SL_B[:, :3], axis=0)
-    # SL_B_mins = np.nanmin(SL_B[:, :3], axis=0)
-    #
-    # SL_A[:, :3] -= SL_A_mins
-    # SL_B[:, :3] -= SL_B_mins
+    shape = (lengths['x'], lengths['y'], lengths['z'], number_sublattices, 3)
+    value_grid = np.zeros(shape) + 1000     # TODO: Change to np empty and remove addition
+    value_grid[j, i, k, sl, 0] = data[:, 4]         # 4=x, 5=y, 6=z
+    value_grid[j, i, k, sl, 1] = data[:, 5]         # (components of spin)
+    value_grid[j, i, k, sl, 2] = data[:, 6]
+
+    value_grid_zavg = np.average(value_grid, axis=2)       # average over k (z layers)
+
+    return value_grid_zavg
 
 
-    X, Y = np.meshgrid(np.arange(0, lengths['x'], 1, dtype=int),
-                       np.arange(0, lengths['y'], 1, dtype=int),
-                       sparse=True)
+def save_spin_config_as_npy(dat_path, save_path, is_tilted=True):
+    grid_data = read_spin_config_dat(dat_path, is_tilted=is_tilted)
+    np.save(save_path, grid_data)
 
-    i, j, k = SL_A[:, 0].astype(int) // divisors['x'], SL_A[:, 1].astype(int) // divisors['y'], SL_A[:, 2].astype(int) // divisors['z']
 
-    shape = (lengths['x'], lengths['y'], lengths['z'])
-    value_array = np.zeros(shape)
-    value_array[i, j, k] = SL_A[:, 4]       # x values
-
+def plot_colormap(data_grid):
+    X, Y = np.meshgrid(np.arange(0, data_grid.shape[0], 1, dtype=int),
+                       np.arange(0, data_grid.shape[1], 1, dtype=int),
+                       sparse=True, indexing='xy')
     fig, ax = plt.subplots()
-    ax.pcolormesh(X, Y, value_array[:, :, 0])
+    ax.pcolormesh(X, Y, data_grid)
 
     plt.show()
-
-    return value_array, SL_A
-
-def save_spin_config_as_npy(path):
-    pass
-
 
 
 # %% Testing
 
 path = "/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id2/spin-configs-99-999/spin-config-99-999-010000.dat"
+path = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
+data = read_spin_config_dat(path)
 
-temp1, temp2 = read_spin_config_dat(path)
-
-
+plot_colormap(select_SL_and_component(data, "A", "z"))
