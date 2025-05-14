@@ -9,6 +9,8 @@ import src.utility as util
 import src.mag_util as mag_util
 import src.bulk_util as bulk_util
 
+import src.helper as helper
+
 def neel_vector(Sz_A, Sz_B, do_time_avg=False):
     """
     Returns the neel vector (value) as an array, where each entry is the value for a specific layer index.
@@ -93,7 +95,7 @@ def seebeck(dataA, dataB, eq_data, rel_step_pos):
     print(f"Hot region: The equilibrium value of the neel vector is {neel_eqH}, of the magnetization is {magn_eqH}.")
 
     N = magn.shape[0]
-    step_pos = int(np.floor(rel_step_pos * N))   # TODO: +1 might be needed depending on definitions
+    step_pos = helper.get_absolute_T_step_index(rel_step_pos, N)
     print(f"There are {N} layers. The temperature step is at {step_pos}.")
 
     delta_neel = np.empty_like(neel)

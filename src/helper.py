@@ -16,3 +16,7 @@ def create_slice_list(slice_string, column_dict):
             raise ValueError(f"Can't return {slice_string}-component of spin.")
         slice_list.append(column_dict[char])
     return slice_list
+
+
+def get_absolute_T_step_index(relative_position, N):
+    return int(np.floor(relative_position * N))     # TODO: +1 might be needed depending on definitions
