@@ -71,17 +71,18 @@ def save_arrayjob_as_npy(base_path: str, npy_path: str, start: int, stop=None, s
         raise ValueError(f"Somehow the dimensions of {base_path}{start}/{middle_path}X{suffix} differ for X=A and X=B.")
     data_arrA = np.empty((array_job_size,) + data_first_A.shape, dtype=data_first_A.dtype)
     data_arrB = np.empty((array_job_size,) + data_first_A.shape, dtype=data_first_A.dtype)
-    data_arrA[start] = data_first_A
-    data_arrB[start] = data_first_B
+    data_arrA[0] = data_first_A
+    data_arrB[0] = data_first_B
 
     index_list = [start, ]
 
-    for i in range(start + step, stop + 1, step):
-        index_list.append(i)
-        print(f"{i}", end="")
-        data_arrA[i] = np.loadtxt(f"{base_path}{i}/{middle_path}A{suffix}") # TODO: Just blindly choosing i does not work if start does not start with 0 and step is not 1 etc
+    for i in range(1, array_job_size):
+        job_index = start + i * step
+        index_list.append(job_index)
+        print(f"{job_index}", end="")
+        data_arrA[i] = np.loadtxt(f"{base_path}{job_index}/{middle_path}A{suffix}") # TODO: Just blindly choosing i does not work if start does not start with 0 and step is not 1 etc
         print("A", end="")
-        data_arrB[i] = np.loadtxt(f"{base_path}{i}/{middle_path}B{suffix}")
+        data_arrB[i] = np.loadtxt(f"{base_path}{job_index}/{middle_path}B{suffix}")
         print("B")
 
     print(f"Saving data to '{npy_path}X.npy' for X=A and X=B...")

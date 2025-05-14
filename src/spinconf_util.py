@@ -73,7 +73,7 @@ def read_spin_config_dat(path, is_tilted=True):
     value_grid = np.zeros(shape) + 1000     # TODO: Change to np empty and remove addition
     value_grid[j, i, k, sl, 0] = data[:, 4]         # 4=x, 5=y, 6=z
     value_grid[j, i, k, sl, 1] = data[:, 5]         # (components of spin)
-    value_grid[j, i, k, sl, 2] = data[:, 6]
+    value_grid[j, i, k, sl, 2] = data[:, 6]         # j i k instead of i j k because indecis are weird...
 
     value_grid_zavg = np.average(value_grid, axis=2)       # average over k (z layers)
 
@@ -96,12 +96,12 @@ def read_spin_config_arrjob(path_prefix, path_suffix, start, stop=None, step=1, 
     data_first = read_spin_config_dat(f"{path_prefix}{start}{path_suffix}", is_tilted=is_tilted)
 
     data_arr = np.empty((array_job_size,) + data_first.shape, dtype=data_first.dtype)
-    data_arr[start] = data_first
+    data_arr[0] = data_first
 
-    for i in range(start + step, stop + 1, step):
-        print(f"{i}.", end="")
-        data_arr[i-1] = read_spin_config_dat(f"{path_prefix}{i}{path_suffix}", is_tilted=is_tilted)
-    # TODO: Just blindly choosing i does not work if start does not start with 0 and step is not 1 etc
+    for i in range(1, array_job_size):
+        job_index = start + i * step
+        print(f"{job_index}.", end="")
+        data_arr[i] = read_spin_config_dat(f"{path_prefix}{job_index}{path_suffix}", is_tilted=is_tilted)
 
     if average:
         return np.mean(data_arr, axis=0)
@@ -118,13 +118,31 @@ def plot_colormap(data_grid):
     plt.show()
 
 
+def calculate_spin_currents(data_grid, direction):
+
+
+
+"""
+TODO:
+- Implement function that calculates spin currents, in x and in y direction (longitudinal and transversal)
+- Implement function that calculates magnetization and neel vector, also implement possibility (maybe with boolean 
+parameter) that decides whether function also subtracts the ground state magnetization for warm and cold region (same 
+for neel)
+- Implement better plot function (with title, legend etc), also show where temperature step is
+- Implement possibility to convolute data or to e.g. average data e.g. in blocks of 2x2 or 4x4 or 8x8
+"""
+
+
 # %% Testing
 
 path1 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
 path2 = "/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id2/spin-configs-99-999/spin-config-99-999-010000.dat"
-# data1 = read_spin_config_dat(path1)
+data1 = read_spin_config_dat(path1)
 data2 = read_spin_config_arrjob("/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id",
                                 "/spin-configs-99-999/spin-config-99-999-010000.dat",
                                 10,)
 
-plot_colormap(select_SL_and_component(data2, "A", "z"))
+plot_colormap(physics.neel_vector(select_SL_and_component(data1, "A", "z"), select_SL_and_component(data1, "B", "z")))
+plot_colormap(physics.magnetizazion(select_SL_and_component(data1, "A", "z"), select_SL_and_component(data1, "B", "z")))
+plot_colormap(physics.neel_vector(select_SL_and_component(data2, "A", "z"), select_SL_and_component(data2, "B", "z")))
+plot_colormap(physics.magnetizazion(select_SL_and_component(data2, "A", "z"), select_SL_and_component(data2, "B", "z")))
