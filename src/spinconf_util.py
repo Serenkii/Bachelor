@@ -2,8 +2,12 @@ import numpy as np
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 
 import scipy as sp
+from scipy.ndimage import gaussian_filter
+from scipy.ndimage import uniform_filter
+from scipy.ndimage import median_filter
 
 import src.physics as physics
 import src.helper as helper
@@ -110,14 +114,22 @@ def read_spin_config_arrjob(path_prefix, path_suffix, start, stop=None, step=1, 
     return data_arr
 
 
-def plot_colormap(data_grid, title=""):
-    X, Y = np.meshgrid(np.arange(0, data_grid.shape[0], 1, dtype=int),
-                       np.arange(0, data_grid.shape[1], 1, dtype=int),
+def plot_colormap(data_grid, title="", rel_step_pos=None):
+    X, Y = np.meshgrid(np.arange(0, data_grid.shape[1], 1, dtype=int),
+                       np.arange(0, data_grid.shape[0], 1, dtype=int),
                        sparse=True, indexing='xy')
+
     fig, ax = plt.subplots()
+    ax.set_aspect('equal', 'box')
     ax.set_title(title)
-    im = ax.pcolormesh(X, Y, data_grid)
+    im = ax.pcolormesh(X, Y, data_grid, norm=colors.CenteredNorm(), cmap='RdBu_r')
     fig.colorbar(im, ax=ax)
+
+    if rel_step_pos is not None:
+        step_pos = helper.get_absolute_T_step_index(rel_step_pos, data_grid.shape[1])
+        ax.vlines(step_pos, 0, data_grid.shape[0], colors='grey', linestyle='dashed', alpha=0.7)
+
+    ax.margins(x=0, y=0)
     fig.tight_layout()
 
     plt.show()
@@ -125,10 +137,10 @@ def plot_colormap(data_grid, title=""):
 
 # TODO: Test!!!
 def calculate_spin_currents(data_grid, direction):
-    if direction in ["longitudinal", "x", "long"]:
+    if direction in ["transversal", "y", "trans"]:
         slice1 = (slice(0, -1), slice(None))  # equals [:-1, :]
         slice2 = (slice(1, None), slice(None))  # equals [1:, :]
-    elif direction in ["transversal", "y", "trans"]:
+    elif direction in ["longitudinal", "x", "long"]:
         slice1 = (slice(None), slice(0, -1))  # equals [:, :-1]
         slice2 = (slice(None), slice(1, None))  # equals [:, 1:]
     else:
@@ -142,14 +154,14 @@ def calculate_spin_currents(data_grid, direction):
     j_inter_1 = - (spin_x_A[slice1] * spin_y_A[slice2] + spin_y_B[slice1] * spin_x_B[slice2])
     j_inter_2 = - (spin_x_A[slice1] * spin_y_A[slice2] - spin_y_B[slice1] * spin_x_B[slice2])
     j_intra_A = - (spin_x_A[slice1] * spin_y_A[slice2] - spin_y_A[slice1] * spin_x_A[slice2])
-    j_intra_B = - (spin_x_A[slice1] * spin_y_A[slice2] - spin_y_A[slice1] * spin_x_A[slice2])
+    j_intra_B = - (spin_x_B[slice1] * spin_y_B[slice2] - spin_y_B[slice1] * spin_x_B[slice2])
 
     j_other_paper = - spin_x_A[slice1] * spin_y_A[slice2] - spin_y_B[slice1] * spin_x_B[slice2]
 
     return j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other_paper
 
 
-# TODO: Test!!!
+# TODO: Both parts seem to be working
 def calculate_magnetization_neel(data_grid, equi_data_warm=None, direction="x", rel_Tstep_pos=0.49):
     magnetization = dict()
     neel_vector = dict()
@@ -159,7 +171,7 @@ def calculate_magnetization_neel(data_grid, equi_data_warm=None, direction="x", 
         neel_vector[component] = physics.neel_vector(select_SL_and_component(data_grid, "A", component),
                                                      select_SL_and_component(data_grid, "B", component))
 
-    if not equi_data_warm:      # if no ground state is provided
+    if equi_data_warm is None:      # if no ground state is provided
         return magnetization, neel_vector
 
     magn_cold = 0
@@ -179,17 +191,33 @@ def calculate_magnetization_neel(data_grid, equi_data_warm=None, direction="x", 
         magnetization[component][slice_warm] -= physics.magnetizazion(
             np.mean(select_SL_and_component(equi_data_warm, "A", component)),
             np.mean(select_SL_and_component(equi_data_warm, "B", component))
-        )
+        ) # * 0 - 2.555185061314802e-07
         magnetization[component][slice_cold] -= magn_cold
 
         neel_vector[component][slice_warm] -= physics.neel_vector(
             np.mean(select_SL_and_component(equi_data_warm, "A", component)),
             np.mean(select_SL_and_component(equi_data_warm, "B", component))
-        )
+        ) # * 0 - 0.968215418006002
         neel_vector[component][slice_cold] -= neel_cold[component]
 
     return magnetization, neel_vector
 
+
+
+def convolute(data):
+    # return data
+    return uniform_filter(data, size=4)
+
+    # import cv2
+    # normalized = cv2.normalize(data.astype(np.float32), None, 0, 1, cv2.NORM_MINMAX)
+    # return cv2.bilateralFilter(normalized, d=9, sigmaColor=5, sigmaSpace=75) - 0.5
+
+    from skimage.restoration import denoise_bilateral
+
+    # normed = (data - data.min()) / (data.max() - data.min())
+    # return denoise_bilateral(normed, sigma_color=0.05, sigma_spatial=4) * (data.max() - data.min()) + data.min()
+
+    return denoise_bilateral(data, sigma_color=0.01, sigma_spatial=4, mode='constant')  # TODO: Finetune
 
 
 """
@@ -204,14 +232,43 @@ for neel)
 
 # %% Testing
 
-path1 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
-path2 = "/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id2/spin-configs-99-999/spin-config-99-999-010000.dat"
-data1 = read_spin_config_dat(path1)
-data2 = read_spin_config_arrjob("/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id",
-                                "/spin-configs-99-999/spin-config-99-999-010000.dat",
-                                10, )
+# path1 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
+# path2 = "/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id2/spin-configs-99-999/spin-config-99-999-010000.dat"
+# data1 = read_spin_config_dat(path1)
+# data2 = read_spin_config_arrjob("/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id",
+#                                 "/spin-configs-99-999/spin-config-99-999-010000.dat",
+#                                 10, )
 
-plot_colormap(physics.neel_vector(select_SL_and_component(data1, "A", "z"), select_SL_and_component(data1, "B", "z")))
-plot_colormap(physics.magnetizazion(select_SL_and_component(data1, "A", "z"), select_SL_and_component(data1, "B", "z")))
-plot_colormap(physics.neel_vector(select_SL_and_component(data2, "A", "z"), select_SL_and_component(data2, "B", "z")))
-plot_colormap(physics.magnetizazion(select_SL_and_component(data2, "A", "z"), select_SL_and_component(data2, "B", "z")))
+path3 = "/data/scc/marian.gunsch/AM-tilted_Tstep_seebeck/spin-configs-99-999/spin-config-99-999-010000.dat"
+data3 = read_spin_config_dat(path3)
+path3_eq = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_T2meV/spin-configs-99-999/spin-config-99-999-005000.dat"
+data3_eq = read_spin_config_dat(path3_eq)
+
+# plot_colormap(physics.neel_vector(select_SL_and_component(data1, "A", "z"), select_SL_and_component(data1, "B", "z")), "neel, 1")
+# plot_colormap(physics.magnetizazion(select_SL_and_component(data1, "A", "z"), select_SL_and_component(data1, "B", "z")), "magn, 1")
+# plot_colormap(physics.neel_vector(select_SL_and_component(data2, "A", "z"), select_SL_and_component(data2, "B", "z")), "neel, 2")
+# plot_colormap(physics.magnetizazion(select_SL_and_component(data2, "A", "z"), select_SL_and_component(data2, "B", "z")), "magn, 2")
+
+# %%
+# rel_Tstep_pos = 0.49
+rel_Tstep_pos = None
+
+magn, neel = calculate_magnetization_neel(data3, data3_eq, "x")
+# magn, neel = calculate_magnetization_neel(data1, direction="x")
+plot_colormap(convolute(magn["z"]), "magnetization z", rel_Tstep_pos)
+plot_colormap(convolute(neel["z"]), "neel vector z", rel_Tstep_pos)
+
+#%%
+direction = "transversal"
+j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other_paper = calculate_spin_currents(data3, direction)
+# plot_colormap(convolute(j_inter_1), f"j inter +, {direction}", rel_Tstep_pos)
+# plot_colormap(convolute(j_inter_2), f"j inter -, {direction}", rel_Tstep_pos)
+# plot_colormap(convolute(j_intra_A), f"j intra A, {direction}", rel_Tstep_pos)
+# plot_colormap(convolute(j_intra_B), f"j intra B, {direction}", rel_Tstep_pos)
+# plot_colormap(convolute(j_other_paper), f"j other paper, {direction}", rel_Tstep_pos)
+
+plot_colormap(j_inter_1, f"j inter +, {direction}", rel_Tstep_pos)
+plot_colormap(j_inter_2, f"j inter -, {direction}", rel_Tstep_pos)
+plot_colormap(j_intra_A, f"j intra A, {direction}", rel_Tstep_pos)
+plot_colormap(j_intra_B, f"j intra B, {direction}", rel_Tstep_pos)
+plot_colormap(j_other_paper, f"j other paper, {direction}", rel_Tstep_pos)
