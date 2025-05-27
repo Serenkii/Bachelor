@@ -41,7 +41,7 @@ def select_SL_and_component(value_arr, sublattice, spin_component):
     """
     spin_dict = dict(x=0, y=1, z=2)
     sl_dict = dict(A=0, B=1)
-    return value_arr[:, :, sl_dict[sublattice], spin_dict[spin_component]]
+    return value_arr[:, :, :, sl_dict[sublattice], spin_dict[spin_component]]
 
 
 def read_spin_config_dat(path, is_tilted=True):
@@ -79,11 +79,13 @@ def read_spin_config_dat(path, is_tilted=True):
     value_grid = np.zeros(shape) + 1000  # TODO: Change to np empty and remove addition
     value_grid[j, i, k, sl, 0] = data[:, 4]  # 4=x, 5=y, 6=z
     value_grid[j, i, k, sl, 1] = data[:, 5]  # (components of spin)
-    value_grid[j, i, k, sl, 2] = data[:, 6]  # j i k instead of i j k because indecis are weird...
+    value_grid[j, i, k, sl, 2] = data[:, 6]  # j i k instead of i j k because indices are weird...
 
-    value_grid_zavg = np.average(value_grid, axis=2)  # average over k (z layers)
+    # value_grid_zavg = np.average(value_grid, axis=2)  # average over k (z layers)
 
-    return value_grid_zavg
+    # return value_grid_zavg
+
+    return value_grid
 
 
 def save_spin_config_as_npy(dat_path, save_path, is_tilted=True):
@@ -115,6 +117,7 @@ def read_spin_config_arrjob(path_prefix, path_suffix, start, stop=None, step=1, 
 
 
 def plot_colormap(data_grid, title="", rel_step_pos=None):
+    data_grid = np.squeeze(data_grid)
     X, Y = np.meshgrid(np.arange(0, data_grid.shape[1], 1, dtype=int),
                        np.arange(0, data_grid.shape[0], 1, dtype=int),
                        sparse=True, indexing='xy')
@@ -161,7 +164,7 @@ def calculate_spin_currents(data_grid, direction):
     return j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other_paper
 
 
-# TODO: Both parts seem to be working
+# TODO: Both parts seem to be working   --- if i remember correctly, direction meant direction of Tstep
 def calculate_magnetization_neel(data_grid, equi_data_warm=None, direction="x", rel_Tstep_pos=0.49):
     magnetization = dict()
     neel_vector = dict()
@@ -205,20 +208,32 @@ def calculate_magnetization_neel(data_grid, equi_data_warm=None, direction="x", 
 
 
 def convolute(data):
-    # return data
-    return uniform_filter(data, size=4)
+    copy = np.squeeze(data)
+
+    # return copy
+    return uniform_filter(copy, size=4)
 
     # import cv2
-    # normalized = cv2.normalize(data.astype(np.float32), None, 0, 1, cv2.NORM_MINMAX)
+    # normalized = cv2.normalize(copy.astype(np.float32), None, 0, 1, cv2.NORM_MINMAX)
     # return cv2.bilateralFilter(normalized, d=9, sigmaColor=5, sigmaSpace=75) - 0.5
 
     from skimage.restoration import denoise_bilateral
 
-    # normed = (data - data.min()) / (data.max() - data.min())
-    # return denoise_bilateral(normed, sigma_color=0.05, sigma_spatial=4) * (data.max() - data.min()) + data.min()
+    # normed = (copy - copy.min()) / (copy.max() - copy.min())
+    # return denoise_bilateral(normed, sigma_color=0.05, sigma_spatial=4) * (copy.max() - copy.min()) + copy.min()
 
-    return denoise_bilateral(data, sigma_color=0.01, sigma_spatial=4, mode='constant')  # TODO: Finetune
+    return denoise_bilateral(copy, sigma_color=0.01, sigma_spatial=4, mode='constant')  # TODO: Finetune
 
+
+def average_z_layers(data, *args, force_return_tuple=False):
+    if len(args) == 0 and not force_return_tuple:
+        return np.mean(data, axis=2, keepdims=True)
+
+    data_tuple = (data,) + args
+    return_tuple = ()
+    for arg in data_tuple:
+        return_tuple = return_tuple + (np.mean(arg, axis=2, keepdims=True),)
+    return return_tuple
 
 """
 TODO:
@@ -244,6 +259,13 @@ data3 = read_spin_config_dat(path3)
 path3_eq = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_T2meV/spin-configs-99-999/spin-config-99-999-005000.dat"
 data3_eq = read_spin_config_dat(path3_eq)
 
+path4 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
+data4 = read_spin_config_dat(path4)
+
+data = data4
+
+print("Read data")
+
 # plot_colormap(physics.neel_vector(select_SL_and_component(data1, "A", "z"), select_SL_and_component(data1, "B", "z")), "neel, 1")
 # plot_colormap(physics.magnetizazion(select_SL_and_component(data1, "A", "z"), select_SL_and_component(data1, "B", "z")), "magn, 1")
 # plot_colormap(physics.neel_vector(select_SL_and_component(data2, "A", "z"), select_SL_and_component(data2, "B", "z")), "neel, 2")
@@ -253,14 +275,19 @@ data3_eq = read_spin_config_dat(path3_eq)
 # rel_Tstep_pos = 0.49
 rel_Tstep_pos = None
 
-magn, neel = calculate_magnetization_neel(data3, data3_eq, "x")
+# magn, neel = calculate_magnetization_neel(data3, data3_eq, "x")
+magn, neel = calculate_magnetization_neel(data, direction="x")
 # magn, neel = calculate_magnetization_neel(data1, direction="x")
-plot_colormap(convolute(magn["z"]), "magnetization z", rel_Tstep_pos)
-plot_colormap(convolute(neel["z"]), "neel vector z", rel_Tstep_pos)
+plot_colormap(convolute(average_z_layers(magn["z"])), "magnetization z", rel_Tstep_pos)
+plot_colormap(convolute(average_z_layers(neel["z"])), "neel vector z", rel_Tstep_pos)
 
 #%%
+# direction = "longitudinal"
 direction = "transversal"
-j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other_paper = calculate_spin_currents(data3, direction)
+
+# j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other_paper = calculate_spin_currents(average_z_layers(data), direction)    # This yields incorrect results (or rather all the spin currents are averaged out before being calculated...)
+j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other_paper = average_z_layers(*calculate_spin_currents(data, direction))
+
 # plot_colormap(convolute(j_inter_1), f"j inter +, {direction}", rel_Tstep_pos)
 # plot_colormap(convolute(j_inter_2), f"j inter -, {direction}", rel_Tstep_pos)
 # plot_colormap(convolute(j_intra_A), f"j intra A, {direction}", rel_Tstep_pos)
