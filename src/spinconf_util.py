@@ -116,23 +116,31 @@ def read_spin_config_arrjob(path_prefix, path_suffix, start, stop=None, step=1, 
     return data_arr
 
 
-def plot_colormap(data_grid, title="", rel_step_pos=None):
+def plot_colormap(data_grid, title="", rel_step_pos=0.49, show_step=False, zoom=False):
     data_grid = np.squeeze(data_grid)
     X, Y = np.meshgrid(np.arange(0, data_grid.shape[1], 1, dtype=int),
                        np.arange(0, data_grid.shape[0], 1, dtype=int),
                        sparse=True, indexing='xy')
 
     fig, ax = plt.subplots()
-    ax.set_aspect('equal', 'box')
+    if zoom:
+        ax.set_aspect('auto', 'box')
+    else:
+        ax.set_aspect('equal', 'box')
     ax.set_title(title)
     im = ax.pcolormesh(X, Y, data_grid, norm=colors.CenteredNorm(), cmap='RdBu_r')
     fig.colorbar(im, ax=ax)
 
-    if rel_step_pos is not None:
+    if show_step:
         step_pos = helper.get_absolute_T_step_index(rel_step_pos, data_grid.shape[1])
         ax.vlines(step_pos, 0, data_grid.shape[0], colors='grey', linestyle='dashed', alpha=0.7)
 
     ax.margins(x=0, y=0)
+
+    if zoom:
+        step_pos = helper.get_absolute_T_step_index(rel_step_pos, data_grid.shape[1])
+        ax.set_xlim(step_pos - 25, step_pos + 25)
+
     fig.tight_layout()
 
     plt.show()
@@ -262,7 +270,19 @@ data3_eq = read_spin_config_dat(path3_eq)
 path4 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
 data4 = read_spin_config_dat(path4)
 
-data = data4
+path5 = "/data/scc/marian.gunsch/01_AM_tilted_Tstep/spin-configs-99-999/spin-config-99-999-010000.dat"
+data5 = read_spin_config_dat(path5)
+
+path6 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T10/spin-configs-99-999/spin-config-99-999-005000.dat" # high T
+path7 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T1/spin-configs-99-999/spin-config-99-999-005000.dat"  # low T
+
+data6 = read_spin_config_dat(path6)
+data7 = read_spin_config_dat(path7)
+
+path8 = "/data/scc/marian.gunsch/AM-DMI_tilted_Tstep_nernst/spin-configs-99-999/spin-config-99-999-010000.dat"  # DMI
+data8 = read_spin_config_dat(path8)
+
+data = data8
 
 print("Read data")
 
@@ -272,14 +292,16 @@ print("Read data")
 # plot_colormap(physics.magnetizazion(select_SL_and_component(data2, "A", "z"), select_SL_and_component(data2, "B", "z")), "magn, 2")
 
 # %%
-# rel_Tstep_pos = 0.49
-rel_Tstep_pos = None
+rel_Tstep_pos = 0.49
+show_step = False
+zoom = True
+
 
 # magn, neel = calculate_magnetization_neel(data3, data3_eq, "x")
 magn, neel = calculate_magnetization_neel(data, direction="x")
 # magn, neel = calculate_magnetization_neel(data1, direction="x")
-plot_colormap(convolute(average_z_layers(magn["z"])), "magnetization z", rel_Tstep_pos)
-plot_colormap(convolute(average_z_layers(neel["z"])), "neel vector z", rel_Tstep_pos)
+plot_colormap(convolute(average_z_layers(magn["z"])), "magnetization z", rel_Tstep_pos, show_step, zoom)
+plot_colormap(convolute(average_z_layers(neel["z"])), "neel vector z", rel_Tstep_pos, show_step, zoom)
 
 #%%
 # direction = "longitudinal"
@@ -294,8 +316,8 @@ j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other_paper = average_z_layers(*ca
 # plot_colormap(convolute(j_intra_B), f"j intra B, {direction}", rel_Tstep_pos)
 # plot_colormap(convolute(j_other_paper), f"j other paper, {direction}", rel_Tstep_pos)
 
-plot_colormap(j_inter_1, f"j inter +, {direction}", rel_Tstep_pos)
-plot_colormap(j_inter_2, f"j inter -, {direction}", rel_Tstep_pos)
-plot_colormap(j_intra_A, f"j intra A, {direction}", rel_Tstep_pos)
-plot_colormap(j_intra_B, f"j intra B, {direction}", rel_Tstep_pos)
-plot_colormap(j_other_paper, f"j other paper, {direction}", rel_Tstep_pos)
+plot_colormap(j_inter_1, f"j inter +, {direction}", rel_Tstep_pos, show_step, zoom)
+plot_colormap(j_inter_2, f"j inter -, {direction}", rel_Tstep_pos, show_step, zoom)
+plot_colormap(j_intra_A, f"j intra A, {direction}", rel_Tstep_pos, show_step, zoom)
+plot_colormap(j_intra_B, f"j intra B, {direction}", rel_Tstep_pos, show_step, zoom)
+plot_colormap(j_other_paper, f"j other paper, {direction}", rel_Tstep_pos, show_step, zoom)
