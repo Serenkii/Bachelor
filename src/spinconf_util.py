@@ -243,6 +243,9 @@ def average_z_layers(data, *args, force_return_tuple=False):
         return_tuple = return_tuple + (np.mean(arg, axis=2, keepdims=True),)
     return return_tuple
 
+
+#%%
+
 """
 TODO:
 - Implement function that calculates spin currents, in x and in y direction (longitudinal and transversal)
@@ -282,7 +285,10 @@ data7 = read_spin_config_dat(path7)
 path8 = "/data/scc/marian.gunsch/AM-DMI_tilted_Tstep_nernst/spin-configs-99-999/spin-config-99-999-010000.dat"  # DMI
 data8 = read_spin_config_dat(path8)
 
-data = data8
+path9 = "/data/scc/marian.gunsch/02_AM_tilted_Tstep_DMI/spin-configs-99-999/spin-config-99-999-000000.dat"  # DMI more layers
+data9 = read_spin_config_dat(path9)
+
+data = data3
 
 print("Read data")
 
@@ -294,14 +300,14 @@ print("Read data")
 # %%
 rel_Tstep_pos = 0.49
 show_step = False
-zoom = True
+zoom = False
 
 
 # magn, neel = calculate_magnetization_neel(data3, data3_eq, "x")
 magn, neel = calculate_magnetization_neel(data, direction="x")
 # magn, neel = calculate_magnetization_neel(data1, direction="x")
 plot_colormap(convolute(average_z_layers(magn["z"])), "magnetization z", rel_Tstep_pos, show_step, zoom)
-plot_colormap(convolute(average_z_layers(neel["z"])), "neel vector z", rel_Tstep_pos, show_step, zoom)
+# plot_colormap(convolute(average_z_layers(neel["z"])), "neel vector z", rel_Tstep_pos, show_step, zoom)
 
 #%%
 # direction = "longitudinal"
@@ -321,3 +327,13 @@ plot_colormap(j_inter_2, f"j inter -, {direction}", rel_Tstep_pos, show_step, zo
 plot_colormap(j_intra_A, f"j intra A, {direction}", rel_Tstep_pos, show_step, zoom)
 plot_colormap(j_intra_B, f"j intra B, {direction}", rel_Tstep_pos, show_step, zoom)
 plot_colormap(j_other_paper, f"j other paper, {direction}", rel_Tstep_pos, show_step, zoom)
+
+
+# %%
+
+magnon_count_A = select_SL_and_component(data, "A", "x") ** 2 + select_SL_and_component(data, "A", "y") ** 2
+magnon_count_B = select_SL_and_component(data, "B", "x") ** 2 + select_SL_and_component(data, "B", "y") ** 2
+
+plot_colormap(average_z_layers(magnon_count_A), "magnon count A", rel_Tstep_pos, show_step, zoom)
+plot_colormap(average_z_layers(magnon_count_B), "magnon count B", rel_Tstep_pos, show_step, zoom)
+

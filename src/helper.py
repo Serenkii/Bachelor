@@ -19,4 +19,4 @@ def create_slice_list(slice_string, column_dict):
 
 
 def get_absolute_T_step_index(relative_position, N):
-    return int(np.floor(relative_position * N))     # TODO: +1 might be needed depending on definitions
+    return int(np.floor(relative_position * N)) + 1    # TODO: +1 might be needed depending on definitions
