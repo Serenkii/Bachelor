@@ -11,11 +11,9 @@ import src.bulk_util as bulk_util
 import src.utility as util
 import src.plot_util as plot_util
 import src.physics as physics
+import src.spinconf_util as spinconf_util
 
-Nx = 512
-Ny = Nx
-Nz = 2
-temperature_step_rel_pos = 0.49
+
 
 
 def temperature_dependent_nernst(save=False, save_path='out/T-dependent-nernst.png', delta_x=0):
@@ -106,7 +104,7 @@ def temperature_dependent_nernst(save=False, save_path='out/T-dependent-nernst.p
 
 
 
-def dmi_ground_state_comparison():
+def dmi_ground_state_comparison(save=False, save_path='out/T-dependent-nernst.png'):
     equi_path = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_T2meV/AM_Teq2meV-99-999.dat"
     equi_dmi_path = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI-2/AM_Teq-99-999.dat"
 
@@ -155,13 +153,25 @@ def dmi_ground_state_comparison():
     ax.set_title('Equilibrium 2meV: Spin components for different sublattices with and without DMI')
     ax.legend()
 
+    if save:
+        print(f"Saving to {save_path[:-4]}_1.pdf")
+        fig.savefig(f"{save_path[:-4]}_1.pdf")
+
     plt.show()
 
     ## Neel and Magnetization
-    neel = physics.neel_vector(spins_A[2], spins_B[2])
-    neel_DMI = physics.neel_vector(spins_DMI_A[2], spins_DMI_B[2])
-    magn = physics.magnetizazion(spins_A[2], spins_B[2])
-    magn_DMI = physics.magnetizazion(spins_DMI_A[2], spins_DMI_B[2])
+    neel = []
+    neel_DMI = []
+    magn = []
+    magn_DMI = []
+
+    for i in range(3):
+        neel.append(physics.neel_vector(spins_A[i], spins_B[i]))
+        neel_DMI.append(physics.neel_vector(spins_DMI_A[i], spins_DMI_B[i]))
+        magn.append(physics.magnetizazion(spins_A[i], spins_B[i]))
+        magn_DMI.append(physics.magnetizazion(spins_DMI_A[i], spins_DMI_B[i]))
+
+
 
     fig, (ax1, ax2) = plt.subplots(1, 2)
     fig.suptitle("Equilibrium 2meV: Neel and Magn with and without DMI")
@@ -172,8 +182,14 @@ def dmi_ground_state_comparison():
 
     label_list = ['no DMI', 'DMI']
 
-    ax1.plot(label_list, [magn, magn_DMI], linestyle='', marker='o')
+    ax1.plot(label_list, [magn, magn_DMI], linestyle='', marker='o', label=['x', 'y', 'z'])
     ax2.plot(label_list, [neel, neel_DMI], linestyle='', marker='o')
+
+    fig.legend()
+
+    if save:
+        print(f"Saving to 1{save_path[:-4]}_2.pdf")
+        fig.savefig(f"{save_path[:-4]}_2.pdf")
 
     plt.show()
 
@@ -229,6 +245,9 @@ def dmi_comparison(dmi_path_A, dmi_path_B, no_dmi_path_A, no_dmi_path_B, title="
 
     plt.show()
 
+    return magn_nodmi, magn_dmi, neel_nodmi, neel_dmi
+
+
 
 def quick_seebeck_dmi_comparison():
     print("Comparing the spin Seebeck effect with and without antisymmetric exchange at a temperature of 2 meV.")
@@ -239,18 +258,40 @@ def quick_seebeck_dmi_comparison():
     delta_x = 10
 
 
-    dmi_comparison(
+    magn_nodmi_, magn_dmi_, _, _ = dmi_comparison(
         dmi_path_A,
         dmi_path_B,
         no_dmi_path_A,
         no_dmi_path_B,
         "Comparison Seebeck (no equilibriums were subtracted!)",
         delta_x,
-        #"out/comparison_DMI_seebeck_.png"
+        "out/comparison_DMI_seebeck_.pdf"
     )
 
+    # Compare maximum values
+
+    max_nodmi = np.max(magn_nodmi_)
+    max_dmi = np.max(magn_dmi_)
+
+    fig, ax1 = plt.subplots()
+    fig.suptitle("Comparison: Maximum value of magnetization for SSE with(out) DMI")
+    ax1.set_title('Magnetization')
+    ax1.set_ylabel('Magnitude (au)')
+
+    label_list = ['no DMI', 'DMI']
+
+    ax1.plot(label_list, [max_nodmi, max_dmi], linestyle='', marker='o')
+
+    print("Saving to out/max_value_SSE_DMI_comparison.pdf")
+    fig.savefig(f"out/max_value_SSE_DMI_comparison.pdf")
+
+    plt.show()
+
+    ####
+
+
     save_path = None
-    # save_path = "out/comparison_DMI_magnon_accumulation_.png"
+    save_path = "out/comparison_DMI_magnon_accumulation_.pdf"
 
     rel_step_pos = 0.49
 
@@ -319,14 +360,61 @@ def quick_nernst_dmi_comparison():
         "/data/scc/marian.gunsch/AM-tilted_Tstep_nernst/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat",
         "Comparison Nernst",
         10,
-        "out/comparison_DMI_nernst_.png"
+        "out/comparison_DMI_nernst_.pdf"
     )
 
 
+# %% Beginning of June
+
+def magnetization_neel_2d_plot():
+    print("Showing magnetizazion and Neel vector for a temperature of T=2meV. We are subtracting the equilibrium state."
+          " One plot with and one without convolution.\n"
+          "Parameters of the simulation: open open open boundaries, 512x512x64")
+
+    path = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
+    data = spinconf_util.read_spin_config_dat(path)
+
+    eq_path = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_T2meV/spin-configs-99-999/spin-config-99-999-005000.dat"
+    eq_data = spinconf_util.read_spin_config_dat(eq_path)
+
+    print(f"Finished reading data...\n"
+          f"Data path: {path}\n"
+          f"Equilibrium path: {eq_path}\n")
+
+    magn, neel = spinconf_util.calculate_magnetization_neel(data, eq_data, rel_Tstep_pos=0.49)
+
+    magn_zavg = spinconf_util.average_z_layers(magn["z"])
+    neel_zavg = spinconf_util.average_z_layers(neel["z"])
+
+    spinconf_util.plot_colormap(magn_zavg, title="magnetization, equi subtracted (T=2meV)")
+    spinconf_util.plot_colormap(neel_zavg, title="Neel vector (z), equi subtracted (T=2meV)")
+
+    spinconf_util.plot_colormap(spinconf_util.convolute(magn_zavg),
+                                title="magnetization, equi subtracted (T=2meV) - convoluted")
+    spinconf_util.plot_colormap(spinconf_util.convolute(neel_zavg),
+                                title="Neel vector (z), equi subtracted (T=2meV) - convoluted")
+
+
+
+
+def presenting_data_02():
+    print("[05.06.25] Presenting data for next meeting with Uli. We are talking about/showing the following:"
+          "We want to show the 2D-plots for the whole spin configuration. We want to show SNE, SSE and the Fourier "
+          "analysis.")
+
+    magnetization_neel_2d_plot()
+
+
+
+# %% Main
 
 if __name__ == '__main__':
-    #  temperature_dependent_nernst(save=True, save_path='out/T-dependent-nernst.png', delta_x=0)
-    # dmi_ground_state_comparison()
+    # temperature_dependent_nernst(save=True, save_path='out/T-dependent-nernst.png', delta_x=0)
+    # dmi_ground_state_comparison(save=True, save_path='out/ground_state_comparison_DMI.pdf')
 
     quick_seebeck_dmi_comparison()
-    # quick_nernst_dmi_comparison()
+    quick_nernst_dmi_comparison()
+
+    # presenting_data_02()
+
+

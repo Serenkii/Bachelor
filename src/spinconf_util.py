@@ -256,84 +256,86 @@ for neel)
 - Implement possibility to convolute data or to e.g. average data e.g. in blocks of 2x2 or 4x4 or 8x8
 """
 
-# %% Testing
+if __name__ == "__main__":
 
-# path1 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
-# path2 = "/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id2/spin-configs-99-999/spin-config-99-999-010000.dat"
-# data1 = read_spin_config_dat(path1)
-# data2 = read_spin_config_arrjob("/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id",
-#                                 "/spin-configs-99-999/spin-config-99-999-010000.dat",
-#                                 10, )
+    # %% Testing
 
-path3 = "/data/scc/marian.gunsch/AM-tilted_Tstep_seebeck/spin-configs-99-999/spin-config-99-999-010000.dat"
-data3 = read_spin_config_dat(path3)
-path3_eq = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_T2meV/spin-configs-99-999/spin-config-99-999-005000.dat"
-data3_eq = read_spin_config_dat(path3_eq)
+    # path1 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
+    # path2 = "/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id2/spin-configs-99-999/spin-config-99-999-010000.dat"
+    # data1 = read_spin_config_dat(path1)
+    # data2 = read_spin_config_arrjob("/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id",
+    #                                 "/spin-configs-99-999/spin-config-99-999-010000.dat",
+    #                                 10, )
 
-path4 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
-data4 = read_spin_config_dat(path4)
+    path3 = "/data/scc/marian.gunsch/AM-tilted_Tstep_seebeck/spin-configs-99-999/spin-config-99-999-010000.dat"
+    data3 = read_spin_config_dat(path3)
+    path3_eq = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_T2meV/spin-configs-99-999/spin-config-99-999-005000.dat"
+    data3_eq = read_spin_config_dat(path3_eq)
 
-path5 = "/data/scc/marian.gunsch/01_AM_tilted_Tstep/spin-configs-99-999/spin-config-99-999-010000.dat"
-data5 = read_spin_config_dat(path5)
+    path4 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
+    data4 = read_spin_config_dat(path4)
 
-path6 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T10/spin-configs-99-999/spin-config-99-999-005000.dat" # high T
-path7 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T1/spin-configs-99-999/spin-config-99-999-005000.dat"  # low T
+    path5 = "/data/scc/marian.gunsch/01_AM_tilted_Tstep/spin-configs-99-999/spin-config-99-999-010000.dat"
+    data5 = read_spin_config_dat(path5)
 
-data6 = read_spin_config_dat(path6)
-data7 = read_spin_config_dat(path7)
+    path6 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T10/spin-configs-99-999/spin-config-99-999-005000.dat" # high T
+    path7 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T1/spin-configs-99-999/spin-config-99-999-005000.dat"  # low T
 
-path8 = "/data/scc/marian.gunsch/AM-DMI_tilted_Tstep_nernst/spin-configs-99-999/spin-config-99-999-010000.dat"  # DMI
-data8 = read_spin_config_dat(path8)
+    data6 = read_spin_config_dat(path6)
+    data7 = read_spin_config_dat(path7)
 
-path9 = "/data/scc/marian.gunsch/02_AM_tilted_Tstep_DMI/spin-configs-99-999/spin-config-99-999-000000.dat"  # DMI more layers
-data9 = read_spin_config_dat(path9)
+    path8 = "/data/scc/marian.gunsch/AM-DMI_tilted_Tstep_nernst/spin-configs-99-999/spin-config-99-999-010000.dat"  # DMI
+    data8 = read_spin_config_dat(path8)
 
-data = data3
+    path9 = "/data/scc/marian.gunsch/02_AM_tilted_Tstep_DMI/spin-configs-99-999/spin-config-99-999-000000.dat"  # DMI more layers
+    data9 = read_spin_config_dat(path9)
 
-print("Read data")
+    data = data4
 
-# plot_colormap(physics.neel_vector(select_SL_and_component(data1, "A", "z"), select_SL_and_component(data1, "B", "z")), "neel, 1")
-# plot_colormap(physics.magnetizazion(select_SL_and_component(data1, "A", "z"), select_SL_and_component(data1, "B", "z")), "magn, 1")
-# plot_colormap(physics.neel_vector(select_SL_and_component(data2, "A", "z"), select_SL_and_component(data2, "B", "z")), "neel, 2")
-# plot_colormap(physics.magnetizazion(select_SL_and_component(data2, "A", "z"), select_SL_and_component(data2, "B", "z")), "magn, 2")
+    print("Read data")
 
-# %%
-rel_Tstep_pos = 0.49
-show_step = False
-zoom = False
+    # plot_colormap(physics.neel_vector(select_SL_and_component(data1, "A", "z"), select_SL_and_component(data1, "B", "z")), "neel, 1")
+    # plot_colormap(physics.magnetizazion(select_SL_and_component(data1, "A", "z"), select_SL_and_component(data1, "B", "z")), "magn, 1")
+    # plot_colormap(physics.neel_vector(select_SL_and_component(data2, "A", "z"), select_SL_and_component(data2, "B", "z")), "neel, 2")
+    # plot_colormap(physics.magnetizazion(select_SL_and_component(data2, "A", "z"), select_SL_and_component(data2, "B", "z")), "magn, 2")
 
-
-# magn, neel = calculate_magnetization_neel(data3, data3_eq, "x")
-magn, neel = calculate_magnetization_neel(data, direction="x")
-# magn, neel = calculate_magnetization_neel(data1, direction="x")
-plot_colormap(convolute(average_z_layers(magn["z"])), "magnetization z", rel_Tstep_pos, show_step, zoom)
-# plot_colormap(convolute(average_z_layers(neel["z"])), "neel vector z", rel_Tstep_pos, show_step, zoom)
-
-#%%
-# direction = "longitudinal"
-direction = "transversal"
-
-# j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other_paper = calculate_spin_currents(average_z_layers(data), direction)    # This yields incorrect results (or rather all the spin currents are averaged out before being calculated...)
-j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other_paper = average_z_layers(*calculate_spin_currents(data, direction))
-
-# plot_colormap(convolute(j_inter_1), f"j inter +, {direction}", rel_Tstep_pos)
-# plot_colormap(convolute(j_inter_2), f"j inter -, {direction}", rel_Tstep_pos)
-# plot_colormap(convolute(j_intra_A), f"j intra A, {direction}", rel_Tstep_pos)
-# plot_colormap(convolute(j_intra_B), f"j intra B, {direction}", rel_Tstep_pos)
-# plot_colormap(convolute(j_other_paper), f"j other paper, {direction}", rel_Tstep_pos)
-
-plot_colormap(j_inter_1, f"j inter +, {direction}", rel_Tstep_pos, show_step, zoom)
-plot_colormap(j_inter_2, f"j inter -, {direction}", rel_Tstep_pos, show_step, zoom)
-plot_colormap(j_intra_A, f"j intra A, {direction}", rel_Tstep_pos, show_step, zoom)
-plot_colormap(j_intra_B, f"j intra B, {direction}", rel_Tstep_pos, show_step, zoom)
-plot_colormap(j_other_paper, f"j other paper, {direction}", rel_Tstep_pos, show_step, zoom)
+    # %%
+    rel_Tstep_pos = 0.49
+    show_step = False
+    zoom = False
 
 
-# %%
+    magn, neel = calculate_magnetization_neel(data4, data3_eq, "x")
+    # magn, neel = calculate_magnetization_neel(data, direction="x")
+    # magn, neel = calculate_magnetization_neel(data1, direction="x")
+    plot_colormap(convolute(average_z_layers(magn["z"])), "magnetization z", rel_Tstep_pos, show_step, zoom)
+    plot_colormap(convolute(average_z_layers(neel["z"])), "neel vector z", rel_Tstep_pos, show_step, zoom)
 
-magnon_count_A = select_SL_and_component(data, "A", "x") ** 2 + select_SL_and_component(data, "A", "y") ** 2
-magnon_count_B = select_SL_and_component(data, "B", "x") ** 2 + select_SL_and_component(data, "B", "y") ** 2
+    #%%
+    direction = "longitudinal"
+    # direction = "transversal"
 
-plot_colormap(average_z_layers(magnon_count_A), "magnon count A", rel_Tstep_pos, show_step, zoom)
-plot_colormap(average_z_layers(magnon_count_B), "magnon count B", rel_Tstep_pos, show_step, zoom)
+    # j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other_paper = calculate_spin_currents(average_z_layers(data), direction)    # This yields incorrect results (or rather all the spin currents are averaged out before being calculated...)
+    j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other_paper = average_z_layers(*calculate_spin_currents(data, direction))
+
+    # plot_colormap(convolute(j_inter_1), f"j inter +, {direction}", rel_Tstep_pos)
+    # plot_colormap(convolute(j_inter_2), f"j inter -, {direction}", rel_Tstep_pos)
+    # plot_colormap(convolute(j_intra_A), f"j intra A, {direction}", rel_Tstep_pos)
+    # plot_colormap(convolute(j_intra_B), f"j intra B, {direction}", rel_Tstep_pos)
+    # plot_colormap(convolute(j_other_paper), f"j other paper, {direction}", rel_Tstep_pos)
+
+    plot_colormap(j_inter_1, f"j inter +, {direction}", rel_Tstep_pos, show_step, zoom)
+    plot_colormap(j_inter_2, f"j inter -, {direction}", rel_Tstep_pos, show_step, zoom)
+    plot_colormap(j_intra_A, f"j intra A, {direction}", rel_Tstep_pos, show_step, zoom)
+    plot_colormap(j_intra_B, f"j intra B, {direction}", rel_Tstep_pos, show_step, zoom)
+    plot_colormap(j_other_paper, f"j other paper, {direction}", rel_Tstep_pos, show_step, zoom)
+
+
+    # %%
+
+    magnon_count_A = select_SL_and_component(data, "A", "x") ** 2 + select_SL_and_component(data, "A", "y") ** 2
+    magnon_count_B = select_SL_and_component(data, "B", "x") ** 2 + select_SL_and_component(data, "B", "y") ** 2
+
+    plot_colormap(average_z_layers(magnon_count_A), "magnon count A", rel_Tstep_pos, show_step, zoom)
+    plot_colormap(average_z_layers(magnon_count_B), "magnon count B", rel_Tstep_pos, show_step, zoom)
 
