@@ -215,22 +215,31 @@ def calculate_magnetization_neel(data_grid, equi_data_warm=None, direction="x", 
 
 
 
-def convolute(data):
+def convolute(data, filter="denoise"):
     copy = np.squeeze(data)
 
+    if filter is None or filter == 0 or filter == "none" or filter == "copy":
+        return copy
+
+    elif filter == "uniform" or filter == "uni" or filter == 1:
+        return uniform_filter(copy, size=4)
+
+    elif filter == "denoise" or filter == 2:
+        from skimage.restoration import denoise_bilateral
+        return denoise_bilateral(copy, sigma_color=0.001, sigma_spatial=4, mode='edge')  # TODO: Finetune even further
+
+    raise ValueError(f"Unknown filter '{filter}'.")
+
     # return copy
-    return uniform_filter(copy, size=4)
 
     # import cv2
     # normalized = cv2.normalize(copy.astype(np.float32), None, 0, 1, cv2.NORM_MINMAX)
     # return cv2.bilateralFilter(normalized, d=9, sigmaColor=5, sigmaSpace=75) - 0.5
 
-    from skimage.restoration import denoise_bilateral
 
     # normed = (copy - copy.min()) / (copy.max() - copy.min())
     # return denoise_bilateral(normed, sigma_color=0.05, sigma_spatial=4) * (copy.max() - copy.min()) + copy.min()
 
-    return denoise_bilateral(copy, sigma_color=0.01, sigma_spatial=4, mode='constant')  # TODO: Finetune
 
 
 def average_z_layers(data, *args, force_return_tuple=False):

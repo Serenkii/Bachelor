@@ -139,14 +139,14 @@ def dmi_ground_state_comparison(save=False, save_path='out/T-dependent-nernst.pn
     fig, ax = plt.subplots(figsize=(7, 5))
 
     # Assign a color or marker for each type
-    markers = ['o', 's', 'o', 's']  # Circle, square, triangle, diamond
+    markers = ['^', 'o', '^', 'o']  # Circle, square, triangle, diamond
     colors = ['red', 'orange', 'blue', 'purple']
 
     # Plot each type across all groups (x, y, z)
     for i, t in enumerate(types):
         group_labels = list(data.keys())  # ['x', 'y', 'z']
         values = [data[label][i] for label in group_labels]  # Get i-th value for each group
-        ax.scatter(group_labels, values, label=f'{t}', marker=markers[i], color=colors[i])
+        ax.scatter(group_labels, values, label=f'{t}', marker=markers[i], color=colors[i], alpha=0.7)
 
     # Labeling
     ax.set_ylabel('Average value')
@@ -395,15 +395,39 @@ def magnetization_neel_2d_plot():
                                 title="Neel vector (z), equi subtracted (T=2meV) - convoluted")
 
 
+def spin_currents_2d_plot():
+    print("I attempted to gain useful data by calculating the spin currents. Luckily, you can clearly see the Spin"
+          "Seebeck effect when looking at the longitudinal direction of the spin currents. Sadly, for Spin Nernst,"
+          "not much is visible. The following will be plotted: 1. spin currents for SSE, 2. spin currents for SNE, "
+          "3. spin currents for SNE but convoluted.")
+
+    data_path = "PATH"
+
+    print(f"Finished reading data from {data_path}...")
+
+    # TODO: Calculate transverse and longitudinal spin currents as described above
+
+
+def fourier_thingy_TODO_CHANGENAME():
+    print("Lorem ipsum TODO")
 
 
 def presenting_data_02():
+    seperator = "-------------------------------------------------------------\n"
     print("[05.06.25] Presenting data for next meeting with Uli. We are talking about/showing the following:"
           "We want to show the 2D-plots for the whole spin configuration. We want to show SNE, SSE and the Fourier "
-          "analysis.")
+          "analysis.\n"
+          + seperator)
 
-    magnetization_neel_2d_plot()
+    # magnetization_neel_2d_plot()
+    # print(seperator)
 
+    spin_currents_2d_plot()
+    print(seperator)
+
+    # fourier_thingy_TODO_CHANGENAME()
+    # print(seperator)
+    
 
 
 # %% Main
@@ -412,9 +436,9 @@ if __name__ == '__main__':
     # temperature_dependent_nernst(save=True, save_path='out/T-dependent-nernst.png', delta_x=0)
     # dmi_ground_state_comparison(save=True, save_path='out/ground_state_comparison_DMI.pdf')
 
-    quick_seebeck_dmi_comparison()
-    quick_nernst_dmi_comparison()
+    # quick_seebeck_dmi_comparison()
+    # quick_nernst_dmi_comparison()
 
-    # presenting_data_02()
+    presenting_data_02()
 
 
