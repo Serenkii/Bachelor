@@ -15,7 +15,7 @@ import src.physics as physics
 import src.spinconf_util as spinconf_util
 
 
-
+# %% Meeting in May
 
 def temperature_dependent_nernst(save=False, save_path='out/T-dependent-nernst.png', delta_x=0):
     """
@@ -365,7 +365,7 @@ def quick_nernst_dmi_comparison():
     )
 
 
-# %% Beginning of June
+# %% Meeting in June
 
 def magnetization_neel_2d_plot():
     print("Showing magnetizazion and Neel vector for a temperature of T=2meV. We are subtracting the equilibrium state."
@@ -469,16 +469,53 @@ def presenting_data_02():
     # print(seperator)
 
 
+# %% Further stuff for their weird paper
+
+def seebeck_03():
+    print()
+
+    # For direction 110
+    data_diagx_pathA = "/data/scc/marian.gunsch/03_AM_tilted_xTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    data_diagx_pathB = "/data/scc/marian.gunsch/03_AM_tilted_xTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
+
+    # For direction -110
+    data_diagy_pathA = "/data/scc/marian.gunsch/03_AM_tilted_yTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    data_diagy_pathB = "/data/scc/marian.gunsch/03_AM_tilted_yTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
+
+    # TODO: Plot magnetization (z and y component) as a function of grid position
+
+
+
+
+def equi_03():
+    print()
+
+    spinconf_data = "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI/spin-configs-99-999/spin-config-99-999-005000.dat"
+
+    # TODO: Plot 2d colormap for this ground state
+
+
+def presenting_data_03():
+    print("For this paper...")
+
+    seebeck_03()
+
+    equi_03()
+
+
 
 # %% Main
 
 if __name__ == '__main__':
+    pass
     # temperature_dependent_nernst(save=True, save_path='out/T-dependent-nernst.png', delta_x=0)
     # dmi_ground_state_comparison(save=True, save_path='out/ground_state_comparison_DMI.pdf')
 
     # quick_seebeck_dmi_comparison()
     # quick_nernst_dmi_comparison()
 
-    presenting_data_02()
+    # presenting_data_02()
+
+    presenting_data_03()
 
 
