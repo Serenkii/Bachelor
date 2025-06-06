@@ -2,6 +2,7 @@ import numpy as np
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 
 import scipy as sp
 
@@ -396,16 +397,55 @@ def magnetization_neel_2d_plot():
 
 
 def spin_currents_2d_plot():
-    print("I attempted to gain useful data by calculating the spin currents. Luckily, you can clearly see the Spin"
-          "Seebeck effect when looking at the longitudinal direction of the spin currents. Sadly, for Spin Nernst,"
+    print("I attempted to gain useful data by calculating the spin currents. Luckily, you can clearly see the Spin "
+          "Seebeck effect when looking at the longitudinal direction of the spin currents. Sadly, for Spin Nernst, "
           "not much is visible. The following will be plotted: 1. spin currents for SSE, 2. spin currents for SNE, "
           "3. spin currents for SNE but convoluted.")
 
-    data_path = "PATH"
+    data_path = "/data/scc/marian.gunsch/AM_tiltedX_ttmstep_morezlayers_noABC/spin-configs-99-999/spin-config-99-999-005000.dat"
+    # data_path = "/data/scc/marian.gunsch/01_AM_tilted_Tstep/spin-configs-99-999/spin-config-99-999-005000.dat"
+
+    data = spinconf_util.read_spin_config_dat(data_path)
 
     print(f"Finished reading data from {data_path}...")
 
-    # TODO: Calculate transverse and longitudinal spin currents as described above
+    directions = ["longitudinal", "transversal", "transversal"]
+    convolutions = ["none", "none", "denoise"]
+
+    for direction, convolution in zip(directions, convolutions):
+        *data_tuple, j_other_paper = spinconf_util.average_z_layers(
+            *spinconf_util.calculate_spin_currents(data, direction)
+        )
+
+        for i in range(len(data_tuple)):
+            data_tuple[i] = spinconf_util.convolute(data_tuple[i], convolution,
+                                                    denoise_kwargs=dict(sigma_color=0.01, sigma_spatial=4, mode='edge'))
+
+
+        X, Y = np.meshgrid(np.arange(0, data_tuple[0].shape[1], 1, dtype=int),
+                           np.arange(0, data_tuple[0].shape[0], 1, dtype=int),
+                           sparse=True, indexing="xy")
+
+        fig, axs = plt.subplots(2, 2, figsize=(10, 8))
+
+        axs = axs.flatten()
+        titles = ["j_inter_p", "j_inter_m", "j_intra_A", "j_intra_B"]
+
+        for i in range(len(titles)):
+            titles[i] = f"{titles[i]}, {direction}, {convolution}"
+
+        for ax, data_grid, title in zip(axs, data_tuple, titles):
+            im = ax.pcolormesh(X, Y, data_grid, norm=colors.CenteredNorm(), cmap='RdBu_r')
+            ax.set_title(title)
+            ax.set_aspect('equal', 'box')
+            ax.margins(x=0, y=0)
+            fig.colorbar(im, ax=ax)
+
+        fig.tight_layout()
+
+        plt.show()
+
+        # TODO: print statement on what was plotted and saving figure
 
 
 def fourier_thingy_TODO_CHANGENAME():
@@ -427,7 +467,7 @@ def presenting_data_02():
 
     # fourier_thingy_TODO_CHANGENAME()
     # print(seperator)
-    
+
 
 
 # %% Main

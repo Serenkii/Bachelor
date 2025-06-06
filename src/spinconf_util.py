@@ -215,7 +215,7 @@ def calculate_magnetization_neel(data_grid, equi_data_warm=None, direction="x", 
 
 
 
-def convolute(data, filter="denoise"):
+def convolute(data, filter="denoise", denoise_kwargs=None):
     copy = np.squeeze(data)
 
     if filter is None or filter == 0 or filter == "none" or filter == "copy":
@@ -226,6 +226,8 @@ def convolute(data, filter="denoise"):
 
     elif filter == "denoise" or filter == 2:
         from skimage.restoration import denoise_bilateral
+        if denoise_kwargs:
+            return denoise_bilateral(copy, **denoise_kwargs)
         return denoise_bilateral(copy, sigma_color=0.001, sigma_spatial=4, mode='edge')  # TODO: Finetune even further
 
     raise ValueError(f"Unknown filter '{filter}'.")
@@ -276,30 +278,30 @@ if __name__ == "__main__":
     #                                 "/spin-configs-99-999/spin-config-99-999-010000.dat",
     #                                 10, )
 
-    path3 = "/data/scc/marian.gunsch/AM-tilted_Tstep_seebeck/spin-configs-99-999/spin-config-99-999-010000.dat"
-    data3 = read_spin_config_dat(path3)
+    # path3 = "/data/scc/marian.gunsch/AM-tilted_Tstep_seebeck/spin-configs-99-999/spin-config-99-999-010000.dat"
+    # data3 = read_spin_config_dat(path3)
     path3_eq = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_T2meV/spin-configs-99-999/spin-config-99-999-005000.dat"
     data3_eq = read_spin_config_dat(path3_eq)
+    #
+    # path4 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
+    # data4 = read_spin_config_dat(path4)
+    #
+    # path5 = "/data/scc/marian.gunsch/01_AM_tilted_Tstep/spin-configs-99-999/spin-config-99-999-010000.dat"
+    # data5 = read_spin_config_dat(path5)
+    #
+    # path6 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T10/spin-configs-99-999/spin-config-99-999-005000.dat" # high T
+    # path7 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T1/spin-configs-99-999/spin-config-99-999-005000.dat"  # low T
+    #
+    # data6 = read_spin_config_dat(path6)
+    # data7 = read_spin_config_dat(path7)
+    #
+    # path8 = "/data/scc/marian.gunsch/AM-DMI_tilted_Tstep_nernst/spin-configs-99-999/spin-config-99-999-010000.dat"  # DMI
+    # data8 = read_spin_config_dat(path8)
 
-    path4 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
-    data4 = read_spin_config_dat(path4)
-
-    path5 = "/data/scc/marian.gunsch/01_AM_tilted_Tstep/spin-configs-99-999/spin-config-99-999-010000.dat"
-    data5 = read_spin_config_dat(path5)
-
-    path6 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T10/spin-configs-99-999/spin-config-99-999-005000.dat" # high T
-    path7 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T1/spin-configs-99-999/spin-config-99-999-005000.dat"  # low T
-
-    data6 = read_spin_config_dat(path6)
-    data7 = read_spin_config_dat(path7)
-
-    path8 = "/data/scc/marian.gunsch/AM-DMI_tilted_Tstep_nernst/spin-configs-99-999/spin-config-99-999-010000.dat"  # DMI
-    data8 = read_spin_config_dat(path8)
-
-    path9 = "/data/scc/marian.gunsch/02_AM_tilted_Tstep_DMI/spin-configs-99-999/spin-config-99-999-000000.dat"  # DMI more layers
+    path9 = "/data/scc/marian.gunsch/02_AM_tilted_Tstep_DMI/spin-configs-99-999/spin-config-99-999-005000.dat"  # DMI more layers
     data9 = read_spin_config_dat(path9)
 
-    data = data4
+    data = data9
 
     print("Read data")
 
@@ -314,15 +316,17 @@ if __name__ == "__main__":
     zoom = False
 
 
-    magn, neel = calculate_magnetization_neel(data4, data3_eq, "x")
-    # magn, neel = calculate_magnetization_neel(data, direction="x")
+    # magn, neel = calculate_magnetization_neel(data4, data3_eq, "x")
+    magn, neel = calculate_magnetization_neel(data, direction="x")
     # magn, neel = calculate_magnetization_neel(data1, direction="x")
-    plot_colormap(convolute(average_z_layers(magn["z"])), "magnetization z", rel_Tstep_pos, show_step, zoom)
-    plot_colormap(convolute(average_z_layers(neel["z"])), "neel vector z", rel_Tstep_pos, show_step, zoom)
+    plot_colormap(convolute(average_z_layers(magn["z"]), filter="denoise"),
+                  "magnetization z", rel_Tstep_pos, show_step, zoom)
+    plot_colormap(convolute(average_z_layers(neel["z"]), filter="denoise"),
+                  "neel vector z", rel_Tstep_pos, show_step, zoom)
 
     #%%
-    direction = "longitudinal"
-    # direction = "transversal"
+    # direction = "longitudinal"
+    direction = "transversal"
 
     # j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other_paper = calculate_spin_currents(average_z_layers(data), direction)    # This yields incorrect results (or rather all the spin currents are averaged out before being calculated...)
     j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other_paper = average_z_layers(*calculate_spin_currents(data, direction))
