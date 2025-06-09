@@ -11,6 +11,9 @@ import src.helper as helper
 
 default_slice_dict = {'t': 0, 'x': 1, 'y': 2, 'z': 3, '1': 1, '2': 2, '3': 3}
 
+def time_avg(spin_data):
+    return np.average(spin_data, axis=0)
+
 
 def get_component(data, which='z', skip_time_steps=0):
     """
@@ -30,10 +33,24 @@ def get_component(data, which='z', skip_time_steps=0):
     return data[skip_time_steps:, slice_dict[which]::3]
 
 
-def get_components_as_tuple(data, which='xyz', skip_time_steps=0):
+def get_components_as_tuple(data, which='xyz', skip_time_steps=0, do_time_avg=False):
     for component in which:
-        yield get_component(data, component, skip_time_steps=skip_time_steps)
+        if do_time_avg:
+            yield time_avg(get_component(data, component, skip_time_steps=skip_time_steps))
+        else:
+            yield get_component(data, component, skip_time_steps=skip_time_steps)
 
+
+def get_components_as_dict(data, which='xyz', skip_time_steps=0, do_time_avg=False):
+    return_dict = dict()
+    for component in which:
+        if component in return_dict.keys():
+            raise ValueError(f"which={which} is invalid because {component} is in it twice!")
+        if do_time_avg:
+            return_dict[component] = time_avg(get_component(data, component, skip_time_steps=skip_time_steps))
+        else:
+            return_dict[component] = get_component(data, component, skip_time_steps=skip_time_steps)
+    return return_dict
 
 
 # TODO: Test PROBABLY INDEX ERROR

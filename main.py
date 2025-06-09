@@ -13,7 +13,7 @@ import src.utility as util
 import src.plot_util as plot_util
 import src.physics as physics
 import src.spinconf_util as spinconf_util
-
+import src.helper as helper
 
 # %% Meeting in May
 
@@ -471,7 +471,7 @@ def presenting_data_02():
 
 # %% Further stuff for their weird paper
 
-def seebeck_03():
+def seebeck_03(file_path_magnetization, file_path_magnon_acc):
     print()
 
     # For direction 110
@@ -482,25 +482,164 @@ def seebeck_03():
     data_diagy_pathA = "/data/scc/marian.gunsch/03_AM_tilted_yTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
     data_diagy_pathB = "/data/scc/marian.gunsch/03_AM_tilted_yTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
 
-    # TODO: Plot magnetization (z and y component) as a function of grid position
+    datax_A = np.loadtxt(data_diagx_pathA)
+    datax_B = np.loadtxt(data_diagx_pathB)
+    datay_A = np.loadtxt(data_diagy_pathA, skiprows=131)        # Somehow these data files are kinda broken...
+    datay_B = np.loadtxt(data_diagy_pathB, skiprows=131)        # The first 8 rows are incomplete??
+
+    spins_x_A = mag_util.get_components_as_dict(datax_A, 'xyz', 1, True)
+    spins_x_B = mag_util.get_components_as_dict(datax_B, 'xyz', 1, True)
+    spins_y_A = mag_util.get_components_as_dict(datay_A, 'xyz', 0, True)
+    spins_y_B = mag_util.get_components_as_dict(datay_B, 'xyz', 0, True)
+
+    magnetizations_x = dict()
+    magnetizations_y = dict()
+
+    for component in spins_x_A.keys():
+        magnetizations_x[component] = physics.magnetizazion(spins_x_A[component], spins_x_B[component])
+        magnetizations_y[component] = physics.magnetizazion(spins_y_A[component], spins_y_B[component])
+
+    for component in spins_x_A.keys():
+        print(f"Plotting {component}-component of magnetization.")
+        fig, ax = plt.subplots()
+
+        ax.set_title(f"Magnetization, {component}-component")
+        ax.set_xlabel("Grid position")
+        ax.set_ylabel("Magnetization [au]")
+
+        ax.plot(magnetizations_x[component], label="110")
+        ax.plot(magnetizations_y[component], label="-110")
+
+        ax.legend()
+
+        plt.savefig(f"{file_path_magnetization}{component}.pdf")
+
+        plt.show()
+
+
+    # Now with ground state subtracted:
+    # We need ground state with T=7meV and DMI
+    print("Equilibrium data to subtract for Seebeck")
+    rel_T_step_pos = 0.49
+
+    warm_eq_path_A = "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    warm_eq_path_B = "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
+
+    cold_eq_path_A = "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI_T0/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    cold_eq_path_B = "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI_T0/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
+
+    data_warm_A = np.loadtxt(warm_eq_path_A)
+    data_warm_B = np.loadtxt(warm_eq_path_B)
+    data_cold_A = np.loadtxt(cold_eq_path_A)
+    data_cold_B = np.loadtxt(cold_eq_path_B)
+
+    spins_warm_A = mag_util.get_components_as_dict(data_warm_A, 'xyz', 1, True)
+    spins_warm_B = mag_util.get_components_as_dict(data_warm_B, 'xyz', 1, True)
+    spins_cold_A = mag_util.get_components_as_dict(data_cold_A, 'xyz', 1, True)
+    spins_cold_B = mag_util.get_components_as_dict(data_cold_B, 'xyz', 1, True)
+
+    magnetizations_warm = dict()
+    magnetizations_cold = dict()
+
+    for component in spins_warm_A.keys():
+        magnetizations_warm[component] = np.mean(physics.magnetizazion(spins_warm_A[component], spins_warm_B[component]))
+        magnetizations_cold[component] = np.mean(physics.magnetizazion(spins_cold_A[component], spins_cold_B[component]))
+
+    magnon_acc_x = dict()
+    magnon_acc_y = dict()
+    abs_T_step_pos = helper.get_absolute_T_step_index(rel_T_step_pos, magnetizations_x["z"].shape[0])
+
+    for component in magnetizations_warm.keys():
+        j = component
+        magnon_acc_x[j] = np.empty_like(magnetizations_x[j])
+        magnon_acc_y[j] = np.empty_like(magnetizations_y[j])
+
+        magnon_acc_x[j][:abs_T_step_pos] = (magnetizations_x[j][:abs_T_step_pos]) - (magnetizations_warm[j])
+        magnon_acc_x[j][abs_T_step_pos:] = (magnetizations_x[j][abs_T_step_pos:]) - (magnetizations_cold[j])
+
+        magnon_acc_y[j][:abs_T_step_pos] = (magnetizations_y[j][:abs_T_step_pos]) - (magnetizations_warm[j])
+        magnon_acc_y[j][abs_T_step_pos:] = (magnetizations_y[j][abs_T_step_pos:]) - (magnetizations_cold[j])
+
+    for component in magnon_acc_x.keys():
+        print(f"Plotting {component}-component of magnon-accumulation.")
+        fig, ax = plt.subplots()
+
+        ax.set_title(f"Magnon accumulation, {component}-component (equilibrium subtracted)")
+        ax.set_xlabel("Grid position")
+        ax.set_ylabel("Magnetization [au]")
+
+        ax.plot(magnon_acc_x[component], label="110")
+        ax.plot(magnon_acc_y[component], label="-110")
+
+        ax.legend()
+
+        plt.savefig(f"{file_path_magnon_acc}{component}.pdf")
+
+        plt.show()
 
 
 
+    # TODO: Also plot with equilibrium state subtracted!
+    # TODO: Careful! It has to be DMI-equilibrium state, also for y!
 
-def equi_03():
+
+def equi_03(file_path):
     print()
 
     spinconf_data = "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI/spin-configs-99-999/spin-config-99-999-005000.dat"
+    # TODO: Change, below is temporary
+    # spinconf_data = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_T2meV/spin-configs-99-999/spin-config-99-999-005000.dat"
 
-    # TODO: Plot 2d colormap for this ground state
+    equi_data = spinconf_util.average_z_layers(spinconf_util.read_spin_config_dat(spinconf_data))
+
+    print(f"Finished reading equilibrium data from '{spinconf_data}'...")
+
+    magnetization = dict()
+    for component in "xyz":
+        magnetization[component] = np.squeeze(physics.magnetizazion(
+            spinconf_util.select_SL_and_component(equi_data, "A", component),
+            spinconf_util.select_SL_and_component(equi_data, "B", component)
+        ))
+
+    for component in magnetization.keys():
+        data_grid = magnetization[component]
+
+        X, Y = np.meshgrid(np.arange(0, data_grid.shape[1], 1, dtype=int),
+                       np.arange(0, data_grid.shape[0], 1, dtype=int),
+                       sparse=True, indexing='xy')
+
+        fig, ax = plt.subplots()
+        ax.set_xlabel("Grid position in direction [110]")
+        ax.set_ylabel("Grid position in direction [-110]")
+
+        ax.set_aspect('equal', 'box')
+        ax.set_title(f"Magnetization: {component}-component")
+        im = ax.pcolormesh(X, Y, data_grid, norm=colors.CenteredNorm(), cmap='RdBu_r')
+        fig.colorbar(im, ax=ax)
+
+        ax.margins(x=0, y=0)
+
+        fig.tight_layout()
+
+        plt.savefig(f"{file_path}{component}.pdf")
+
+        plt.show()
+
+
 
 
 def presenting_data_03():
-    print("For this paper...")
+    print("For Tobias' paper...")
 
-    seebeck_03()
+    seebeck_eq_file = "out/03_tobi_paper/seebeck_eq_"
+    seebeck_file = "out/03_tobi_paper/seebeck_"
+    colormap_file_path = "out/03_tobi_paper/2d_plot_"
 
-    equi_03()
+    print("Seebeck")
+    seebeck_03(seebeck_file, seebeck_eq_file)
+
+    print("Equilibrium state")
+    equi_03(colormap_file_path)
 
 
 
