@@ -55,8 +55,19 @@ def get_components(data, sublattice='A', which='tz', skip_time_steps=0, squeeze=
     return data[skip_time_steps:, slice_list]
 
 
-# TODO: Test
-def get_components_as_tuple(data, sublattice='A', which='tz', skip_time_steps=0):
-    for component in which:
-        yield get_components(data, sublattice, component, skip_time_steps=skip_time_steps, squeeze=True)
+def time_avg(spin_data):
+    return np.average(spin_data, axis=0)
 
+# TODO: Test
+def get_components_as_tuple(data, sublattice='A', which='tz', skip_time_steps=0, do_time_avg=False):
+    for component in which:
+        if do_time_avg:
+            yield time_avg(get_components(data, sublattice, component, skip_time_steps=skip_time_steps, squeeze=True))
+        else:
+            yield get_components(data, sublattice, component, skip_time_steps=skip_time_steps, squeeze=True)
+
+
+def get_components_as_dict(data, sublattice='A', which='tz', skip_time_steps=0, do_time_avg=False):
+    if len(set(which)) > len(which):
+        raise ValueError(f"There are non-unique elements in which: {which}")
+    return dict(zip(list(which), get_components_as_tuple(data, sublattice, which, skip_time_steps, do_time_avg)))
