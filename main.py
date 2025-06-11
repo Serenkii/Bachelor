@@ -450,6 +450,7 @@ def spin_currents_2d_plot():
 
 def fourier_thingy_TODO_CHANGENAME():
     print("Lorem ipsum TODO")
+    # TODO
 
 
 def presenting_data_02():
@@ -459,11 +460,11 @@ def presenting_data_02():
           "analysis.\n"
           + seperator)
 
-    # magnetization_neel_2d_plot()
-    # print(seperator)
-
-    spin_currents_2d_plot()
+    magnetization_neel_2d_plot()
     print(seperator)
+
+    # spin_currents_2d_plot()
+    # print(seperator)
 
     # fourier_thingy_TODO_CHANGENAME()
     # print(seperator)
@@ -641,10 +642,12 @@ def seebeck_03(file_path_magnetization, file_path_magnon_acc):
 
 
 
-def equi_03(file_path):
+def plot_2d_03(load_path, save_path, width_xy=100):
     print()
 
     spinconf_data = "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI/spin-configs-99-999/spin-config-99-999-005000.dat"
+    spinconf_data = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI-2/spin-configs-99-999/spin-config-99-999-005000.dat"
+    spinconf_data = load_path
 
     equi_data = spinconf_util.average_z_layers(spinconf_util.read_spin_config_dat(spinconf_data))
 
@@ -664,6 +667,10 @@ def equi_03(file_path):
                        np.arange(0, data_grid.shape[0], 1, dtype=int),
                        sparse=True, indexing='xy')
 
+        middle = int(data_grid.shape[0] / 2)
+        lower = int(max(middle - width_xy / 2, 0))
+        upper = int(min(middle + width_xy / 2, data_grid.shape[0]))
+
         fig, ax = plt.subplots()
         ax.set_xlabel("Grid position in direction [110]")
         ax.set_ylabel("Grid position in direction [-110]")
@@ -673,14 +680,16 @@ def equi_03(file_path):
         im = ax.pcolormesh(X, Y, data_grid, norm=colors.CenteredNorm(), cmap='RdBu_r')
         fig.colorbar(im, ax=ax)
 
-        ax.margins(x=0, y=0)
+        # ax.margins(x=0, y=0)
+
+        ax.set_xlim(lower, upper)
+        ax.set_ylim(lower, upper)
 
         fig.tight_layout()
 
-        plt.savefig(f"{file_path}{component}.pdf")
+        plt.savefig(f"{save_path}{component}.pdf")
 
         plt.show()
-
 
 
 
@@ -689,14 +698,33 @@ def presenting_data_03():
 
     seebeck_eq_file = "out/03_tobi_paper/seebeck_eq_"
     seebeck_file = "out/03_tobi_paper/seebeck_"
-    colormap_file_path = "out/03_tobi_paper/2d_plot_"
 
     print("Seebeck")
     seebeck_03(seebeck_file, seebeck_eq_file)
 
-    print("Equilibrium state")
-    equi_03(colormap_file_path)
+    load_paths = [
+        "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
+        "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI_ferri-2/spin-configs-99-999/spin-config-99-999-005000.dat",
+        "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI_large_ferri/spin-configs-99-999/spin-config-99-999-005000.dat"
+    ]
+    save_paths = ["out/03_tobi_paper/2d_plot_T7_",
+                  "out/03_tobi_paper/2d_plot_T2_",
+                  "out/03_tobi_paper/2d_plot_T2_largeDMI_",]
 
+    print("Equilibrium states")
+    for load_path, save_path in zip(load_paths, save_paths):
+        print(".")
+        plot_2d_03(load_path, save_path)
+
+    print("\n\nSeebeck 2d\n")
+    plot_2d_03("/data/scc/marian.gunsch/03_AM_tilted_xTstep_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
+            "out/03_tobi_paper/2d_plot_seebeck_110_")
+    plot_2d_03("/data/scc/marian.gunsch/03_AM_tilted_yTstep_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
+            "out/03_tobi_paper/2d_plot_seebeck_-110_")
+    plot_2d_03("/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat",
+               "out/03_tobi_paper/2d_plot_seebeck_110_T2_noDMI_")
+    plot_2d_03("/data/scc/marian.gunsch/02_AM_tilted_Tstep_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
+               "out/03_tobi_paper/2d_plot_seebeck_110_T2_")
 
 
 # %% Main
