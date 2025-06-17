@@ -35,7 +35,5 @@ def save_file_as_npy(old: str, new: str, force=False):
 
 
 
-
-
 def time_avg(spin_data):
     return np.average(spin_data, axis=0)

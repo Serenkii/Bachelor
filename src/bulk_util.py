@@ -71,3 +71,22 @@ def get_components_as_dict(data, sublattice='A', which='tz', skip_time_steps=0, 
     if len(set(which)) > len(which):
         raise ValueError(f"There are non-unique elements in which: {which}")
     return dict(zip(list(which), get_components_as_tuple(data, sublattice, which, skip_time_steps, do_time_avg)))
+
+
+def get_mean(file_path, skip_time_steps=1):
+    """
+    Returns the spin average of the x, y and z spin component
+    :param file_path:
+    :param skip_time_steps:
+    :return:
+    """
+    data = np.loadtxt(file_path)
+    spins_A = get_components_as_dict(data, sublattice='A', which="xyz", skip_time_steps=skip_time_steps, do_time_avg=True)
+    spins_B = get_components_as_dict(data, sublattice='B', which="xyz", skip_time_steps=skip_time_steps, do_time_avg=True)
+
+    for component in spins_A:
+        spins_A[component] = np.mean(spins_A[component])
+        spins_B[component] = np.mean(spins_B[component])
+
+    return spins_A, spins_B
+

@@ -48,7 +48,7 @@ def temperature_dependent_nernst(save=False, save_path='out/T-dependent-nernst.p
         Sz_A[key] = util.time_avg(mag_util.get_component(data_dict_A[key], 'z', skip_time_steps=1))
         Sz_B[key] = util.time_avg(mag_util.get_component(data_dict_B[key], 'z', skip_time_steps=1))
         neel[key] = physics.neel_vector(Sz_A[key], Sz_B[key])
-        magn[key] = physics.magnetizazion(Sz_A[key], Sz_B[key])
+        magn[key] = physics.magnetization(Sz_A[key], Sz_B[key])
     print()
 
     x = np.arange(delta_x, neel['1'].size - delta_x, 1.0)
@@ -169,8 +169,8 @@ def dmi_ground_state_comparison(save=False, save_path='out/T-dependent-nernst.pn
     for i in range(3):
         neel.append(physics.neel_vector(spins_A[i], spins_B[i]))
         neel_DMI.append(physics.neel_vector(spins_DMI_A[i], spins_DMI_B[i]))
-        magn.append(physics.magnetizazion(spins_A[i], spins_B[i]))
-        magn_DMI.append(physics.magnetizazion(spins_DMI_A[i], spins_DMI_B[i]))
+        magn.append(physics.magnetization(spins_A[i], spins_B[i]))
+        magn_DMI.append(physics.magnetization(spins_DMI_A[i], spins_DMI_B[i]))
 
 
 
@@ -210,10 +210,10 @@ def dmi_comparison(dmi_path_A, dmi_path_B, no_dmi_path_A, no_dmi_path_B, title="
     Sz_nodmi_B = util.time_avg(mag_util.get_component(data_nodmi_B, 'z', 1))
 
     neel_dmi = physics.neel_vector(Sz_dmi_A, Sz_dmi_B)
-    magn_dmi = physics.magnetizazion(Sz_dmi_A, Sz_dmi_B)
+    magn_dmi = physics.magnetization(Sz_dmi_A, Sz_dmi_B)
 
     neel_nodmi = physics.neel_vector(Sz_nodmi_A, Sz_nodmi_B)
-    magn_nodmi = physics.magnetizazion(Sz_nodmi_A, Sz_nodmi_B)
+    magn_nodmi = physics.magnetization(Sz_nodmi_A, Sz_nodmi_B)
 
     x = np.arange(delta_x, neel_dmi.size - delta_x, 1.0)
 
@@ -368,7 +368,8 @@ def quick_nernst_dmi_comparison():
 # %% Meeting in June
 
 def magnetization_neel_2d_plot():
-    print("Showing magnetizazion and Neel vector for a temperature of T=2meV. We are subtracting the equilibrium state."
+    print("MAGNETIZATION AND NEEL VECTOR\n"
+          "Showing magnetizazion and Neel vector for a temperature of T=2meV. We are subtracting the equilibrium state."
           " One plot with and one without convolution.\n"
           "Parameters of the simulation: open open open boundaries, 512x512x64")
 
@@ -397,7 +398,8 @@ def magnetization_neel_2d_plot():
 
 
 def spin_currents_2d_plot():
-    print("I attempted to gain useful data by calculating the spin currents. Luckily, you can clearly see the Spin "
+    print("SPIN CURRENTS\n"
+          "I attempted to gain useful data by calculating the spin currents. Luckily, you can clearly see the Spin "
           "Seebeck effect when looking at the longitudinal direction of the spin currents. Sadly, for Spin Nernst, "
           "not much is visible. The following will be plotted: 1. spin currents for SSE, 2. spin currents for SNE, "
           "3. spin currents for SNE but convoluted.")
@@ -445,200 +447,124 @@ def spin_currents_2d_plot():
 
         plt.show()
 
+        print(f"Plotting spin currents in {direction} direction with convolution '{convolution}'...")
+
         # TODO: print statement on what was plotted and saving figure
 
 
 def fourier_thingy_TODO_CHANGENAME():
-    print("Lorem ipsum TODO")
-    # TODO
+    print("MAGNON DENSITY AS A FUNCTION OF FREQUENCY\n"
+          "For the spin Nernst effect, we want to look at the frequency dependency of the magnon density as a function "
+          "in space. We want to know the magnon density for different frequencies at different positions along the "
+          "orthogonal direction of the temperature gradient (step). Therefore we want a two-dimensional colorplot, one "
+          "axis is the position and the other is the frequency. The color then corresponds to the magnon density.\n"
+          "The procedure is not optimal. Ideally we would take all (for each grid position) Sx and Sy, Fourier "
+          "transform, square them and "
+          "THEN average. This is not possible because spin configurations don't include all time steps. Therefore "
+          "we now try to take the magnetic profile (where all the spins were already averaged) and then we square."
+          )
+
+    data_A_path = "/data/scc/marian.gunsch/01_AM_tilted_Tstep/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    data_B_path = "/data/scc/marian.gunsch/01_AM_tilted_Tstep/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
+
+    data_A = np.loadtxt(data_A_path)
+    data_B = np.loadtxt(data_B_path)
+
+    Sx = mag_util.get_component(data_A, "x", 1) + mag_util.get_component(data_B, "x", 1)
+    Sy = mag_util.get_component(data_A, "y", 1) + mag_util.get_component(data_B, "y", 1)
+
+    # Fourier
+    time_steps = mag_util.get_component(data_A, "t", 1)
+    dt = time_steps[1] - time_steps[0]
+
+    Sx_F_ = np.fft.fft(Sx, axis=0)
+    Sy_F_ = np.fft.fft(Sy, axis=0)
+
+    freqs = np.fft.fftfreq(time_steps.shape[0], d=dt)
+    omega = 2 * np.pi * freqs
+
+    Sx_F = np.fft.fftshift(Sx_F_, axes=0)
+    Sy_F = np.fft.fftshift(Sy_F_, axes=0)
+    omega_shifted = np.fft.fftshift(omega)
+
+    magnon_density = Sx_F ** 2 + Sy_F ** 2
+
+    # plotting
+    fig, ax = plt.subplots()
+    ax.plot(omega_shifted, magnon_density[:, 0], label="position 0")
+
+    plt.show()
 
 
 def presenting_data_02():
     seperator = "-------------------------------------------------------------\n"
-    print("[05.06.25] Presenting data for next meeting with Uli. We are talking about/showing the following:"
+    print("[05.06.25] Presenting data for next meeting with Uli. We are talking about/showing the following:\n"
           "We want to show the 2D-plots for the whole spin configuration. We want to show SNE, SSE and the Fourier "
           "analysis.\n"
           + seperator)
 
-    magnetization_neel_2d_plot()
-    print(seperator)
+    # magnetization_neel_2d_plot()
+    # print(seperator)
 
     # spin_currents_2d_plot()
     # print(seperator)
 
-    # fourier_thingy_TODO_CHANGENAME()
-    # print(seperator)
+    fourier_thingy_TODO_CHANGENAME()
+    print(seperator)
 
 
-# %% Further stuff for their weird paper
+# %% Further stuff for their weird paper (03)
 
 def seebeck_03(file_path_magnetization, file_path_magnon_acc):
     print()
 
-    cutoff = 10
     noDMI_kwargs = dict(alpha=0.7, linestyle="--", linewidth=1.0)
 
-    # For direction 110 (with DMI)
-    data_diagx_pathA = "/data/scc/marian.gunsch/03_AM_tilted_xTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
-    data_diagx_pathB = "/data/scc/marian.gunsch/03_AM_tilted_xTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
+    prefix = "/data/scc/marian.gunsch/"
+    mag_util.plot_magnetic_profile(
+        [f"{prefix}03_AM_tilted_xTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}03_AM_tilted_yTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}AM_mag-accumu_tilt_x-axis_kT-7/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}AM_mag-accumu_tilt_y-axis_kT-7/spin-configs-99-999/mag-profile-99-999.altermagnet"], [0, 131, 0, 0],
+        file_path_magnetization, None, None, 0.49,
+        [dict(label="DMI, [110]"),
+        dict(label="DMI, [-110]"),
+        dict(label="no DMI, [110]", **noDMI_kwargs),
+        dict(label="no DMI, [,110]", **noDMI_kwargs)]
+    )
 
-    # For direction -110 (with DMI)
-    data_diagy_pathA = "/data/scc/marian.gunsch/03_AM_tilted_yTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
-    data_diagy_pathB = "/data/scc/marian.gunsch/03_AM_tilted_yTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
+    # Subtracting equilibrium
+    spins_warm_A, spins_warm_B = mag_util.get_mean(
+        "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
+    )
+    spins_cold_A, spins_cold_B = mag_util.get_mean(
+        "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI_T0/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI_T0/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
+    )
+    spins_warm_nodmi_A, spins_warm_nodmi_B = bulk_util.get_mean("data/temp/altermagnet-equilibrium-7meV.dat")
 
-    # For direction 110 without DMI
-    data_noDMIx_pathA = "/data/scc/marian.gunsch/AM_mag-accumu_tilt_x-axis_kT-7/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
-    data_noDMIx_pathB = "/data/scc/marian.gunsch/AM_mag-accumu_tilt_x-axis_kT-7/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
-
-    # For direction -110 without DMI
-    data_noDMIy_pathA = "/data/scc/marian.gunsch/AM_mag-accumu_tilt_y-axis_kT-7/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
-    data_noDMIy_pathB = "/data/scc/marian.gunsch/AM_mag-accumu_tilt_y-axis_kT-7/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
-
-    datax_A = np.loadtxt(data_diagx_pathA)
-    datax_B = np.loadtxt(data_diagx_pathB)
-    datay_A = np.loadtxt(data_diagy_pathA, skiprows=131)        # Somehow these data files are kinda broken...
-    datay_B = np.loadtxt(data_diagy_pathB, skiprows=131)        # The first 8 rows are incomplete??
-    data_noDMIx_A = np.loadtxt(data_noDMIx_pathA)
-    data_noDMIx_B = np.loadtxt(data_noDMIx_pathB)
-    data_noDMIy_A = np.loadtxt(data_noDMIy_pathA)
-    data_noDMIy_B = np.loadtxt(data_noDMIy_pathB)
-
-    spins_x_A = mag_util.get_components_as_dict(datax_A, 'xyz', 1, True)
-    spins_x_B = mag_util.get_components_as_dict(datax_B, 'xyz', 1, True)
-    spins_y_A = mag_util.get_components_as_dict(datay_A, 'xyz', 0, True)
-    spins_y_B = mag_util.get_components_as_dict(datay_B, 'xyz', 0, True)
-    spins_noDMIx_A = mag_util.get_components_as_dict(data_noDMIx_A, 'xyz', 1, True)
-    spins_noDMIx_B = mag_util.get_components_as_dict(data_noDMIx_B, 'xyz', 1, True)
-    spins_noDMIy_A = mag_util.get_components_as_dict(data_noDMIy_A, 'xyz', 1, True)
-    spins_noDMIy_B = mag_util.get_components_as_dict(data_noDMIy_B, 'xyz', 1, True)
-
-    magnetizations_x = dict()
-    magnetizations_y = dict()
-    magnetizations_noDMIx = dict()
-    magnetizations_noDMIy = dict()
-
-    for component in spins_x_A.keys():
-        magnetizations_x[component] = physics.magnetizazion(spins_x_A[component], spins_x_B[component])
-        magnetizations_y[component] = physics.magnetizazion(spins_y_A[component], spins_y_B[component])
-        magnetizations_noDMIx[component] = physics.magnetizazion(spins_noDMIx_A[component], spins_noDMIx_B[component])
-        magnetizations_noDMIy[component] = physics.magnetizazion(spins_noDMIy_A[component], spins_noDMIy_B[component])
-
-    for component in spins_x_A.keys():
-        print(f"Plotting {component}-component of magnetization.")
-        fig, ax = plt.subplots()
-
-        ax.set_title(f"Magnetization, {component}-component")
-        ax.set_xlabel("Grid position")
-        ax.set_ylabel("Magnetization [au]")
-
-        ax.plot(magnetizations_x[component][cutoff:-cutoff], label="DMI, [110]")
-        ax.plot(magnetizations_y[component][cutoff:-cutoff], label="DMI, [-110]")
-
-        # no DMI
-        ax.set_ylabel("Magnetization [au]")
-        ax.plot(magnetizations_noDMIx[component][cutoff:-cutoff], label="no DMI, [110]", **noDMI_kwargs)
-        ax.plot(magnetizations_noDMIy[component][cutoff:-cutoff], label="no DMI, [-110]", **noDMI_kwargs)
-
-        ax.legend()
-
-        fig.tight_layout()
-
-        plt.savefig(f"{file_path_magnetization}{component}.pdf")
-
-        plt.show()
+    mag_util.plot_magnetic_profile(
+        [f"{prefix}03_AM_tilted_xTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}03_AM_tilted_yTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}AM_mag-accumu_tilt_x-axis_kT-7/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}AM_mag-accumu_tilt_y-axis_kT-7/spin-configs-99-999/mag-profile-99-999.altermagnet"], [0, 131, 0, 0],
+        file_path_magnon_acc, [(spins_warm_A, spins_warm_B),
+                               (spins_warm_A, spins_warm_B),
+                               (spins_warm_nodmi_A, spins_warm_nodmi_B),
+                               (spins_warm_nodmi_A, spins_warm_nodmi_B)], [(spins_cold_A, spins_cold_B),
+                                                                           (spins_cold_A, spins_cold_B),
+                                                                           (dict(x=0, y=0, z=1), dict(x=0, y=0, z=-1)),
+                                                                           # maybe 1 and -1 swapped
+                                                                           (dict(x=0, y=0, z=1), dict(x=0, y=0, z=-1))],
+        0.49,
+        [dict(label="DMI, [110]"),
+        dict(label="DMI, [-110]"),
+        dict(label="no DMI, [110]", **noDMI_kwargs),
+        dict(label="no DMI, [,110]", **noDMI_kwargs)]
+    )
 
 
-    # Now with ground state subtracted:
-    # We need ground state with T=7meV and DMI
-    print("Equilibrium data to subtract for Seebeck")
-    rel_T_step_pos = 0.49
-
-    # Warm (7meV) with DMI
-    warm_eq_path_A = "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
-    warm_eq_path_B = "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
-    # Cold (0meV) with DMI
-    cold_eq_path_A = "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI_T0/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
-    cold_eq_path_B = "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI_T0/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
-    # Warm (7meV) without DMI
-    warm_eq_nodmi_path = "data/temp/altermagnet-equilibrium-7meV.dat"
-
-    data_warm_A = np.loadtxt(warm_eq_path_A)
-    data_warm_B = np.loadtxt(warm_eq_path_B)
-    data_cold_A = np.loadtxt(cold_eq_path_A)
-    data_cold_B = np.loadtxt(cold_eq_path_B)
-    # no DMI
-    data_warm_nodmi = np.loadtxt(warm_eq_nodmi_path)
-
-    spins_warm_A = mag_util.get_components_as_dict(data_warm_A, 'xyz', 1, True)
-    spins_warm_B = mag_util.get_components_as_dict(data_warm_B, 'xyz', 1, True)
-    spins_cold_A = mag_util.get_components_as_dict(data_cold_A, 'xyz', 1, True)
-    spins_cold_B = mag_util.get_components_as_dict(data_cold_B, 'xyz', 1, True)
-    # no DMI
-    spins_warm_nodmi_A = bulk_util.get_components_as_dict(data_warm_nodmi, 'A', 'xyz', 1, True)
-    spins_warm_nodmi_B = bulk_util.get_components_as_dict(data_warm_nodmi, 'B', 'xyz', 1, True)
-
-    magnetizations_warm = dict()
-    magnetizations_cold = dict()
-    # no DMI
-    magnetizations_warm_nodmi = dict()
-    magnetizations_cold_nodmi = dict(x=0, y=0, z=0)
-
-    for component in spins_warm_A.keys():
-        magnetizations_warm[component] = np.mean(physics.magnetizazion(spins_warm_A[component], spins_warm_B[component]))
-        magnetizations_cold[component] = np.mean(physics.magnetizazion(spins_cold_A[component], spins_cold_B[component]))
-        magnetizations_warm_nodmi[component] = np.mean(physics.magnetizazion(spins_warm_nodmi_A[component],
-                                                                             spins_warm_nodmi_B[component]))
-
-    magnon_acc_x = dict()
-    magnon_acc_y = dict()
-    # no DMI
-    magnon_acc_noDMIx = dict()
-    magnon_acc_noDMIy = dict()
-
-    abs_T_step_pos = helper.get_absolute_T_step_index(rel_T_step_pos, magnetizations_x["z"].shape[0])
-
-    for component in magnetizations_warm.keys():
-        j = component
-        magnon_acc_x[j] = np.empty_like(magnetizations_x[j])
-        magnon_acc_y[j] = np.empty_like(magnetizations_y[j])
-        # no DMI
-        magnon_acc_noDMIx[j] = np.empty_like(magnetizations_noDMIx[j])
-        magnon_acc_noDMIy[j] = np.empty_like(magnetizations_noDMIx[j])
-
-        magnon_acc_x[j][:abs_T_step_pos] = (magnetizations_x[j][:abs_T_step_pos]) - (magnetizations_warm[j])
-        magnon_acc_x[j][abs_T_step_pos:] = (magnetizations_x[j][abs_T_step_pos:]) - (magnetizations_cold[j])
-
-        magnon_acc_y[j][:abs_T_step_pos] = (magnetizations_y[j][:abs_T_step_pos]) - (magnetizations_warm[j])
-        magnon_acc_y[j][abs_T_step_pos:] = (magnetizations_y[j][abs_T_step_pos:]) - (magnetizations_cold[j])
-
-        # no DMI
-        magnon_acc_noDMIx[j][:abs_T_step_pos] = (magnetizations_noDMIx[j][:abs_T_step_pos]) - (magnetizations_warm_nodmi[j])
-        magnon_acc_noDMIx[j][abs_T_step_pos:] = (magnetizations_noDMIx[j][abs_T_step_pos:]) - (magnetizations_cold_nodmi[j])
-
-        magnon_acc_noDMIy[j][:abs_T_step_pos] = (magnetizations_noDMIy[j][:abs_T_step_pos]) - (magnetizations_warm_nodmi[j])
-        magnon_acc_noDMIy[j][abs_T_step_pos:] = (magnetizations_noDMIy[j][abs_T_step_pos:]) - (magnetizations_cold_nodmi[j])
-
-
-    for component in magnon_acc_x.keys():
-        print(f"Plotting {component}-component of magnon-accumulation.")
-        fig, ax = plt.subplots()
-
-        ax.set_title(f"Magnon accumulation, {component}-component (equilibrium subtracted)")
-        ax.set_xlabel("Grid position")
-        ax.set_ylabel("Magnetization [au]")
-
-        ax.plot(magnon_acc_x[component][cutoff:-cutoff], label="DMI, [110]")
-        ax.plot(magnon_acc_y[component][cutoff:-cutoff], label="DMI, [-110]")
-
-        # no DMI
-        ax.plot(magnon_acc_noDMIx[component][cutoff:-cutoff], label="no DMI, [110]", **noDMI_kwargs)
-        ax.plot(magnon_acc_noDMIy[component][cutoff:-cutoff], label="no DMI, [-110]", **noDMI_kwargs)
-
-        ax.legend()
-
-        plt.savefig(f"{file_path_magnon_acc}{component}.pdf")
-
-        plt.show()
 
 
 
@@ -655,10 +581,9 @@ def plot_2d_03(load_path, save_path, width_xy=100):
 
     magnetization = dict()
     for component in "xyz":
-        magnetization[component] = np.squeeze(physics.magnetizazion(
-            spinconf_util.select_SL_and_component(equi_data, "A", component),
-            spinconf_util.select_SL_and_component(equi_data, "B", component)
-        ))
+        magnetization[component] = np.squeeze(
+            physics.magnetization(spinconf_util.select_SL_and_component(equi_data, "A", component),
+                                  spinconf_util.select_SL_and_component(equi_data, "B", component)))
 
     for component in magnetization.keys():
         data_grid = magnetization[component]
@@ -696,11 +621,8 @@ def plot_2d_03(load_path, save_path, width_xy=100):
 def presenting_data_03():
     print("For Tobias' paper...")
 
-    seebeck_eq_file = "out/03_tobi_paper/seebeck_eq_"
-    seebeck_file = "out/03_tobi_paper/seebeck_"
-
     print("Seebeck")
-    seebeck_03(seebeck_file, seebeck_eq_file)
+    seebeck_03("out/03_tobi_paper/seebeck", "out/03_tobi_paper/seebeck_eq")
 
     load_paths = [
         "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
@@ -739,6 +661,6 @@ if __name__ == '__main__':
 
     # presenting_data_02()
 
-    presenting_data_03()
+    pass
 
 

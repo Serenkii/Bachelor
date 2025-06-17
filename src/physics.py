@@ -23,7 +23,7 @@ def neel_vector(Sz_A, Sz_B, do_time_avg=False):
     return 0.5 * (Sz_A - Sz_B)
 
 
-def magnetizazion(Sz_A, Sz_B, do_time_avg=False):
+def magnetization(Sz_A, Sz_B, do_time_avg=False):
     """
     Returns the magnetization as an array, where each entry is the value for a specific layer index.
     :param Sz_A: Time averaged z-components of spin vectors, sublattice A.
@@ -86,9 +86,9 @@ def seebeck(dataA, dataB, eq_data, rel_step_pos):
     Sz_B_eqH = bulk_util.get_components(eq_data, 'B', 'z', 1)
 
     neel = neel_vector(Sz_A, Sz_B, do_time_avg=True)
-    magn = magnetizazion(Sz_A, Sz_B, do_time_avg=True)
+    magn = magnetization(Sz_A, Sz_B, do_time_avg=True)
     neel_eqH = neel_vector(Sz_A_eqH, Sz_B_eqH, do_time_avg=True)
-    magn_eqH = magnetizazion(Sz_A_eqH, Sz_B_eqH, do_time_avg=True)
+    magn_eqH = magnetization(Sz_A_eqH, Sz_B_eqH, do_time_avg=True)
     neel_eqL = 1
     magn_eqL = 0
 

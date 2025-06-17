@@ -177,7 +177,7 @@ def calculate_magnetization_neel(data_grid, equi_data_warm=None, direction="x", 
     magnetization = dict()
     neel_vector = dict()
     for component in ["x", "y", "z"]:
-        magnetization[component] = physics.magnetizazion(select_SL_and_component(data_grid, "A", component),
+        magnetization[component] = physics.magnetization(select_SL_and_component(data_grid, "A", component),
                                                          select_SL_and_component(data_grid, "B", component))
         neel_vector[component] = physics.neel_vector(select_SL_and_component(data_grid, "A", component),
                                                      select_SL_and_component(data_grid, "B", component))
@@ -199,10 +199,9 @@ def calculate_magnetization_neel(data_grid, equi_data_warm=None, direction="x", 
         raise ValueError(f"Can't handle a temperature step in '{direction}'-direction.")
 
     for component in ["x", "y", "z"]:
-        magnetization[component][slice_warm] -= physics.magnetizazion(
+        magnetization[component][slice_warm] -= physics.magnetization(
             np.mean(select_SL_and_component(equi_data_warm, "A", component)),
-            np.mean(select_SL_and_component(equi_data_warm, "B", component))
-        ) # * 0 - 2.555185061314802e-07
+            np.mean(select_SL_and_component(equi_data_warm, "B", component)))  # * 0 - 2.555185061314802e-07
         magnetization[component][slice_cold] -= magn_cold
 
         neel_vector[component][slice_warm] -= physics.neel_vector(

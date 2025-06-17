@@ -8,6 +8,7 @@ import scipy as sp
 import os
 
 import src.helper as helper
+import src.physics as physics
 
 default_slice_dict = {'t': 0, 'x': 1, 'y': 2, 'z': 3, '1': 1, '2': 2, '3': 3}
 
@@ -171,3 +172,153 @@ def load_arrayjob_npyz(save_file_prefix, file_ending=".npy"):
     return A, B
 
 
+
+def get_mean(file_path_A, file_path_B, skip_time_steps=1):
+    """
+    Returns the spin average of the x, y and z spin component
+    :param file_path:
+    :param skip_time_steps:
+    :return:
+    """
+    data_A = np.loadtxt(file_path_A)
+    data_B = np.loadtxt(file_path_B)
+    spins_A = get_components_as_dict(data_A, which="xyz", skip_time_steps=skip_time_steps, do_time_avg=True)
+    spins_B = get_components_as_dict(data_B, which="xyz", skip_time_steps=skip_time_steps, do_time_avg=True)
+
+    for component in spins_A:
+        spins_A[component] = np.mean(spins_A[component])
+        spins_B[component] = np.mean(spins_B[component])
+
+    return spins_A, spins_B
+
+
+
+def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, equi_values_cold, rel_T_step_positions, plot_kwargs_list):
+    """
+    Plots and saves the magnetization and neel vector of this magnetic profile. All files are read and plotted in the
+    same figure. Equilibrium values can be given and will be subtracted. If none are given, all components are set to
+    zero.
+    :param load_paths: The magnetic profile paths that will be loaded.
+    :param skip_rows: The number of rows that will be skipped when reading the files. (Needed if file is broken)
+    :param save_path: The prefix which is used to save the plots.
+    :param equi_values_warm: Format: [(dict(x=..., y..., ...), dict(x=..., ...)), ...] for SL A and SL B
+    :param equi_values_cold: Format: [(dict(x=..., y..., ...), dict(x=..., ...)), ...] for SL A and SL B
+    :param rel_T_step_positions: The relative position of the temperature step. Default is 0.49.
+    :param plot_kwargs: The keywords argument for plotting.
+    :return: Nothing
+    """
+
+    print("Plotting magnetic profile (Magnetization and Neel-Vector)")
+
+    # Checking input
+    if not skip_rows:
+        skip_rows = 0
+    skip_rows = np.array(skip_rows)
+    if skip_rows.size == 1:
+        skip_rows = np.zeros(len(load_paths), dtype=int) + skip_rows
+    if skip_rows.size < len(load_paths):
+        raise ValueError("Too few rows in 'skip_rows'.")
+
+    if not rel_T_step_positions:
+        rel_T_step_positions = 0.49
+    rel_T_step_positions = np.array(rel_T_step_positions)
+    if rel_T_step_positions.size == 1:
+        rel_T_step_positions = np.zeros(len(load_paths), dtype=float) + 0.49
+    if rel_T_step_positions.size < len(load_paths):
+        raise ValueError("Too few rows in 'rel_T_step_pos'.")
+
+    if not equi_values_warm and not equi_values_cold:
+        equi_values_cold, equi_values_warm = [], []
+        zero_dict = dict(x=0, y=0, z=0)
+        for _ in load_paths:
+            equi_values_cold.append((zero_dict, zero_dict))
+            equi_values_warm.append((zero_dict, zero_dict))
+
+    # Read data
+    data_A_list, data_B_list = [], []
+
+    for path, skip in zip(load_paths, skip_rows):
+        data_A_list.append(np.loadtxt(f"{path}A.dat", skiprows=skip))
+        data_B_list.append(np.loadtxt(f"{path}B.dat", skiprows=skip))
+
+    spins_A_list, spins_B_list = [], []
+
+    for data_A, data_B in zip(data_A_list, data_B_list):
+        spins_A_list.append(get_components_as_dict(data_A, 'xyz', 1, True))
+        spins_B_list.append(get_components_as_dict(data_B, 'xyz', 1, True))
+
+    # Calculating magnetization and neel vectors
+    magnetization_list, neel_list = [], []
+    for spins_A, spins_B in zip(spins_A_list, spins_B_list):
+        magnetization_list.append(dict())
+        neel_list.append(dict())
+        for component in spins_A.keys():
+            magnetization_list[-1][component] = physics.magnetization(spins_A[component], spins_B[component], False)
+            neel_list[-1][component] = physics.neel_vector(spins_A[component], spins_B[component], False)
+
+
+    # Subtracting equilibrium
+    magnon_accum_list, delta_neel_list = [], []
+    for magnetization, neel_vector, equi_val_cold, equi_val_warm, rel_T_step_pos in zip(magnetization_list, neel_list,
+                                                                        equi_values_cold, equi_values_warm, rel_T_step_positions):
+        abs_T_step_pos = helper.get_absolute_T_step_index(rel_T_step_pos, magnetization["z"].shape[0])
+
+        magnon_accum_list.append(dict())
+        delta_neel_list.append(dict())
+
+        for component in magnetization.keys():
+            j = component
+
+            magnetization_warm = physics.magnetization(equi_val_warm[0][component], equi_val_warm[1][component])
+            magnetization_cold = physics.magnetization(equi_val_cold[0][component], equi_val_cold[1][component])
+
+            neel_warm = physics.neel_vector(equi_val_warm[0][component], equi_val_warm[1][component])
+            neel_cold = physics.neel_vector(equi_val_cold[0][component], equi_val_cold[1][component])
+
+            magnon_accum_list[-1][j] = np.empty_like(magnetization[j])
+            magnon_accum_list[-1][j][:abs_T_step_pos] = magnetization[j][:abs_T_step_pos] - magnetization_warm
+            magnon_accum_list[-1][j][abs_T_step_pos:] = magnetization[j][abs_T_step_pos:] - magnetization_cold
+
+            delta_neel_list[-1][j] = np.empty_like(neel_vector[j])
+            delta_neel_list[-1][j][:abs_T_step_pos] = neel_vector[j][:abs_T_step_pos] - neel_warm
+            delta_neel_list[-1][j][abs_T_step_pos:] = neel_vector[j][abs_T_step_pos:] - neel_cold
+
+    # Plotting
+    for component in magnon_accum_list[0].keys():
+        for quantity_list, title, save_quanti_short in zip((magnon_accum_list, delta_neel_list),
+                                                           (f"Magnetization, {component}", f"Neel vector, {component}"),
+                                                           ("magn", "neel")):
+            print(f"Plotting {component}...")
+            fig, ax = plt.subplots()
+
+            ax.set_title(title)
+            ax.set_xlabel("Grid position")
+            ax.set_ylabel("Magnitude [au]")
+
+            for quantity, plot_kwargs in zip(quantity_list, plot_kwargs_list):
+                ax.plot(quantity[component], **plot_kwargs)
+
+            data_list_for_component = []
+            for quantity in quantity_list:
+                data_list_for_component.append(quantity[component])
+
+            all_data = np.array(data_list_for_component)
+            mean = np.mean(all_data)
+            median = np.median(all_data)
+            mid = (mean + median) / 2
+            std = np.std(all_data)
+            _max = np.max(all_data)
+            _min = np.min(all_data)
+            bottom = max(mid - 5 * std, _min - 0.8 * std)
+            top = min(mid + 5 * std, _max + 0.8 * std)
+
+            ax.set_ylim(ymin=bottom, ymax=top)
+
+            ax.legend()
+
+            if save_path:
+                save_path_ = f"{save_path}_{save_quanti_short}_{component}.pdf"
+                print(f"Saving to {save_path_}...")
+                plt.savefig(save_path_)
+
+            plt.show()
