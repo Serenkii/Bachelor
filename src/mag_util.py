@@ -173,13 +173,20 @@ def load_arrayjob_npyz(save_file_prefix, file_ending=".npy"):
 
 
 
-def get_mean(file_path_A, file_path_B, skip_time_steps=1):
+def get_mean(file_path_A, file_path_B=None, skip_time_steps=1):
     """
     Returns the spin average of the x, y and z spin component
-    :param file_path:
+    :param file_path_A: File path of the magnetic profile of SL A. (Or prefix of filename if file_path_B is None)
+    :param file_path_B: File path of the magnetic profile of SL B. (If file_path_A is None the prefix of file_path_A is used for both.)
     :param skip_time_steps:
     :return:
     """
+    if not file_path_B:
+        if file_path_A.endswith("A.dat"):
+            file_path_B = f"{file_path_A[:-5]}B.dat"
+        else:
+            file_path_B = f"{file_path_A}B.dat"
+            file_path_A = f"{file_path_A}A.dat"
     data_A = np.loadtxt(file_path_A)
     data_B = np.loadtxt(file_path_B)
     spins_A = get_components_as_dict(data_A, which="xyz", skip_time_steps=skip_time_steps, do_time_avg=True)
@@ -193,7 +200,7 @@ def get_mean(file_path_A, file_path_B, skip_time_steps=1):
 
 
 
-def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, equi_values_cold, rel_T_step_positions, plot_kwargs_list):
+def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, equi_values_cold, rel_T_step_positions, plot_kwargs_list, title_suffix=""):
     """
     Plots and saves the magnetization and neel vector of this magnetic profile. All files are read and plotted in the
     same figure. Equilibrium values can be given and will be subtracted. If none are given, all components are set to
@@ -223,7 +230,7 @@ def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, eq
         rel_T_step_positions = 0.49
     rel_T_step_positions = np.array(rel_T_step_positions)
     if rel_T_step_positions.size == 1:
-        rel_T_step_positions = np.zeros(len(load_paths), dtype=float) + 0.49
+        rel_T_step_positions = np.zeros(len(load_paths), dtype=float) + rel_T_step_positions
     if rel_T_step_positions.size < len(load_paths):
         raise ValueError("Too few rows in 'rel_T_step_pos'.")
 
@@ -259,6 +266,7 @@ def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, eq
 
     # Subtracting equilibrium
     magnon_accum_list, delta_neel_list = [], []
+
     for magnetization, neel_vector, equi_val_cold, equi_val_warm, rel_T_step_pos in zip(magnetization_list, neel_list,
                                                                         equi_values_cold, equi_values_warm, rel_T_step_positions):
         abs_T_step_pos = helper.get_absolute_T_step_index(rel_T_step_pos, magnetization["z"].shape[0])
@@ -286,7 +294,7 @@ def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, eq
     # Plotting
     for component in magnon_accum_list[0].keys():
         for quantity_list, title, save_quanti_short in zip((magnon_accum_list, delta_neel_list),
-                                                           (f"Magnetization, {component}", f"Neel vector, {component}"),
+                                                           (f"Magnetization, {component} {title_suffix}", f"Neel vector, {component} {title_suffix}"),
                                                            ("magn", "neel")):
             print(f"Plotting {component}...")
             fig, ax = plt.subplots()

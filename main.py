@@ -15,6 +15,8 @@ import src.physics as physics
 import src.spinconf_util as spinconf_util
 import src.helper as helper
 
+seperator = "-------------------------------------------------------------\n"
+
 # %% Meeting in May
 
 def temperature_dependent_nernst(save=False, save_path='out/T-dependent-nernst.png', delta_x=0):
@@ -515,7 +517,7 @@ def presenting_data_02():
 
 # %% Further stuff for their weird paper (03)
 
-def seebeck_03(file_path_magnetization, file_path_magnon_acc):
+def seebeck_03(file_path_quantity, file_path_quantity_eq_subtracted):
     print()
 
     noDMI_kwargs = dict(alpha=0.7, linestyle="--", linewidth=1.0)
@@ -526,11 +528,12 @@ def seebeck_03(file_path_magnetization, file_path_magnon_acc):
          f"{prefix}03_AM_tilted_yTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnet",
          f"{prefix}AM_mag-accumu_tilt_x-axis_kT-7/spin-configs-99-999/mag-profile-99-999.altermagnet",
          f"{prefix}AM_mag-accumu_tilt_y-axis_kT-7/spin-configs-99-999/mag-profile-99-999.altermagnet"], [0, 131, 0, 0],
-        file_path_magnetization, None, None, 0.49,
+        file_path_quantity, None, None, 0.49,
         [dict(label="DMI, [110]"),
         dict(label="DMI, [-110]"),
         dict(label="no DMI, [110]", **noDMI_kwargs),
-        dict(label="no DMI, [,110]", **noDMI_kwargs)]
+        dict(label="no DMI, [-110]", **noDMI_kwargs)],
+        "(T=7meV)"
     )
 
     # Subtracting equilibrium
@@ -549,10 +552,10 @@ def seebeck_03(file_path_magnetization, file_path_magnon_acc):
          f"{prefix}03_AM_tilted_yTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnet",
          f"{prefix}AM_mag-accumu_tilt_x-axis_kT-7/spin-configs-99-999/mag-profile-99-999.altermagnet",
          f"{prefix}AM_mag-accumu_tilt_y-axis_kT-7/spin-configs-99-999/mag-profile-99-999.altermagnet"], [0, 131, 0, 0],
-        file_path_magnon_acc, [(spins_warm_A, spins_warm_B),
-                               (spins_warm_A, spins_warm_B),
-                               (spins_warm_nodmi_A, spins_warm_nodmi_B),
-                               (spins_warm_nodmi_A, spins_warm_nodmi_B)], [(spins_cold_A, spins_cold_B),
+        file_path_quantity_eq_subtracted, [(spins_warm_A, spins_warm_B),
+                                           (spins_warm_A, spins_warm_B),
+                                           (spins_warm_nodmi_A, spins_warm_nodmi_B),
+                                           (spins_warm_nodmi_A, spins_warm_nodmi_B)], [(spins_cold_A, spins_cold_B),
                                                                            (spins_cold_A, spins_cold_B),
                                                                            (dict(x=0, y=0, z=1), dict(x=0, y=0, z=-1)),
                                                                            # maybe 1 and -1 swapped
@@ -561,7 +564,8 @@ def seebeck_03(file_path_magnetization, file_path_magnon_acc):
         [dict(label="DMI, [110]"),
         dict(label="DMI, [-110]"),
         dict(label="no DMI, [110]", **noDMI_kwargs),
-        dict(label="no DMI, [,110]", **noDMI_kwargs)]
+        dict(label="no DMI, [,110]", **noDMI_kwargs)],
+        "(T=7meV, equi subtracted)"
     )
 
 
@@ -649,6 +653,76 @@ def presenting_data_03():
                "out/03_tobi_paper/2d_plot_seebeck_110_T2_")
 
 
+# %% 04
+
+def seebeck_04(save_prefix="out/04_lowerT/seebeck_T2"):
+    print("PLOTTING SEEBECK EFFECT\n"
+          "Now creating plots for SSE. Magnetization and Neel-Vector will be plotted for a temperature of 2meV."
+          "Two different directions with and without DMI are plotted. ([110] and [-110])")
+
+    noDMI_kwargs = dict(alpha=0.7, linestyle="--", linewidth=1.0)
+
+    mag_util.plot_magnetic_profile(
+        ["/data/scc/marian.gunsch/04_AM_tilted_xTstep_T2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         "/data/scc/marian.gunsch/04_AM_tilted_yTstep_T2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         "/data/scc/marian.gunsch/04_AM_tilted_xTstep_DMI_T2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         "/data/scc/marian.gunsch/04_AM_tilted_yTstep_DMI_T2/spin-configs-99-999/mag-profile-99-999.altermagnet"],
+        0,
+        save_prefix,
+        None,
+        None,
+        0.49,
+        [dict(label="no DMI, [110]", **noDMI_kwargs),
+         dict(label="no DMI, [-110]", **noDMI_kwargs),
+         dict(label="DMI, [110]"),
+         dict(label="DMI, [-110]"),],
+        "(T=2meV)"
+    )
+
+    print("\nNow the magnetic profile with the equilibrium subtracted will be plotted.")
+    prefix = "/data/scc/marian.gunsch/"
+    equi_warm_noDMI = mag_util.get_mean(f"{prefix}04_AM_tilted_Tstairs_T2/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat")
+    equi_warm_DMI = mag_util.get_mean(f"{prefix}04_AM_tilted_Tstairs_DMI_T2/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat")
+
+    equi_cold_noDMI = (dict(x=0, y=0, z=1), dict(x=0, y=0, z=-1))
+    equi_cold_DMI = mag_util.get_mean(f"{prefix}03_AM_tilted_Tstairs_DMI_T0/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat")
+
+    mag_util.plot_magnetic_profile(
+        ["/data/scc/marian.gunsch/04_AM_tilted_xTstep_T2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         "/data/scc/marian.gunsch/04_AM_tilted_yTstep_T2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         "/data/scc/marian.gunsch/04_AM_tilted_xTstep_DMI_T2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         "/data/scc/marian.gunsch/04_AM_tilted_yTstep_DMI_T2/spin-configs-99-999/mag-profile-99-999.altermagnet"],
+        0,
+        save_prefix,
+        [equi_warm_noDMI, equi_warm_noDMI, equi_warm_DMI, equi_warm_DMI],
+        [equi_cold_noDMI, equi_cold_noDMI, equi_cold_DMI, equi_cold_DMI],
+        0.49,
+        [dict(label="no DMI, [110]", **noDMI_kwargs),
+         dict(label="no DMI, [-110]", **noDMI_kwargs),
+         dict(label="DMI, [110]"),
+         dict(label="DMI, [-110]"),],
+        "(T=2meV, equilibrium subtracted)"
+    )
+
+
+
+
+def spin_conservation():
+    print("<DESCRIPTION SPIN CONSERVATION>")
+
+
+
+
+def presenting_data_04():
+    print("<DESCRIPTION>")
+
+    seebeck_04()
+    print(seperator)
+
+    spin_conservation()
+    print(seperator)
+
+
 # %% Main
 
 if __name__ == '__main__':
@@ -660,6 +734,8 @@ if __name__ == '__main__':
     # quick_nernst_dmi_comparison()
 
     # presenting_data_02()
+
+    presenting_data_04()
 
     pass
 

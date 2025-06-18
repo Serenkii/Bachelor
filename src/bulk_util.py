@@ -10,13 +10,14 @@ import src.helper as helper
 slice_dict_A = {'t': 0, 'x': 3, 'y': 4, 'z': 5, '1': 3, '2': 4, '3': 5}
 slice_dict_B = {'t': 0, 'x': 3 + 3, 'y': 4 + 3, 'z': 5 + 3, '1': 3 + 3, '2': 4 + 3, '3': 5 + 3}
 
-def plot_spin_xyz_over_t(file_path, title=""):
+def plot_spin_xyz_over_t(file_path, title=None):
     """
     Takes the path of a bulk file and plots all spins over time.
     :param file_path: File path of the bulk file.
     :param title: Title of the plot. Defaults to no title.
     :return: The data of the bulk file.
     """
+    title = title or file_path
     data = np.loadtxt(file_path)
     fig, ax = plt.subplots()
     ax.title.set_text(title)
