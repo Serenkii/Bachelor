@@ -589,7 +589,7 @@ def seebeck_03(file_path_quantity, file_path_quantity_eq_subtracted):
 
 
 
-def plot_2d_03(load_path, save_path, width_xy=100):
+def plot_2d(load_path, save_path=None, width_xy=100, title_suffix=""):
     print()
 
     spinconf_data = "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI/spin-configs-99-999/spin-config-99-999-005000.dat"
@@ -622,7 +622,7 @@ def plot_2d_03(load_path, save_path, width_xy=100):
         ax.set_ylabel("Grid position in direction [-110]")
 
         ax.set_aspect('equal', 'box')
-        ax.set_title(f"Magnetization: {component}-component")
+        ax.set_title(f"Magnetization: {component}-component {title_suffix}")
         im = ax.pcolormesh(X, Y, data_grid, norm=colors.CenteredNorm(), cmap='RdBu_r')
         fig.colorbar(im, ax=ax)
 
@@ -632,8 +632,8 @@ def plot_2d_03(load_path, save_path, width_xy=100):
         ax.set_ylim(lower, upper)
 
         fig.tight_layout()
-
-        plt.savefig(f"{save_path}{component}.pdf")
+        if save_path:
+            plt.savefig(f"{save_path}{component}.pdf")
 
         plt.show()
 
@@ -657,17 +657,17 @@ def presenting_data_03():
     print("Equilibrium states")
     for load_path, save_path in zip(load_paths, save_paths):
         print(".")
-        plot_2d_03(load_path, save_path)
+        plot_2d(load_path, save_path)
 
     print("\n\nSeebeck 2d\n")
-    plot_2d_03("/data/scc/marian.gunsch/03_AM_tilted_xTstep_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
+    plot_2d("/data/scc/marian.gunsch/03_AM_tilted_xTstep_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
             "out/03_tobi_paper/2d_plot_seebeck_110_")
-    plot_2d_03("/data/scc/marian.gunsch/03_AM_tilted_yTstep_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
+    plot_2d("/data/scc/marian.gunsch/03_AM_tilted_yTstep_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
             "out/03_tobi_paper/2d_plot_seebeck_-110_")
-    plot_2d_03("/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat",
-               "out/03_tobi_paper/2d_plot_seebeck_110_T2_noDMI_")
-    plot_2d_03("/data/scc/marian.gunsch/02_AM_tilted_Tstep_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
-               "out/03_tobi_paper/2d_plot_seebeck_110_T2_")
+    plot_2d("/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat",
+            "out/03_tobi_paper/2d_plot_seebeck_110_T2_noDMI_")
+    plot_2d("/data/scc/marian.gunsch/02_AM_tilted_Tstep_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
+            "out/03_tobi_paper/2d_plot_seebeck_110_T2_")
 
 
 # %% 04
@@ -727,14 +727,79 @@ def seebeck_04(save_prefix="out/04_lowerT/seebeck_T2"):
 def spin_conservation():
     print("<DESCRIPTION SPIN CONSERVATION>")
 
+    ### Spin configuration
+    path_config_nodmi = "/data/scc/marian.gunsch/04_AM_tilted_Tstairs_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
+    path_config_dmi = "/data/scc/marian.gunsch/04_AM_tilted_Tstairs_DMI_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
+
+    import os
+    if os.path.exists(path_config_nodmi) and os.path.exists(path_config_dmi):
+        plot_2d(path_config_nodmi, title_suffix="(No DMI, T=2meV)")
+        plot_2d(path_config_dmi, title_suffix="(DMI, T=2meV)")
+    else:
+        print(f"Files {path_config_nodmi}, {path_config_dmi} were not created yet!")
+
+
+    ### Mean values
+    s = "/data/scc/marian.gunsch/"
+    spins_nodmi_A, spins_nodmi_B = bulk_util.get_mean(f"{s}04_AM_tilted_Tstairs_T2/04_AM_Tstairs-99-999.dat")
+    spins_dmi_A, spins_dmi_B = bulk_util.get_mean(f"{s}04_AM_tilted_Tstairs_DMI_T2/04_AM_Tstairs-99-999.dat")
+
+    spins_nodmi_A['norm'] = np.sqrt(np.sum(np.array([spins_nodmi_A[c] for c in spins_nodmi_A.keys()]) ** 2))
+    spins_nodmi_B['norm'] = np.sqrt(np.sum(np.array([spins_nodmi_B[c] for c in spins_nodmi_B.keys()]) ** 2))
+    spins_dmi_A['norm'] = np.sqrt(np.sum(np.array([spins_dmi_A[c] for c in spins_dmi_A.keys()]) ** 2))
+    spins_dmi_B['norm'] = np.sqrt(np.sum(np.array([spins_dmi_B[c] for c in spins_dmi_B.keys()]) ** 2))
+
+    print("The norms of the spin vectors are the following:\n"
+          f"No DMI, SL A: \t{spins_nodmi_A['norm']:.4f}\n"
+          f"No DMI, SL B: \t{spins_nodmi_B['norm']:.4f}\n"
+          f"DMI, SL A: \t\t{spins_dmi_A['norm']:.4f}\n"
+          f"DMI, SL B: \t\t{spins_dmi_A['norm']:.4f}\n")
+
+    ## Plotting
+    components = list(spins_nodmi_A.keys())    # ['x', 'y', 'z', 'norm']
+    x_base = np.arange(len(components))  # [0, 1, 2, 3]
+
+    # Offsets to separate groups
+    gap = 1.5
+    x_nodmi = x_base
+    x_dmi = x_base + len(components) + gap  # creates visual gap
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+
+    # Add separation lines
+    ax.axvline(x=(x_nodmi[-1] + x_dmi[0]) / 2, color='black', linewidth=1)
+    ax.axhline(y=0, color='grey', linestyle='--', linewidth=1)
+
+    # Plot points
+    ax.plot(x_nodmi, [spins_nodmi_A[c] for c in components], 'o', label='no DMI A', color='blue', alpha=0.6)
+    ax.plot(x_nodmi, [spins_nodmi_B[c] for c in components], '^', label='no DMI B', color='orange', alpha=0.6)
+    ax.plot(x_dmi, [spins_dmi_A[c] for c in components], 'o', label='DMI A', color='green', alpha=0.6)
+    ax.plot(x_dmi, [spins_dmi_B[c] for c in components], '^', label='DMI B', color='red', alpha=0.6)
+
+    # X-ticks and labels
+    ax.set_xticks(list(x_nodmi) + list(x_dmi))
+    ax.set_xticklabels(components * 2)
+
+    # Group labels
+    mid_nodmi = np.mean(x_nodmi)
+    mid_dmi = np.mean(x_dmi)
+    ax.text(mid_nodmi, -0.05, 'no DMI', ha='center', va='top', transform=ax.get_xaxis_transform())
+    ax.text(mid_dmi, -0.05, 'DMI', ha='center', va='top', transform=ax.get_xaxis_transform())
+
+    # Other settings
+    ax.set_ylabel("Mean Spin Component")
+    ax.set_ylim(-1.05, 1.05)
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
 
 
 
 def presenting_data_04():
     print("<DESCRIPTION>")
 
-    seebeck_04()
-    print(seperator)
+    # seebeck_04()
+    # print(seperator)
 
     spin_conservation()
     print(seperator)
@@ -743,12 +808,12 @@ def presenting_data_04():
 # %% Main
 
 if __name__ == '__main__':
-    presenting_data_01()
+    # presenting_data_01()
 
     # presenting_data_02()
 
     # presenting_data_03()
-    # presenting_data_04()
+    presenting_data_04()
 
     pass
 
