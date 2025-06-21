@@ -33,6 +33,9 @@ def plot_spin_xyz_over_t(file_path, title=None):
     return data
 
 
+p = plot_spin_xyz_over_t
+
+
 # TODO: Test and maybe adjust name
 def get_components(data, sublattice='A', which='tz', skip_time_steps=0, squeeze=False):
     """

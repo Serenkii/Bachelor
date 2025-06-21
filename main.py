@@ -109,7 +109,13 @@ def temperature_dependent_nernst(save=False, save_path='out/T-dependent-nernst.p
 
 def dmi_ground_state_comparison(save=False, save_path='out/T-dependent-nernst.png'):
     equi_path = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_T2meV/AM_Teq2meV-99-999.dat"
-    equi_dmi_path = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI-2/AM_Teq-99-999.dat"
+    equi_dmi_path = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI-2/AM_Teq-99-999.dat"  # this seems weird!!!
+    print("CAREFUL!\n"
+          f"{equi_path} seems to have faulty data! Maybe it was never able to reach equilibrium because no start config"
+          f" ferri was used?\n"
+          f"Use bulk_util.p({equi_dmi_path}) to see the weirdness when equilibriating...")
+    equi_dmi_path = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI_ferri-2/AM_Teq-99-999.dat"
+    print(f"\tNow using {equi_dmi_path} instead...")
 
     data_noDMI = np.loadtxt(equi_path)
     data_DMI = np.loadtxt(equi_dmi_path)
@@ -367,6 +373,14 @@ def quick_nernst_dmi_comparison():
     )
 
 
+def presenting_data_01():
+    temperature_dependent_nernst(save=True, save_path='out/T-dependent-nernst.png', delta_x=0)
+    dmi_ground_state_comparison(save=True, save_path='out/ground_state_comparison_DMI.pdf')
+
+    quick_seebeck_dmi_comparison()
+    quick_nernst_dmi_comparison()
+
+
 # %% Meeting in June
 
 def magnetization_neel_2d_plot():
@@ -546,6 +560,9 @@ def seebeck_03(file_path_quantity, file_path_quantity_eq_subtracted):
         "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI_T0/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
     )
     spins_warm_nodmi_A, spins_warm_nodmi_B = bulk_util.get_mean("data/temp/altermagnet-equilibrium-7meV.dat")
+    for component in spins_warm_nodmi_A.keys():
+        spins_warm_nodmi_A[component] *= -1
+        spins_warm_nodmi_B[component] *= -1        # for some reason here the spin values (z) for A are negative and for B are positive...
 
     mag_util.plot_magnetic_profile(
         [f"{prefix}03_AM_tilted_xTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnet",
@@ -726,16 +743,12 @@ def presenting_data_04():
 # %% Main
 
 if __name__ == '__main__':
-    pass
-    # temperature_dependent_nernst(save=True, save_path='out/T-dependent-nernst.png', delta_x=0)
-    # dmi_ground_state_comparison(save=True, save_path='out/ground_state_comparison_DMI.pdf')
-
-    # quick_seebeck_dmi_comparison()
-    # quick_nernst_dmi_comparison()
+    presenting_data_01()
 
     # presenting_data_02()
 
-    presenting_data_04()
+    # presenting_data_03()
+    # presenting_data_04()
 
     pass
 
