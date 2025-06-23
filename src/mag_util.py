@@ -173,7 +173,7 @@ def load_arrayjob_npyz(save_file_prefix, file_ending=".npy"):
 
 
 
-def get_mean(file_path_A, file_path_B=None, skip_time_steps=1):
+def get_mean(file_path_A, file_path_B=None, skip_time_steps=15):
     """
     Returns the spin average of the x, y and z spin component
     :param file_path_A: File path of the magnetic profile of SL A. (Or prefix of filename if file_path_B is None)

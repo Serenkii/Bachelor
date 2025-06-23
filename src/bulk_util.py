@@ -77,7 +77,7 @@ def get_components_as_dict(data, sublattice='A', which='tz', skip_time_steps=0, 
     return dict(zip(list(which), get_components_as_tuple(data, sublattice, which, skip_time_steps, do_time_avg)))
 
 
-def get_mean(file_path, skip_time_steps=1):
+def get_mean(file_path, skip_time_steps=15):
     """
     Returns the spin average of the x, y and z spin component
     :param file_path:

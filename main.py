@@ -529,7 +529,7 @@ def presenting_data_02():
     print(seperator)
 
 
-# %% Further stuff for their weird paper (03)
+# %% Further stuff for their paper (03)
 
 def seebeck_03(file_path_quantity, file_path_quantity_eq_subtracted):
     print()
@@ -581,7 +581,7 @@ def seebeck_03(file_path_quantity, file_path_quantity_eq_subtracted):
         [dict(label="DMI, [110]"),
         dict(label="DMI, [-110]"),
         dict(label="no DMI, [110]", **noDMI_kwargs),
-        dict(label="no DMI, [,110]", **noDMI_kwargs)],
+        dict(label="no DMI, [-110]", **noDMI_kwargs)],
         "(T=7meV, equi subtracted)"
     )
 
@@ -672,10 +672,11 @@ def presenting_data_03():
 
 # %% 04
 
-def seebeck_04(save_prefix="out/04_lowerT/seebeck_T2"):
+def seebeck_04(save_prefix="out/04_lowerT/seebeck_T2", save_prefix_eq="out/04_lowerT/seebeck_eq_T2"):
     print("PLOTTING SEEBECK EFFECT\n"
           "Now creating plots for SSE. Magnetization and Neel-Vector will be plotted for a temperature of 2meV."
           "Two different directions with and without DMI are plotted. ([110] and [-110])")
+    print("Plotting for T=2meV")
 
     noDMI_kwargs = dict(alpha=0.7, linestyle="--", linewidth=1.0)
 
@@ -710,7 +711,7 @@ def seebeck_04(save_prefix="out/04_lowerT/seebeck_T2"):
          "/data/scc/marian.gunsch/04_AM_tilted_xTstep_DMI_T2/spin-configs-99-999/mag-profile-99-999.altermagnet",
          "/data/scc/marian.gunsch/04_AM_tilted_yTstep_DMI_T2/spin-configs-99-999/mag-profile-99-999.altermagnet"],
         0,
-        save_prefix,
+        save_prefix_eq,
         [equi_warm_noDMI, equi_warm_noDMI, equi_warm_DMI, equi_warm_DMI],
         [equi_cold_noDMI, equi_cold_noDMI, equi_cold_DMI, equi_cold_DMI],
         0.49,
@@ -723,26 +724,35 @@ def seebeck_04(save_prefix="out/04_lowerT/seebeck_T2"):
 
 
 
-
-def spin_conservation():
-    print("<DESCRIPTION SPIN CONSERVATION>")
+def spin_conservation(
+        path_config_nodmi,
+        path_config_dmi,
+        path_bulk_nodmi,
+        path_bulk_dmi,
+        path_prefix="",
+        title="",
+        save_path=None):
+    print("In past simulations, it seemed like the spin vector norm was not conserved using DMI. This is now plotted "
+          "again and looked at again.")
+    print(f"\t{title}\n")
 
     ### Spin configuration
-    path_config_nodmi = "/data/scc/marian.gunsch/04_AM_tilted_Tstairs_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
-    path_config_dmi = "/data/scc/marian.gunsch/04_AM_tilted_Tstairs_DMI_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
+    path_config_nodmi = path_prefix + path_config_nodmi
+    path_config_dmi = path_prefix + path_config_dmi
 
     import os
     if os.path.exists(path_config_nodmi) and os.path.exists(path_config_dmi):
-        plot_2d(path_config_nodmi, title_suffix="(No DMI, T=2meV)")
-        plot_2d(path_config_dmi, title_suffix="(DMI, T=2meV)")
+        plot_2d(path_config_nodmi, title_suffix=f"(No DMI, {title})")
+        plot_2d(path_config_dmi, title_suffix=f"(DMI, {title})")
     else:
-        print(f"Files {path_config_nodmi}, {path_config_dmi} were not created yet!")
+        print(f"Files {path_config_nodmi}, {path_config_dmi} were not created yet!\n")
 
 
     ### Mean values
-    s = "/data/scc/marian.gunsch/"
-    spins_nodmi_A, spins_nodmi_B = bulk_util.get_mean(f"{s}04_AM_tilted_Tstairs_T2/04_AM_Tstairs-99-999.dat")
-    spins_dmi_A, spins_dmi_B = bulk_util.get_mean(f"{s}04_AM_tilted_Tstairs_DMI_T2/04_AM_Tstairs-99-999.dat")
+    path_bulk_nodmi = path_prefix + path_bulk_nodmi
+    path_bulk_dmi = path_prefix + path_bulk_dmi
+    spins_nodmi_A, spins_nodmi_B = bulk_util.get_mean(path_bulk_nodmi)
+    spins_dmi_A, spins_dmi_B = bulk_util.get_mean(path_bulk_dmi)
 
     spins_nodmi_A['norm'] = np.sqrt(np.sum(np.array([spins_nodmi_A[c] for c in spins_nodmi_A.keys()]) ** 2))
     spins_nodmi_B['norm'] = np.sqrt(np.sum(np.array([spins_nodmi_B[c] for c in spins_nodmi_B.keys()]) ** 2))
@@ -754,6 +764,11 @@ def spin_conservation():
           f"No DMI, SL B: \t{spins_nodmi_B['norm']:.4f}\n"
           f"DMI, SL A: \t\t{spins_dmi_A['norm']:.4f}\n"
           f"DMI, SL B: \t\t{spins_dmi_A['norm']:.4f}\n")
+    print("The y and z components of the spin vectors are the following:\n"
+          f"No DMI, SL A: \t Sy = {spins_nodmi_A['y']:.4f} \t and \t Sz = {spins_dmi_A['z']:.8f}\n"
+          f"No DMI, SL B: \t Sy = {spins_nodmi_B['y']:.4f} \t and \t Sz = {spins_dmi_B['z']:.8f}\n"
+          f"DMI, SL A: \t\t Sy = {spins_dmi_A['y']:.4f} \t and \t Sz = {spins_dmi_A['z']:.8f}\n"
+          f"DMI, SL B: \t\t Sy = {spins_dmi_B['y']:.4f} \t and \t Sz = {spins_dmi_B['z']:.8f}\n")
 
     ## Plotting
     components = list(spins_nodmi_A.keys())    # ['x', 'y', 'z', 'norm']
@@ -765,6 +780,7 @@ def spin_conservation():
     x_dmi = x_base + len(components) + gap  # creates visual gap
 
     fig, ax = plt.subplots(figsize=(8, 4))
+    ax.set_title(title)
 
     # Add separation lines
     ax.axvline(x=(x_nodmi[-1] + x_dmi[0]) / 2, color='black', linewidth=1)
@@ -791,17 +807,51 @@ def spin_conservation():
     ax.set_ylim(-1.05, 1.05)
     ax.legend()
     plt.tight_layout()
+
+    if save_path:
+        fig.savefig(save_path)
+
     plt.show()
 
 
 
 def presenting_data_04():
-    print("<DESCRIPTION>")
+    print("[04] As previous attempts working with the equilibrium data for DMI have failed, I am trying once again"
+          "with lower temperature. Turns out, the previous attempts have failed because I made a mistake with a lot "
+          "of equilibrium ('stairs') simulations, mixing up two flags. I have now run the simulations again and "
+          "have better (correct) results. I have correct results for the lower temperature (T=2meV). Furthermore I "
+          "have also fixed the previous simulations for T=7meV. These results are therefore shown here as well."
+          "Results can be seen in the folder starting with 04.")
 
-    # seebeck_04()
-    # print(seperator)
+    seebeck_03("out/04_lowerT/seebeck_T7", "out/04_lowerT/seebeck_eq_T7")
+    print(seperator)
 
-    spin_conservation()
+    seebeck_04()
+    print(seperator)
+
+    spin_conservation(path_config_nodmi="04_AM_tilted_Tstairs_T2/spin-configs-99-999/spin-config-99-999-005000.dat",
+                      path_config_dmi="04_AM_tilted_Tstairs_DMI_T2/spin-configs-99-999/spin-config-99-999-005000.dat",
+                      path_bulk_nodmi="04_AM_tilted_Tstairs_T2/04_AM_Tstairs-99-999.dat",
+                      path_bulk_dmi="04_AM_tilted_Tstairs_DMI_T2/04_AM_Tstairs-99-999.dat",
+                      path_prefix="/data/scc/marian.gunsch/", title="Equilibrium results for T=2meV",
+                      save_path="out/04_lowerT/equilibrium_summary_T2.pdf")
+    print(seperator)
+
+    spin_conservation(path_config_nodmi="I DO NOT HAVE A 7meV EQUI CONFIG AVAILABLE",
+                      path_config_dmi="/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
+                      path_bulk_nodmi="data/temp/altermagnet-equilibrium-7meV.dat",
+                      path_bulk_dmi="/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI/03_AM_Tstairs-99-999.dat",
+                      path_prefix="", title="Equilibrium results for T=7meV",
+                      save_path="out/04_lowerT/equilibrium_summary_T7.pdf")
+    print(seperator)
+
+    spin_conservation(path_config_nodmi="03_AM_tilted_Tstairs_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
+                      #path_config_dmi="03_AM_tilted_Tstairs_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
+                      path_config_dmi="DON'T PLOT CONFIG",
+                      path_bulk_nodmi="03_AM_tilted_Tstairs_DMI_T0/03_AM_Tstairs_T0-99-999.dat",
+                      path_bulk_dmi="03_AM_tilted_Tstairs_DMI_T0/03_AM_Tstairs_T0-99-999.dat",
+                      path_prefix="/data/scc/marian.gunsch/", title="Equilibrium results for T=0meV (both sides show for DMI!!!)",
+                      save_path="out/04_lowerT/equilibrium_summary_T0.pdf")
     print(seperator)
 
 
