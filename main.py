@@ -383,16 +383,13 @@ def presenting_data_01():
 
 # %% Meeting in June
 
-def magnetization_neel_2d_plot():
-    print("MAGNETIZATION AND NEEL VECTOR\n"
-          "Showing magnetizazion and Neel vector for a temperature of T=2meV. We are subtracting the equilibrium state."
-          " One plot with and one without convolution.\n"
-          "Parameters of the simulation: open open open boundaries, 512x512x64")
+def magnetization_neel_2d_plot(path_conf, eq_path_conf, temperature=2, save_prefix=None):
+    print("MAGNETIZATION AND NEEL VECTOR\n")
 
-    path = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
+    path = path_conf
     data = spinconf_util.read_spin_config_dat(path)
 
-    eq_path = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_T2meV/spin-configs-99-999/spin-config-99-999-005000.dat"
+    eq_path = eq_path_conf
     eq_data = spinconf_util.read_spin_config_dat(eq_path)
 
     print(f"Finished reading data...\n"
@@ -404,24 +401,42 @@ def magnetization_neel_2d_plot():
     magn_zavg = spinconf_util.average_z_layers(magn["z"])
     neel_zavg = spinconf_util.average_z_layers(neel["z"])
 
-    spinconf_util.plot_colormap(magn_zavg, title="magnetization, equi subtracted (T=2meV)")
-    spinconf_util.plot_colormap(neel_zavg, title="Neel vector (z), equi subtracted (T=2meV)")
+    if not save_prefix:
+        spinconf_util.plot_colormap(magn_zavg, title=f"magnetization, equi subtracted (T={temperature}meV)",
+                                    read_path=f"{path_conf} \n - {eq_path}")
+        spinconf_util.plot_colormap(neel_zavg, title=f"Neel vector (z), equi subtracted (T={temperature}meV)",
+                                    read_path=f"{path_conf} \n - {eq_path}")
 
-    spinconf_util.plot_colormap(spinconf_util.convolute(magn_zavg),
-                                title="magnetization, equi subtracted (T=2meV) - convoluted")
-    spinconf_util.plot_colormap(spinconf_util.convolute(neel_zavg),
-                                title="Neel vector (z), equi subtracted (T=2meV) - convoluted")
+        spinconf_util.plot_colormap(spinconf_util.convolute(magn_zavg),
+                                    title=f"magnetization, equi subtracted (T={temperature}meV) - convoluted",
+                                    read_path=f"{path_conf} \n - {eq_path}")
+        spinconf_util.plot_colormap(spinconf_util.convolute(neel_zavg),
+                                    title=f"Neel vector (z), equi subtracted (T={temperature}meV) - convoluted",
+                                    read_path=f"{path_conf} \n - {eq_path}")
+    else:
+        spinconf_util.plot_colormap(magn_zavg, title=f"magnetization, equi subtracted (T={temperature}meV)",
+                                    save_path=f"{save_prefix}_magn_equisubtr.pdf",
+                                    read_path=f"{path_conf} \n - {eq_path}")
+        spinconf_util.plot_colormap(neel_zavg, title=f"Neel vector (z), equi subtracted (T={temperature}meV)",
+                                    save_path=f"{save_prefix}_neel_equisubtr.pdf",
+                                    read_path=f"{path_conf} \n - {eq_path}")
+
+        spinconf_util.plot_colormap(spinconf_util.convolute(magn_zavg),
+                                    title=f"magnetization, equi subtracted (T={temperature}meV) - convoluted",
+                                    save_path=f"{save_prefix}_magn_conv_equisubtr.pdf",
+                                    read_path=f"{path_conf} \n - {eq_path}")
+        spinconf_util.plot_colormap(spinconf_util.convolute(neel_zavg),
+                                    title=f"Neel vector (z), equi subtracted (T={temperature}meV) - convoluted",
+                                    save_path=f"{save_prefix}_neel_conv_equisubtr.pdf",
+                                    read_path=f"{path_conf} \n - {eq_path}")
 
 
-def spin_currents_2d_plot():
+def spin_currents_2d_plot(data_path, save_prefix=None, show_path=True):
     print("SPIN CURRENTS\n"
           "I attempted to gain useful data by calculating the spin currents. Luckily, you can clearly see the Spin "
           "Seebeck effect when looking at the longitudinal direction of the spin currents. Sadly, for Spin Nernst, "
           "not much is visible. The following will be plotted: 1. spin currents for SSE, 2. spin currents for SNE, "
           "3. spin currents for SNE but convoluted.")
-
-    data_path = "/data/scc/marian.gunsch/AM_tiltedX_ttmstep_morezlayers_noABC/spin-configs-99-999/spin-config-99-999-005000.dat"
-    # data_path = "/data/scc/marian.gunsch/01_AM_tilted_Tstep/spin-configs-99-999/spin-config-99-999-005000.dat"
 
     data = spinconf_util.read_spin_config_dat(data_path)
 
@@ -461,6 +476,14 @@ def spin_currents_2d_plot():
 
         fig.tight_layout()
 
+        if show_path:
+            fig.text(0.5, 0.5, data_path, color="green", ha="center", va="center")
+
+        if save_prefix:
+            save_path = f"{save_prefix}_{direction[:4]}_conv-{convolution}.pdf"
+            print(f"Saving to {save_path}...")
+            fig.savefig(save_path)
+
         plt.show()
 
         print(f"Plotting spin currents in {direction} direction with convolution '{convolution}'...")
@@ -468,7 +491,7 @@ def spin_currents_2d_plot():
         # TODO: print statement on what was plotted and saving figure
 
 
-def fourier_thingy_TODO_CHANGENAME():
+def fourier_thingy_TODO_CHANGENAME(data_A_path, data_B_path=None, save_prefix=None, show_path=True):
     print("MAGNON DENSITY AS A FUNCTION OF FREQUENCY\n"
           "For the spin Nernst effect, we want to look at the frequency dependency of the magnon density as a function "
           "in space. We want to know the magnon density for different frequencies at different positions along the "
@@ -480,36 +503,83 @@ def fourier_thingy_TODO_CHANGENAME():
           "we now try to take the magnetic profile (where all the spins were already averaged) and then we square."
           )
 
-    data_A_path = "/data/scc/marian.gunsch/01_AM_tilted_Tstep/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
-    data_B_path = "/data/scc/marian.gunsch/01_AM_tilted_Tstep/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
+    # 001 boundaries
+    # data_A_path = "/data/scc/marian.gunsch/01_AM_tilted_Tstep/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    # data_B_path = "/data/scc/marian.gunsch/01_AM_tilted_Tstep/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
+    #
+    # data_A_path = "/data/scc/marian.gunsch/02_AM_tilted_Tstep_hightres/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    # data_B_path = "/data/scc/marian.gunsch/02_AM_tilted_Tstep_hightres/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
+
+    if not data_B_path:
+        data_B_path = f"{data_A_path[:-5]}B.dat"
 
     data_A = np.loadtxt(data_A_path)
     data_B = np.loadtxt(data_B_path)
 
-    Sx = mag_util.get_component(data_A, "x", 1) + mag_util.get_component(data_B, "x", 1)
-    Sy = mag_util.get_component(data_A, "y", 1) + mag_util.get_component(data_B, "y", 1)
+    skip_time_steps = -100000
+    # skip_time_steps = -10000
+
+    Sx = mag_util.get_component(data_A, "x", skip_time_steps) + mag_util.get_component(data_B, "x", skip_time_steps)
+    Sy = mag_util.get_component(data_A, "y", skip_time_steps) + mag_util.get_component(data_B, "y", skip_time_steps)
+
+    Sp = Sx + 1j * Sy
+    Sm = Sx - 1j * Sy
 
     # Fourier
-    time_steps = mag_util.get_component(data_A, "t", 1)
+    time_steps = mag_util.get_component(data_A, "t", skip_time_steps)
     dt = time_steps[1] - time_steps[0]
+    dt *= 1e-16     # unit: picoseconds
 
-    Sx_F_ = np.fft.fft(Sx, axis=0)
-    Sy_F_ = np.fft.fft(Sy, axis=0)
+    Sp_F_ = np.fft.fft(Sp, axis=0)
+    Sm_F_ = np.fft.fft(Sm, axis=0)
 
     freqs = np.fft.fftfreq(time_steps.shape[0], d=dt)
     omega = 2 * np.pi * freqs
 
-    Sx_F = np.fft.fftshift(Sx_F_, axes=0)
-    Sy_F = np.fft.fftshift(Sy_F_, axes=0)
+    Sp_F = np.fft.fftshift(Sp_F_, axes=0)
+    Sm_F = np.fft.fftshift(Sm_F_, axes=0)
     omega_shifted = np.fft.fftshift(omega)
 
-    magnon_density = Sx_F ** 2 + Sy_F ** 2
+    # magnon_density = np.abs(Sp_F * Sm_F) # ** 2      # Should this be only real (without np.abs)?
+    # magnon_density = Sp_F * Sm_F
+    magnon_density = np.abs(Sp_F) ** 2
 
     # plotting
     fig, ax = plt.subplots()
-    ax.plot(omega_shifted, magnon_density[:, 0], label="position 0")
+    ax.set_title("Position and frequency dependent magnon density")
+    positions = np.arange(0, Sx.shape[1], 1)
+    # im = ax.pcolormesh(positions[:60], omega_shifted, magnon_density[:,:60], shading='auto')
+    # im = ax.pcolormesh(positions, omega_shifted, magnon_density, shading='auto', norm=colors.LogNorm(vmin=magnon_density.min(), vmax=magnon_density.max()))
+    im = ax.pcolormesh(positions, omega_shifted, magnon_density, shading='auto')
+    # im = ax.pcolormesh(positions[:30], omega_shifted[9000:-9000], magnon_density[9000:-9000,:30], shading='auto', norm=colors.LogNorm(vmin=magnon_density.min(), vmax=magnon_density.max()))
+    ax.set_ylabel('Frequency ω in rad/s')
+    ax.set_xlabel('Position (index)')
+    fig.colorbar(im, ax=ax, label='Magnon Density')
+
+    if show_path:
+        fig.text(0.5, 1.0, f"{data_A_path}", ha="center", va="top", color="green", size=6)
+
+    if save_prefix:
+        fig.savefig(f"{save_prefix}_colormesh.pdf")
 
     plt.show()
+
+    for position in [0, 10, 50, -1]:
+        fig, ax = plt.subplots()
+        ax.set_title(f"Spectrum at position index {position}")
+        ax.set_xlabel("Frequency ω in rad/s")
+        ax.set_ylabel("Amplitude (magnon density)")
+        ax.plot(omega_shifted, magnon_density[:, position], linewidth=0.3, label=f"position {position}")
+        # ax.set_ylim(bottom=20, top=40)
+        # ax.set_xlim(left=-0.5, right=0.5)
+
+        if show_path:
+            fig.text(0.5, 1.0, f"{data_A_path}", ha="center", va="top", color="green", size=6)
+
+        if save_prefix:
+            fig.savefig(f"{save_prefix}_i{position}.pdf")
+
+        plt.show()
 
 
 def presenting_data_02():
@@ -519,14 +589,48 @@ def presenting_data_02():
           "analysis.\n"
           + seperator)
 
-    # magnetization_neel_2d_plot()
-    # print(seperator)
+    out_prefix = "out/02_nernst_and_more/"
 
-    # spin_currents_2d_plot()
-    # print(seperator)
-
-    fourier_thingy_TODO_CHANGENAME()
+    fourier_thingy_TODO_CHANGENAME("/data/scc/marian.gunsch/02_AM_tilted_Tstep_hightres/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+                                   save_prefix=f"{out_prefix}magnon_acc_frequency")
     print(seperator)
+
+    return
+
+    print("Showing magnetizazion and Neel vector for a temperature of T=2meV. We are subtracting the equilibrium state."
+          " One plot with and one without convolution.\n"
+          "Parameters of the simulation: open open open boundaries, 512x512x64")
+    magnetization_neel_2d_plot(
+        "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat",
+        "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_T2meV/spin-configs-99-999/spin-config-99-999-005000.dat",
+        2, f"{out_prefix}spin_config_T2step")
+    print(seperator)
+
+    # No info for SNE because of 010 boundaries (periodic destroys any edge effects)
+    # magnetization_neel_2d_plot(
+    #     "/data/scc/marian.gunsch/04_AM_tilted_xTstep_T2/spin-configs-99-999/spin-config-99-999-005000.dat",
+    #     "/data/scc/marian.gunsch/04_AM_tilted_Tstairs_T2/spin-configs-99-999/spin-config-99-999-005000.dat")
+    # print(seperator)
+    print(seperator)
+
+    spin_currents_2d_plot(
+        "/data/scc/marian.gunsch/AM_tiltedX_ttmstep_morezlayers_noABC/spin-configs-99-999/spin-config-99-999-005000.dat",
+        f"{out_prefix}config_spin_currents_T7step")
+    print(seperator)
+
+    spin_currents_2d_plot(
+        "/data/scc/marian.gunsch/01_AM_tilted_Tstep/spin-configs-99-999/spin-config-99-999-005000.dat",
+        f"{out_prefix}config_spin_currents_T2step")
+    print(seperator)
+
+    spin_currents_2d_plot(
+        "/data/scc/marian.gunsch/04_AM_tilted_xTstep_T2/spin-configs-99-999/spin-config-99-999-005000.dat",
+        f"{out_prefix}config_spin_currents_T2step_morez")
+    print(seperator)
+
+
+    # fourier_thingy_TODO_CHANGENAME()
+    # print(seperator)
 
 
 # %% Further stuff for their paper (03)
@@ -741,11 +845,31 @@ def spin_conservation(
     path_config_dmi = path_prefix + path_config_dmi
 
     import os
-    if os.path.exists(path_config_nodmi) and os.path.exists(path_config_dmi):
-        plot_2d(path_config_nodmi, title_suffix=f"(No DMI, {title})")
-        plot_2d(path_config_dmi, title_suffix=f"(DMI, {title})")
+    if os.path.exists(path_config_nodmi) or os.path.exists(path_config_dmi):
+        if os.path.exists(path_config_nodmi):
+            plot_2d(path_config_nodmi, title_suffix=f"(No DMI, {title})")
+        if os.path.exists(path_config_dmi):
+            plot_2d(path_config_dmi, title_suffix=f"(DMI, {title})")
+
+
+        print("The average norms of the spin vectors* are the following: \t\t\t\t *First, the norm of every spin was "
+              "taken, then these norms were averaged.")
+        sel = spinconf_util.select_SL_and_component
+        norm = dict()
+        for info, path in zip(["No DMI", "DMI"], [path_config_nodmi, path_config_dmi]):
+            if os.path.exists(path):
+                conf_data = spinconf_util.read_spin_config_dat(path)
+                norm[info + " A"] = np.mean(np.sqrt(sel(conf_data, "A", "x") ** 2 +
+                                               sel(conf_data, "A", "y") ** 2 +
+                                               sel(conf_data, "A", "z") ** 2))
+                norm[info + " B"] = np.mean(np.sqrt(sel(conf_data, "B", "x") ** 2 +
+                                               sel(conf_data, "B", "y") ** 2 +
+                                               sel(conf_data, "B", "z") ** 2))
+                print(f"{info}, SL A: \t{norm[info + " A"]:.4f}\n"
+                      f"{info}, SL B: \t{norm[info + " B"]:.4f}")
+        print()
     else:
-        print(f"Files {path_config_nodmi}, {path_config_dmi} were not created yet!\n")
+        print(f"Files {path_config_nodmi} and {path_config_dmi} were not created yet!\n")
 
 
     ### Mean values
@@ -759,12 +883,13 @@ def spin_conservation(
     spins_dmi_A['norm'] = np.sqrt(np.sum(np.array([spins_dmi_A[c] for c in spins_dmi_A.keys()]) ** 2))
     spins_dmi_B['norm'] = np.sqrt(np.sum(np.array([spins_dmi_B[c] for c in spins_dmi_B.keys()]) ** 2))
 
-    print("The norms of the spin vectors are the following:\n"
+    print("The norms of the averages of the spin vectors* are the following: \t\t\t\t *First averages were taken, then "
+          "the norm of these averages were calculated.\n"
           f"No DMI, SL A: \t{spins_nodmi_A['norm']:.4f}\n"
           f"No DMI, SL B: \t{spins_nodmi_B['norm']:.4f}\n"
           f"DMI, SL A: \t\t{spins_dmi_A['norm']:.4f}\n"
           f"DMI, SL B: \t\t{spins_dmi_A['norm']:.4f}\n")
-    print("The y and z components of the spin vectors are the following:\n"
+    print("The averages of the y and z components of the spin vectors are the following:\n"
           f"No DMI, SL A: \t Sy = {spins_nodmi_A['y']:.4f} \t and \t Sz = {spins_dmi_A['z']:.8f}\n"
           f"No DMI, SL B: \t Sy = {spins_nodmi_B['y']:.4f} \t and \t Sz = {spins_dmi_B['z']:.8f}\n"
           f"DMI, SL A: \t\t Sy = {spins_dmi_A['y']:.4f} \t and \t Sz = {spins_dmi_A['z']:.8f}\n"
@@ -816,17 +941,17 @@ def spin_conservation(
 
 
 def presenting_data_04():
-    print("[04] As previous attempts working with the equilibrium data for DMI have failed, I am trying once again"
+    print("[04] As previous attempts working with the equilibrium data for DMI have failed, I am trying once again "
           "with lower temperature. Turns out, the previous attempts have failed because I made a mistake with a lot "
           "of equilibrium ('stairs') simulations, mixing up two flags. I have now run the simulations again and "
           "have better (correct) results. I have correct results for the lower temperature (T=2meV). Furthermore I "
           "have also fixed the previous simulations for T=7meV. These results are therefore shown here as well."
           "Results can be seen in the folder starting with 04.")
 
-    seebeck_03("out/04_lowerT/seebeck_T7", "out/04_lowerT/seebeck_eq_T7")
+    # seebeck_03("out/04_lowerT/seebeck_T7", "out/04_lowerT/seebeck_eq_T7")
     print(seperator)
 
-    seebeck_04()
+    # seebeck_04()
     print(seperator)
 
     spin_conservation(path_config_nodmi="04_AM_tilted_Tstairs_T2/spin-configs-99-999/spin-config-99-999-005000.dat",
@@ -845,9 +970,9 @@ def presenting_data_04():
                       save_path="out/04_lowerT/equilibrium_summary_T7.pdf")
     print(seperator)
 
-    spin_conservation(path_config_nodmi="03_AM_tilted_Tstairs_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
-                      #path_config_dmi="03_AM_tilted_Tstairs_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
-                      path_config_dmi="DON'T PLOT CONFIG",
+    spin_conservation(#path_config_nodmi="03_AM_tilted_Tstairs_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
+                      path_config_nodmi="DON'T PLOT CONFIG",
+                      path_config_dmi="03_AM_tilted_Tstairs_DMI/spin-configs-99-999/spin-config-99-999-005000.dat",
                       path_bulk_nodmi="03_AM_tilted_Tstairs_DMI_T0/03_AM_Tstairs_T0-99-999.dat",
                       path_bulk_dmi="03_AM_tilted_Tstairs_DMI_T0/03_AM_Tstairs_T0-99-999.dat",
                       path_prefix="/data/scc/marian.gunsch/", title="Equilibrium results for T=0meV (both sides show for DMI!!!)",
@@ -860,10 +985,10 @@ def presenting_data_04():
 if __name__ == '__main__':
     # presenting_data_01()
 
-    # presenting_data_02()
+    presenting_data_02()
 
     # presenting_data_03()
-    presenting_data_04()
+    # presenting_data_04()
 
     pass
 

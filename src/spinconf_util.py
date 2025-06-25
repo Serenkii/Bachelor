@@ -116,7 +116,7 @@ def read_spin_config_arrjob(path_prefix, path_suffix, start, stop=None, step=1, 
     return data_arr
 
 
-def plot_colormap(data_grid, title="", rel_step_pos=0.49, show_step=False, zoom=False):
+def plot_colormap(data_grid, title="", rel_step_pos=0.49, show_step=False, zoom=False, save_path=None, read_path=None):
     data_grid = np.squeeze(data_grid)
     X, Y = np.meshgrid(np.arange(0, data_grid.shape[1], 1, dtype=int),
                        np.arange(0, data_grid.shape[0], 1, dtype=int),
@@ -142,6 +142,13 @@ def plot_colormap(data_grid, title="", rel_step_pos=0.49, show_step=False, zoom=
         ax.set_xlim(step_pos - 25, step_pos + 25)
 
     fig.tight_layout()
+
+    if read_path:
+        fig.text(0.5, 0.0, read_path, ha='center', va='bottom', color="green", size=5.0)
+
+    if save_path:
+        print(f"Saving to {save_path}...")
+        fig.savefig(save_path)
 
     plt.show()
 
