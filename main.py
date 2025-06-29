@@ -491,7 +491,7 @@ def spin_currents_2d_plot(data_path, save_prefix=None, show_path=True):
         # TODO: print statement on what was plotted and saving figure
 
 
-def fourier_thingy_TODO_CHANGENAME(data_A_path, data_B_path=None, save_prefix=None, show_path=True):
+def position_dependent_frequency_spectrum(data_A_path, data_B_path=None, save_prefix=None, show_path=True):
     print("MAGNON DENSITY AS A FUNCTION OF FREQUENCY\n"
           "For the spin Nernst effect, we want to look at the frequency dependency of the magnon density as a function "
           "in space. We want to know the magnon density for different frequencies at different positions along the "
@@ -516,11 +516,15 @@ def fourier_thingy_TODO_CHANGENAME(data_A_path, data_B_path=None, save_prefix=No
     data_A = np.loadtxt(data_A_path)
     data_B = np.loadtxt(data_B_path)
 
+    print(f"Finished reading data from {data_A_path}")
+
     skip_time_steps = -100000
-    # skip_time_steps = -10000
+    # skip_time_steps = -50000
 
     Sx = mag_util.get_component(data_A, "x", skip_time_steps) + mag_util.get_component(data_B, "x", skip_time_steps)
+    Sx *= 0.5
     Sy = mag_util.get_component(data_A, "y", skip_time_steps) + mag_util.get_component(data_B, "y", skip_time_steps)
+    Sy *= 0.5
 
     Sp = Sx + 1j * Sy
     Sm = Sx - 1j * Sy
@@ -544,13 +548,15 @@ def fourier_thingy_TODO_CHANGENAME(data_A_path, data_B_path=None, save_prefix=No
     # magnon_density = Sp_F * Sm_F
     magnon_density = np.abs(Sp_F) ** 2
 
+    print("Plotting...")
+
     # plotting
     fig, ax = plt.subplots()
     ax.set_title("Position and frequency dependent magnon density")
     positions = np.arange(0, Sx.shape[1], 1)
     # im = ax.pcolormesh(positions[:60], omega_shifted, magnon_density[:,:60], shading='auto')
-    # im = ax.pcolormesh(positions, omega_shifted, magnon_density, shading='auto', norm=colors.LogNorm(vmin=magnon_density.min(), vmax=magnon_density.max()))
-    im = ax.pcolormesh(positions, omega_shifted, magnon_density, shading='auto')
+    im = ax.pcolormesh(positions, omega_shifted, magnon_density, shading='auto', norm=colors.LogNorm(vmin=magnon_density.min(), vmax=magnon_density.max()))
+    # im = ax.pcolormesh(positions, omega_shifted, magnon_density, shading='auto')
     # im = ax.pcolormesh(positions[:30], omega_shifted[9000:-9000], magnon_density[9000:-9000,:30], shading='auto', norm=colors.LogNorm(vmin=magnon_density.min(), vmax=magnon_density.max()))
     ax.set_ylabel('Frequency ω in rad/s')
     ax.set_xlabel('Position (index)')
@@ -564,7 +570,7 @@ def fourier_thingy_TODO_CHANGENAME(data_A_path, data_B_path=None, save_prefix=No
 
     plt.show()
 
-    for position in [0, 10, 50, -1]:
+    for position in [0, 1, 2, 10, 50, -1]:
         fig, ax = plt.subplots()
         ax.set_title(f"Spectrum at position index {position}")
         ax.set_xlabel("Frequency ω in rad/s")
@@ -591,8 +597,9 @@ def presenting_data_02():
 
     out_prefix = "out/02_nernst_and_more/"
 
-    fourier_thingy_TODO_CHANGENAME("/data/scc/marian.gunsch/02_AM_tilted_Tstep_hightres/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
-                                   save_prefix=f"{out_prefix}magnon_acc_frequency")
+    position_dependent_frequency_spectrum(
+        "/data/scc/marian.gunsch/02_AM_tilted_Tstep_hightres/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        save_prefix=f"{out_prefix}magnon_acc_frequency")
     print(seperator)
 
     return
@@ -776,7 +783,7 @@ def presenting_data_03():
 
 # %% 04
 
-def seebeck_04(save_prefix="out/04_lowerT/seebeck_T2", save_prefix_eq="out/04_lowerT/seebeck_eq_T2"):
+def seebeck_04(save_prefix="out/04_lowerT/seebeck_T2-2", save_prefix_eq="out/04_lowerT/seebeck_eq_T2-2"):
     print("PLOTTING SEEBECK EFFECT\n"
           "Now creating plots for SSE. Magnetization and Neel-Vector will be plotted for a temperature of 2meV."
           "Two different directions with and without DMI are plotted. ([110] and [-110])")
@@ -785,10 +792,10 @@ def seebeck_04(save_prefix="out/04_lowerT/seebeck_T2", save_prefix_eq="out/04_lo
     noDMI_kwargs = dict(alpha=0.7, linestyle="--", linewidth=1.0)
 
     mag_util.plot_magnetic_profile(
-        ["/data/scc/marian.gunsch/04_AM_tilted_xTstep_T2/spin-configs-99-999/mag-profile-99-999.altermagnet",
-         "/data/scc/marian.gunsch/04_AM_tilted_yTstep_T2/spin-configs-99-999/mag-profile-99-999.altermagnet",
-         "/data/scc/marian.gunsch/04_AM_tilted_xTstep_DMI_T2/spin-configs-99-999/mag-profile-99-999.altermagnet",
-         "/data/scc/marian.gunsch/04_AM_tilted_yTstep_DMI_T2/spin-configs-99-999/mag-profile-99-999.altermagnet"],
+        ["/data/scc/marian.gunsch/04_AM_tilted_xTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         "/data/scc/marian.gunsch/04_AM_tilted_yTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         "/data/scc/marian.gunsch/04_AM_tilted_xTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         "/data/scc/marian.gunsch/04_AM_tilted_yTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet"],
         0,
         save_prefix,
         None,
@@ -810,10 +817,10 @@ def seebeck_04(save_prefix="out/04_lowerT/seebeck_T2", save_prefix_eq="out/04_lo
     equi_cold_DMI = mag_util.get_mean(f"{prefix}03_AM_tilted_Tstairs_DMI_T0/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat")
 
     mag_util.plot_magnetic_profile(
-        ["/data/scc/marian.gunsch/04_AM_tilted_xTstep_T2/spin-configs-99-999/mag-profile-99-999.altermagnet",
-         "/data/scc/marian.gunsch/04_AM_tilted_yTstep_T2/spin-configs-99-999/mag-profile-99-999.altermagnet",
-         "/data/scc/marian.gunsch/04_AM_tilted_xTstep_DMI_T2/spin-configs-99-999/mag-profile-99-999.altermagnet",
-         "/data/scc/marian.gunsch/04_AM_tilted_yTstep_DMI_T2/spin-configs-99-999/mag-profile-99-999.altermagnet"],
+        ["/data/scc/marian.gunsch/04_AM_tilted_xTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         "/data/scc/marian.gunsch/04_AM_tilted_yTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         "/data/scc/marian.gunsch/04_AM_tilted_xTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         "/data/scc/marian.gunsch/04_AM_tilted_yTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet"],
         0,
         save_prefix_eq,
         [equi_warm_noDMI, equi_warm_noDMI, equi_warm_DMI, equi_warm_DMI],
@@ -948,11 +955,13 @@ def presenting_data_04():
           "have also fixed the previous simulations for T=7meV. These results are therefore shown here as well."
           "Results can be seen in the folder starting with 04.")
 
-    # seebeck_03("out/04_lowerT/seebeck_T7", "out/04_lowerT/seebeck_eq_T7")
+    seebeck_03("out/04_lowerT/seebeck_T7", "out/04_lowerT/seebeck_eq_T7")
     print(seperator)
 
-    # seebeck_04()
+    seebeck_04()
     print(seperator)
+
+    # return
 
     spin_conservation(path_config_nodmi="04_AM_tilted_Tstairs_T2/spin-configs-99-999/spin-config-99-999-005000.dat",
                       path_config_dmi="04_AM_tilted_Tstairs_DMI_T2/spin-configs-99-999/spin-config-99-999-005000.dat",
@@ -980,15 +989,41 @@ def presenting_data_04():
     print(seperator)
 
 
+
+# %% 05 Static B field
+
+def dispersion_relation(path_A, path_B=None):
+    path_B = path_B or f"{path_A[:-5]}B.dat"
+
+    data_A = np.loadtxt(path_A)
+    data_B = np.loadtxt(path_B)
+
+    skip_steps = -25000
+
+    Sx = physics.magnetization(mag_util.get_component(data_A, "x", skip_steps),
+                               mag_util.get_component(data_B, "x", skip_steps))
+    Sy = physics.magnetization(mag_util.get_component(data_A, "y", skip_steps),
+                               mag_util.get_component(data_B, "y", skip_steps))
+
+    Sp = Sx + 1j * Sy
+
+
+
+
+def presenting_data_05():
+    dispersion_relation("/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat")
+
 # %% Main
 
 if __name__ == '__main__':
     # presenting_data_01()
 
-    presenting_data_02()
+    # presenting_data_02()
 
     # presenting_data_03()
     # presenting_data_04()
+
+    presenting_data_05()
 
     pass
 
