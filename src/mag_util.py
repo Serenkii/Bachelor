@@ -200,7 +200,7 @@ def get_mean(file_path_A, file_path_B=None, skip_time_steps=15):
 
 
 
-def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, equi_values_cold, rel_T_step_positions, plot_kwargs_list, title_suffix=""):
+def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, equi_values_cold, rel_T_step_positions, plot_kwargs_list, title_suffix="", dont_calculate_margins=False):
     """
     Plots and saves the magnetization and neel vector of this magnetic profile. All files are read and plotted in the
     same figure. Equilibrium values can be given and will be subtracted. If none are given, all components are set to
@@ -264,6 +264,22 @@ def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, eq
             neel_list[-1][component] = physics.neel_vector(spins_A[component], spins_B[component], False)
 
 
+    def calculate_margins(data_list_for_component):
+        max_len = max(len(sub) for sub in data_list_for_component)
+        all_data = np.full((len(data_list_for_component), max_len), np.nan)
+        for i, sub in enumerate(data_list_for_component):
+            all_data[i, :len(sub)] = sub
+
+        mean = np.nanmean(all_data)
+        median = np.nanmedian(all_data)
+        mid = (mean + median) / 2
+        std = np.nanstd(all_data)
+        _max = np.nanmax(all_data)
+        _min = np.nanmin(all_data)
+        bottom = max(mid - 5 * std, _min - 0.8 * std)
+        top = min(mid + 5 * std, _max + 0.8 * std)
+        return (bottom, top)
+
     # Subtracting equilibrium
     magnon_accum_list, delta_neel_list = [], []
 
@@ -310,17 +326,9 @@ def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, eq
             for quantity in quantity_list:
                 data_list_for_component.append(quantity[component])
 
-            all_data = np.array(data_list_for_component)
-            mean = np.mean(all_data)
-            median = np.median(all_data)
-            mid = (mean + median) / 2
-            std = np.std(all_data)
-            _max = np.max(all_data)
-            _min = np.min(all_data)
-            bottom = max(mid - 5 * std, _min - 0.8 * std)
-            top = min(mid + 5 * std, _max + 0.8 * std)
-
-            ax.set_ylim(ymin=bottom, ymax=top)
+            if not dont_calculate_margins:
+                bottom, top = calculate_margins(data_list_for_component)
+                ax.set_ylim(ymin=bottom, ymax=top)
 
             ax.legend()
 
@@ -330,3 +338,34 @@ def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, eq
                 plt.savefig(save_path_)
 
             plt.show()
+
+
+def save_mag_files(file_path_A, save_path_prefix, file_path_B=None, saving_after_index=0, force=False):
+    file_path_B = file_path_B or f"{file_path_A[:-5]}B.dat"
+
+    save_path_A = f"{save_path_prefix}_A.npy" if not save_path_prefix.endswith("_A.npy") else save_path_prefix
+    save_path_B = f"{save_path_prefix[:-6]}_B.npy"
+
+    if os.path.isfile(save_path_A) or os.path.isfile(save_path_B) and not force:
+        print(f"File {save_path_A} or {save_path_B} already exists, skipping.")
+        return save_path_A, save_path_B
+
+    print(f"Loading data from {file_path_A} and {file_path_B}...", end=" ")
+    dataA = np.loadtxt(file_path_A)
+    print("A", end=".")
+    dataB = np.loadtxt(file_path_B)
+    print("B.")
+
+    print(f"Saving data to {save_path_A} and {save_path_B}...")
+
+    np.save(save_path_A, dataA[saving_after_index:])
+    np.save(save_path_B, dataB[saving_after_index:])
+
+    return save_path_A, save_path_B
+
+
+def load_mag_npy_files(path_A, path_B=None):
+    path_A = path_A if path_A.endswith("_A.npy") else f"{path_A}_A.npy"
+    path_B = path_B or f"{path_A[:-6]}_B.npy"
+    print(f"Loading data from {path_A} and {path_B}...")
+    return np.load(path_A), np.load(path_B)

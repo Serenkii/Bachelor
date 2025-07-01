@@ -17,6 +17,8 @@ import src.helper as helper
 
 seperator = "-------------------------------------------------------------\n"
 
+plot_paths = True
+
 # %% Meeting in May
 
 def temperature_dependent_nernst(save=False, save_path='out/T-dependent-nernst.png', delta_x=0):
@@ -992,13 +994,13 @@ def presenting_data_04():
 
 # %% 05 Static B field
 
-def dispersion_relation(path_A, path_B=None):
-    path_B = path_B or f"{path_A[:-5]}B.dat"
+def dispersion_relation(path_A, npy_path_A, path_B=None, title="Dispersion relation", out_path=None):
+    print(f"Displaying the dispersion relation of the data in path '{path_A}'...")
 
-    data_A = np.loadtxt(path_A)
-    data_B = np.loadtxt(path_B)
+    mag_util.save_mag_files(path_A, npy_path_A, saving_after_index=-100000)
+    data_A, data_B = mag_util.load_mag_npy_files(npy_path_A)
 
-    skip_steps = -25000
+    skip_steps = 0
 
     Sx = physics.magnetization(mag_util.get_component(data_A, "x", skip_steps),
                                mag_util.get_component(data_B, "x", skip_steps))
@@ -1007,11 +1009,129 @@ def dispersion_relation(path_A, path_B=None):
 
     Sp = Sx + 1j * Sy
 
+    # Fourier
+    time_steps = mag_util.get_component(data_A, "t", skip_steps)
+    dt = time_steps[1] - time_steps[0]
+    dt *= 1e-16  # unit: picoseconds TODO: unit is wrong
+    dt = 50e-16
 
+    dx = 1e-10  # 1 Angstrom    # TODO: Do not know if this is correct
+    k_vectors = np.fft.fftfreq(Sp.shape[1], d=dx) * 2 * np.pi
+
+    Sp_F_ = np.fft.fft2(Sp)
+
+    freqs = np.fft.fftfreq(time_steps.shape[0], d=dt)
+    freqs_shifted = np.fft.fftshift(freqs)
+    omega_shifted = 2 * np.pi * freqs
+
+    Sp_F = np.fft.fftshift(Sp_F_)
+    k_shifted = np.fft.fftshift(k_vectors)
+
+    magnon_density = np.abs(Sp_F) ** 2
+
+
+    print("Plotting...")
+
+    # plotting
+    fig, ax = plt.subplots()
+    ax.set_title(title)
+
+    im = ax.pcolormesh(k_shifted, freqs_shifted, magnon_density, shading='auto', norm=colors.LogNorm(vmin=magnon_density.min(), vmax=magnon_density.max()))
+    # im = ax.pcolormesh(k_shifted, omega_shifted, magnon_density, shading='auto')
+
+    if plot_paths:
+        fig.text(0.5, 1.0, f"{path_A}", ha="center", va="top", color="green", size=6)
+
+    ax.set_ylabel('Frequency ω in rad/s')
+    ax.set_xlabel('k-vector (1/A)')
+    fig.colorbar(im, ax=ax, label='Magnon Density')
+
+    if out_path:
+        print(f"Saving dispersion relation figure to {out_path}..", end="")
+        fig.savefig(out_path, dpi=1200)
+        print(".")
+
+    plt.show()
+
+
+def seebeck_05():
+    print("Seebeck with static B-field")
+
+    noB_kwargs = dict(alpha=0.7, linestyle="-.", linewidth=1.0)
+    prefix = "/data/scc/marian.gunsch/"
+    save_path = "out/05_staticB/default_save_file"
+
+    prefix = "/data/scc/marian.gunsch/"
+    mag_util.plot_magnetic_profile(
+        [f"{prefix}05_AM_tilted_xTstep_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}05_AM_tilted_yTstep_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}05_AM_tilted_xTstep_DMI_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}05_AM_tilted_yTstep_DMI_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}04_AM_tilted_xTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}04_AM_tilted_yTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}04_AM_tilted_xTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}04_AM_tilted_yTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet"],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        "out/05_staticB/seebeck_T2_completeComparison", None, None, 0.49,
+        [dict(label="B=100T, no DMI, [110]"),
+         dict(label="B=100T, no DMI, [-110]"),
+         dict(label="B=100T, DMI, [110]"),
+         dict(label="B=100T, DMI, [-110]"),
+         dict(label="B=0, no DMI, [110]", **noB_kwargs),
+         dict(label="B=0, no DMI, [-110]", **noB_kwargs),
+         dict(label="B=0, DMI, [110]", **noB_kwargs),
+         dict(label="B=0, DMI, [-110]", **noB_kwargs)],
+        "(T=2meV)"
+    )
+
+    mag_util.plot_magnetic_profile(
+        [f"{prefix}05_AM_tilted_xTstep_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}05_AM_tilted_yTstep_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}04_AM_tilted_xTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}04_AM_tilted_yTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",],
+        [0, 0, 0, 0],
+        "out/05_staticB/seebeck_T2_nodmiComparison", None, None, 0.49,
+        [dict(label="B=100T, no DMI, [110]"),
+         dict(label="B=100T, no DMI, [-110]"),
+         dict(label="B=0, no DMI, [110]", **noB_kwargs),
+         dict(label="B=0, no DMI, [-110]", **noB_kwargs)],
+        "(T=2meV)"
+    )
+
+    mag_util.plot_magnetic_profile(
+         [f"{prefix}05_AM_tilted_xTstep_DMI_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}05_AM_tilted_yTstep_DMI_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}04_AM_tilted_xTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         f"{prefix}04_AM_tilted_yTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet"],
+        [0, 0, 0, 0],
+        "out/05_staticB/seebeck_T2_dmi_comparison", None, None, 0.49,
+        [dict(label="B=100T, DMI, [110]"),
+         dict(label="B=100T, DMI, [-110]"),
+         dict(label="B=0, DMI, [110]", **noB_kwargs),
+         dict(label="B=0, DMI, [-110]", **noB_kwargs)],
+        "(T=2meV)"
+    )
 
 
 def presenting_data_05():
-    dispersion_relation("/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat")
+    dispersion_relation(
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/05_staticB/stairs_T2_x_staticB_A.npy",
+        title="Dispersion relation [110] (with static B-field)",
+        # out_path="out/05_staticB/dispersionRel_110.pdf"
+        out_path="out/05_staticB/dispersionRel_110.png"
+    )
+
+    dispersion_relation(
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/05_staticB/stairs_T2_y_staticB_A.npy",
+        title="Dispersion relation [-110] (with static B-field)",
+        # out_path="out/05_staticB/dispersionRel_-110.pdf"
+        out_path="out/05_staticB/dispersionRel_-110.png"
+    )
+
+    # seebeck_05()
+
 
 # %% Main
 
