@@ -405,32 +405,32 @@ def magnetization_neel_2d_plot(path_conf, eq_path_conf, temperature=2, save_pref
 
     if not save_prefix:
         spinconf_util.plot_colormap(magn_zavg, title=f"magnetization, equi subtracted (T={temperature}meV)",
-                                    read_path=f"{path_conf} \n - {eq_path}")
+                                    fig_comment=f"{path_conf} \n - {eq_path}")
         spinconf_util.plot_colormap(neel_zavg, title=f"Neel vector (z), equi subtracted (T={temperature}meV)",
-                                    read_path=f"{path_conf} \n - {eq_path}")
+                                    fig_comment=f"{path_conf} \n - {eq_path}")
 
         spinconf_util.plot_colormap(spinconf_util.convolute(magn_zavg),
                                     title=f"magnetization, equi subtracted (T={temperature}meV) - convoluted",
-                                    read_path=f"{path_conf} \n - {eq_path}")
+                                    fig_comment=f"{path_conf} \n - {eq_path}")
         spinconf_util.plot_colormap(spinconf_util.convolute(neel_zavg),
                                     title=f"Neel vector (z), equi subtracted (T={temperature}meV) - convoluted",
-                                    read_path=f"{path_conf} \n - {eq_path}")
+                                    fig_comment=f"{path_conf} \n - {eq_path}")
     else:
         spinconf_util.plot_colormap(magn_zavg, title=f"magnetization, equi subtracted (T={temperature}meV)",
                                     save_path=f"{save_prefix}_magn_equisubtr.pdf",
-                                    read_path=f"{path_conf} \n - {eq_path}")
+                                    fig_comment=f"{path_conf} \n - {eq_path}")
         spinconf_util.plot_colormap(neel_zavg, title=f"Neel vector (z), equi subtracted (T={temperature}meV)",
                                     save_path=f"{save_prefix}_neel_equisubtr.pdf",
-                                    read_path=f"{path_conf} \n - {eq_path}")
+                                    fig_comment=f"{path_conf} \n - {eq_path}")
 
         spinconf_util.plot_colormap(spinconf_util.convolute(magn_zavg),
                                     title=f"magnetization, equi subtracted (T={temperature}meV) - convoluted",
                                     save_path=f"{save_prefix}_magn_conv_equisubtr.pdf",
-                                    read_path=f"{path_conf} \n - {eq_path}")
+                                    fig_comment=f"{path_conf} \n - {eq_path}")
         spinconf_util.plot_colormap(spinconf_util.convolute(neel_zavg),
                                     title=f"Neel vector (z), equi subtracted (T={temperature}meV) - convoluted",
                                     save_path=f"{save_prefix}_neel_conv_equisubtr.pdf",
-                                    read_path=f"{path_conf} \n - {eq_path}")
+                                    fig_comment=f"{path_conf} \n - {eq_path}")
 
 
 def spin_currents_2d_plot(data_path, save_prefix=None, show_path=True):
@@ -705,8 +705,6 @@ def seebeck_03(file_path_quantity, file_path_quantity_eq_subtracted):
 def plot_2d(load_path, save_path=None, width_xy=100, title_suffix=""):
     print()
 
-    spinconf_data = "/data/scc/marian.gunsch/03_AM_tilted_Tstairs_DMI/spin-configs-99-999/spin-config-99-999-005000.dat"
-    spinconf_data = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_DMI-2/spin-configs-99-999/spin-config-99-999-005000.dat"
     spinconf_data = load_path
 
     equi_data = spinconf_util.average_z_layers(spinconf_util.read_spin_config_dat(spinconf_data))

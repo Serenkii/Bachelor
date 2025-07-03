@@ -13,6 +13,11 @@ import src.physics as physics
 import src.helper as helper
 
 def get_dimensions(path):
+    """
+    Reads the specified path
+    :param path: The path to a spin-config file. (Probably other files of the same simulation work too)
+    :return: Returns the dimension and actual length of the simulation as two dictionaries with keys 'x', 'y' and 'z'.
+    """
     lengths = dict()
     dimensions = dict()
     with open(path, 'r') as f:
@@ -33,11 +38,12 @@ def get_dimensions(path):
 
 def select_SL_and_component(value_arr, sublattice, spin_component):
     """
-
+    Selects the specified sublattice and spin component and returns a three-dimensional array whose indices specify the
+    position in space.
     :param value_arr: data array as for example returned by read_spin_config_dat
     :param sublattice: A or B?
     :param spin_component: x, y, or z?
-    :return:
+    :return: A three-dimensional arrays of shape (l.x, l.y, l.z), where l is the (actual) length of the material.
     """
     spin_dict = dict(x=0, y=1, z=2)
     sl_dict = dict(A=0, B=1)
@@ -76,19 +82,28 @@ def read_spin_config_dat(path, is_tilted=True):
     )
 
     shape = (lengths['x'], lengths['y'], lengths['z'], number_sublattices, 3)
-    value_grid = np.zeros(shape) + 1000  # TODO: Change to np empty and remove addition
+    value_grid = np.zeros(shape) + 1e9
     value_grid[j, i, k, sl, 0] = data[:, 4]  # 4=x, 5=y, 6=z
     value_grid[j, i, k, sl, 1] = data[:, 5]  # (components of spin)
     value_grid[j, i, k, sl, 2] = data[:, 6]  # j i k instead of i j k because indices are weird...
 
-    # value_grid_zavg = np.average(value_grid, axis=2)  # average over k (z layers)
-
-    # return value_grid_zavg
+    if np.any(value_grid > 1e6):
+        raise ValueError(f"A value of the value_grid containing the data of the specified path '{path}' could not be "
+                         f"set using the available data in the spin configuration file. Check the file (any maybe"
+                         f"also this function).")
 
     return value_grid
 
 
 def save_spin_config_as_npy(dat_path, save_path, is_tilted=True):
+    """
+    Saves the spin configuration file in the specified data path as a new .npy file in the specified path. Any existing
+    file will be overwritten.
+    :param dat_path: The path of the spin configuration file.
+    :param save_path: The npy file path.
+    :param is_tilted: Specify if the tilted configuration is used.
+    :return:
+    """
     grid_data = read_spin_config_dat(dat_path, is_tilted=is_tilted)
     np.save(save_path, grid_data)
 
@@ -116,7 +131,18 @@ def read_spin_config_arrjob(path_prefix, path_suffix, start, stop=None, step=1, 
     return data_arr
 
 
-def plot_colormap(data_grid, title="", rel_step_pos=0.49, show_step=False, zoom=False, save_path=None, read_path=None):
+def plot_colormap(data_grid, title="", rel_step_pos=0.49, show_step=False, zoom=False, save_path=None, fig_comment=None):
+    """
+    Creates a 2d color-plot for a given data grid.
+    :param data_grid: The data which will be plotted in a 2d color-plot.
+    :param title: The title of the figure.
+    :param rel_step_pos: The relative position of the temperature step. Is only used if show_step or zoom is True.
+    :param show_step: Displays a vertical dashed line at the position of the temperature step.
+    :param zoom: If True, only the data around the temperature step will be shown.
+    :param save_path: The path, in which the figure will be saved.
+    :param fig_comment: If specified, will add a text on the figure displaying this string.
+    :return:
+    """
     data_grid = np.squeeze(data_grid)
     X, Y = np.meshgrid(np.arange(0, data_grid.shape[1], 1, dtype=int),
                        np.arange(0, data_grid.shape[0], 1, dtype=int),
@@ -143,8 +169,8 @@ def plot_colormap(data_grid, title="", rel_step_pos=0.49, show_step=False, zoom=
 
     fig.tight_layout()
 
-    if read_path:
-        fig.text(0.5, 0.0, read_path, ha='center', va='bottom', color="green", size=5.0)
+    if fig_comment:
+        fig.text(0.5, 0.0, fig_comment, ha='center', va='bottom', color="green", size=5.0)
 
     if save_path:
         print(f"Saving to {save_path}...")
@@ -222,6 +248,19 @@ def calculate_magnetization_neel(data_grid, equi_data_warm=None, direction="x", 
 
 
 def convolute(data, filter="denoise", denoise_kwargs=None):
+    """
+    Convolute the given two-dimensional data array with one of a few filters. A three-dimensional array is also allowed,
+    as long as the array is squeezable into a two-dimensional array.
+    The implementation of this method can be improved.
+    Available filters:
+    'none' returns a copy of the original array.
+    'uniform' applies the scipy uniform filter.
+    'denoise' applies the denoise_bilateral filter from skimage.restoration.
+    :param data:
+    :param filter: The filter that should be applied: 'none', 'uniform' or 'denoise'
+    :param denoise_kwargs: If the specified filter is 'denoise', one can supply additional keyword arguments.
+    :return: A copy of the original array with the filter applied.
+    """
     copy = np.squeeze(data)
 
     if filter is None or filter == 0 or filter == "none" or filter == "copy":
@@ -238,19 +277,15 @@ def convolute(data, filter="denoise", denoise_kwargs=None):
 
     raise ValueError(f"Unknown filter '{filter}'.")
 
-    # return copy
-
-    # import cv2
-    # normalized = cv2.normalize(copy.astype(np.float32), None, 0, 1, cv2.NORM_MINMAX)
-    # return cv2.bilateralFilter(normalized, d=9, sigmaColor=5, sigmaSpace=75) - 0.5
-
-
-    # normed = (copy - copy.min()) / (copy.max() - copy.min())
-    # return denoise_bilateral(normed, sigma_color=0.05, sigma_spatial=4) * (copy.max() - copy.min()) + copy.min()
-
-
 
 def average_z_layers(data, *args, force_return_tuple=False):
+    """
+    Takes a minimum of one data arrays of spin configurations and returns them averaged along z direction for each.
+    :param data: A spin configuration array.
+    :param args: (optional) additional spin configuration arrays.
+    :param force_return_tuple: If True, also returns a tuple if only one spin configuration array was passed.
+    :return: Returns either a single data array averaged along z direction, or a tuple of all passed data arrays.
+    """
     if len(args) == 0 and not force_return_tuple:
         return np.mean(data, axis=2, keepdims=True)
 
@@ -325,10 +360,10 @@ if __name__ == "__main__":
     # magn, neel = calculate_magnetization_neel(data4, data3_eq, "x")
     magn, neel = calculate_magnetization_neel(data, direction="x")
     # magn, neel = calculate_magnetization_neel(data1, direction="x")
-    plot_colormap(convolute(average_z_layers(magn["z"]), filter="denoise"),
-                  "magnetization z", rel_Tstep_pos, show_step, zoom)
-    plot_colormap(convolute(average_z_layers(neel["z"]), filter="denoise"),
-                  "neel vector z", rel_Tstep_pos, show_step, zoom)
+    plot_colormap(convolute(average_z_layers(magn["z"]), filter="denoise"), "magnetization z", rel_Tstep_pos, show_step,
+                  zoom)
+    plot_colormap(convolute(average_z_layers(neel["z"]), filter="denoise"), "neel vector z", rel_Tstep_pos, show_step,
+                  zoom)
 
     #%%
     # direction = "longitudinal"
