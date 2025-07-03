@@ -202,9 +202,9 @@ def get_mean(file_path_A, file_path_B=None, skip_time_steps=15):
 
 def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, equi_values_cold, rel_T_step_positions, plot_kwargs_list, title_suffix="", dont_calculate_margins=False):
     """
-    Plots and saves the magnetization and neel vector of this magnetic profile. All files are read and plotted in the
-    same figure. Equilibrium values can be given and will be subtracted. If none are given, all components are set to
-    zero.
+    Plots and saves the magnetization and neel vector of the magnetic profiles. All files are read and plotted in the
+    same figure. Equilibrium values can be given and will be subtracted. If none are given, all equilibrium components
+    are set to zero, therefore subtracting does not change the outcome.
     :param load_paths: The magnetic profile paths that will be loaded.
     :param skip_rows: The number of rows that will be skipped when reading the files. (Needed if file is broken)
     :param save_path: The prefix which is used to save the plots.
@@ -341,13 +341,23 @@ def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, eq
 
 
 def save_mag_files(file_path_A, save_path_prefix, file_path_B=None, saving_after_index=0, force=False):
+    """
+    Loads the text files in the specified (paths) and saves them in the save_path. Only saves from line/timestep
+    saving_after_index. If force is False (default) no files will be loaded or saved, if the save files exist already.
+    :param file_path_A: The path of the magnetic profile of SL A.
+    :param save_path_prefix: The prefix of the save_path. The output path then is something like save_path + '_{SL}.npy'
+    :param file_path_B: The path of the magnetic profile of SL B. If not specified, it is attempted to guess the path from file_path_A.
+    :param saving_after_index: Line index / time step after which the magnetic profile will be saved. If you want to save the last 100 lines, specify -100 e.g.
+    :param force: If True, existing save_files will be overwritten.
+    :return: The numpy save paths.
+    """
     file_path_B = file_path_B or f"{file_path_A[:-5]}B.dat"
 
     save_path_A = f"{save_path_prefix}_A.npy" if not save_path_prefix.endswith("_A.npy") else save_path_prefix
     save_path_B = f"{save_path_prefix[:-6]}_B.npy"
 
     if os.path.isfile(save_path_A) or os.path.isfile(save_path_B) and not force:
-        print(f"File {save_path_A} or {save_path_B} already exists, skipping.")
+        print(f"File {save_path_A} or {save_path_B} already exists, no file is overwritten, therefore skipping.")
         return save_path_A, save_path_B
 
     print(f"Loading data from {file_path_A} and {file_path_B}...", end=" ")
@@ -365,6 +375,12 @@ def save_mag_files(file_path_A, save_path_prefix, file_path_B=None, saving_after
 
 
 def load_mag_npy_files(path_A, path_B=None):
+    """
+
+    :param path_A:
+    :param path_B:
+    :return:
+    """
     path_A = path_A if path_A.endswith("_A.npy") else f"{path_A}_A.npy"
     path_B = path_B or f"{path_A[:-6]}_B.npy"
     print(f"Loading data from {path_A} and {path_B}...")

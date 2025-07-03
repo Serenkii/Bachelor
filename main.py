@@ -727,8 +727,8 @@ def plot_2d(load_path, save_path=None, width_xy=100, title_suffix=""):
                        sparse=True, indexing='xy')
 
         middle = int(data_grid.shape[0] / 2)
-        lower = int(max(middle - width_xy / 2, 0))
-        upper = int(min(middle + width_xy / 2, data_grid.shape[0]))
+        lower = int(max(middle - width_xy / 2, 0)) - 0.5
+        upper = int(min(middle + width_xy / 2, data_grid.shape[0])) - 0.5
 
         fig, ax = plt.subplots()
         ax.set_xlabel("Grid position in direction [110]")
@@ -949,6 +949,13 @@ def spin_conservation(
 
 
 
+def check_boundaries_open_equilibrium():
+    plot_2d("/data/scc/marian.gunsch/04_AM_tilted_Tstairs_DMI_T2_openbou/spin-configs-99-999/spin-config-99-999-005000.dat", width_xy=99999, save_path="out/04_lowerT/open_bound_stairs_DMI", title_suffix="(Open boundaries, DMI)")
+    plot_2d("/data/scc/marian.gunsch/04_AM_tilted_Tstairs_DMI_T2/spin-configs-99-999/spin-config-99-999-005000.dat", width_xy=99999, save_path="out/04_lowerT/period_bound_stairs_DMI", title_suffix="(Periodic boundaries, DMI)")
+    plot_2d("/data/scc/marian.gunsch/04_AM_tilted_Tstairs_T2_openbou//spin-configs-99-999/spin-config-99-999-005000.dat", width_xy=99999, save_path="out/04_lowerT/open_bound_stairs_noDMI", title_suffix="(Open boundaries, no DMI)")
+    plot_2d("/data/scc/marian.gunsch/04_AM_tilted_Tstairs_T2/spin-configs-99-999/spin-config-99-999-005000.dat", width_xy=99999, save_path="out/04_lowerT/period_bound_stairs_noDMI", title_suffix="(Periodic boundaries, no DMI)")
+
+
 def presenting_data_04():
     print("[04] As previous attempts working with the equilibrium data for DMI have failed, I am trying once again "
           "with lower temperature. Turns out, the previous attempts have failed because I made a mistake with a lot "
@@ -990,11 +997,13 @@ def presenting_data_04():
                       save_path="out/04_lowerT/equilibrium_summary_T0.pdf")
     print(seperator)
 
+    check_boundaries_open_equilibrium()
+
 
 
 # %% 05 Static B field
 
-def dispersion_relation(path_A, npy_path_A, path_B=None, title="Dispersion relation", out_path=None):
+def dispersion_relation(path_A, npy_path_A, path_B=None, title="Dispersion relation", out_path=None, rasterized=True):
     print(f"Displaying the dispersion relation of the data in path '{path_A}'...")
 
     mag_util.save_mag_files(path_A, npy_path_A, saving_after_index=-100000)
@@ -1016,7 +1025,7 @@ def dispersion_relation(path_A, npy_path_A, path_B=None, title="Dispersion relat
     dt = 50e-16
 
     dx = 1e-10  # 1 Angstrom    # TODO: Do not know if this is correct
-    k_vectors = np.fft.fftfreq(Sp.shape[1], d=dx) * 2 * np.pi
+    k_vectors = np.fft.fftfreq(Sp.shape[1], d=dx) # * 2 * np.pi     # TODO
 
     Sp_F_ = np.fft.fft2(Sp)
 
@@ -1032,26 +1041,41 @@ def dispersion_relation(path_A, npy_path_A, path_B=None, title="Dispersion relat
 
     print("Plotting...")
 
+    # units
+    k_shifted *= 1e-10  # Angstrom
+    freqs_shifted *= 1e-12   # Tera
+
     # plotting
     fig, ax = plt.subplots()
     ax.set_title(title)
 
-    im = ax.pcolormesh(k_shifted, freqs_shifted, magnon_density, shading='auto', norm=colors.LogNorm(vmin=magnon_density.min(), vmax=magnon_density.max()))
-    # im = ax.pcolormesh(k_shifted, omega_shifted, magnon_density, shading='auto')
+    im = ax.pcolormesh(k_shifted, freqs_shifted, magnon_density, shading='auto',
+                       norm=colors.LogNorm(vmin=magnon_density.min(), vmax=magnon_density.max()),
+                       rasterized=rasterized)
+    # im = ax.pcolormesh(k_shifted, omega_shifted, magnon_density, shading='auto', rasterized=rasterized)
 
     if plot_paths:
         fig.text(0.5, 1.0, f"{path_A}", ha="center", va="top", color="green", size=6)
 
-    ax.set_ylabel('Frequency ω in rad/s')
-    ax.set_xlabel('k-vector (1/A)')
+    # ax.set_ylabel('Frequency ω in rad/s')
+    ax.set_ylabel('Frequency $f$ in THz')
+    ax.set_xlabel(r'Spatial frequency $\propto k$ (1/A)')
     fig.colorbar(im, ax=ax, label='Magnon Density')
 
     if out_path:
         print(f"Saving dispersion relation figure to {out_path}..", end="")
-        fig.savefig(out_path, dpi=1200)
+        if out_path.endswith(".pdf"):
+            if rasterized:
+                fig.savefig(out_path, dpi=2400)
+            else:
+                fig.savefig(out_path)
+        else:
+            fig.savefig(out_path, dpi=1200)
         print(".")
 
     plt.show()
+
+    print()
 
 
 def seebeck_05():
@@ -1118,16 +1142,32 @@ def presenting_data_05():
         "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
         "data/05_staticB/stairs_T2_x_staticB_A.npy",
         title="Dispersion relation [110] (with static B-field)",
-        # out_path="out/05_staticB/dispersionRel_110.pdf"
-        out_path="out/05_staticB/dispersionRel_110.png"
+        # out_path="out/05_staticB/dispersionRel_statB_110.png"
+        out_path="out/05_staticB/dispersionRel_statB_110.pdf"
     )
 
     dispersion_relation(
         "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
         "data/05_staticB/stairs_T2_y_staticB_A.npy",
         title="Dispersion relation [-110] (with static B-field)",
-        # out_path="out/05_staticB/dispersionRel_-110.pdf"
-        out_path="out/05_staticB/dispersionRel_-110.png"
+        # out_path="out/05_staticB/dispersionRel_statB_-110.png"
+        out_path="out/05_staticB/dispersionRel_statB_-110.pdf"
+    )
+
+    dispersion_relation(
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/05_staticB/stairs_T2_x_A.npy",
+        title="Dispersion relation [110] (no static B field, no DMI)",
+        # out_path="out/05_staticB/dispersionRel_110.png"
+        out_path="out/05_staticB/dispersionRel_110.pdf"
+    )
+
+    dispersion_relation(
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/05_staticB/stairs_T2_y_A.npy",
+        title="Dispersion relation [-110] (no static B field, no DMI)",
+        # out_path="out/05_staticB/dispersionRel_-110.png"
+        out_path="out/05_staticB/dispersionRel_-110.pdf"
     )
 
     # seebeck_05()
@@ -1143,7 +1183,10 @@ if __name__ == '__main__':
     # presenting_data_03()
     # presenting_data_04()
 
-    presenting_data_05()
+    check_boundaries_open_equilibrium()
+
+    # presenting_data_05()
+
 
     pass
 
