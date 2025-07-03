@@ -1003,7 +1003,7 @@ def presenting_data_04():
 
 # %% 05 Static B field
 
-def dispersion_relation(path_A, npy_path_A, path_B=None, title="Dispersion relation", out_path=None, rasterized=True):
+def dispersion_relation(path_A, npy_path_A, path_B=None, title="Dispersion relation", out_path=None, rasterized=True, dont_plot=False):
     print(f"Displaying the dispersion relation of the data in path '{path_A}'...")
 
     mag_util.save_mag_files(path_A, npy_path_A, saving_after_index=-100000)
@@ -1038,6 +1038,8 @@ def dispersion_relation(path_A, npy_path_A, path_B=None, title="Dispersion relat
 
     magnon_density = np.abs(Sp_F) ** 2
 
+    if dont_plot:
+        return k_shifted, freqs_shifted, magnon_density
 
     print("Plotting...")
 
@@ -1076,6 +1078,71 @@ def dispersion_relation(path_A, npy_path_A, path_B=None, title="Dispersion relat
     plt.show()
 
     print()
+
+    return k_shifted, freqs_shifted, magnon_density
+
+
+def side_by_side_comparison(dat_path_statB, npy_path_statB, dat_path_noB, npy_path_noB, direction, rasterized=True, out_path=None, zoom=True):
+    k_statB, f_statB, magnon_statB = dispersion_relation(
+        dat_path_statB,
+        npy_path_statB,
+        dont_plot=True
+    )
+
+    k_noB, f_noB, magnon_noB = dispersion_relation(
+        dat_path_noB,
+        npy_path_noB,
+        dont_plot=True
+    )
+
+    k_statB *= 1e-10
+    f_statB *= 1e-12
+    k_noB *= 1e-10
+    f_noB *= 1e-12
+
+    vmin = min(magnon_statB.min(), magnon_noB.min())
+    vmax = max(magnon_statB.max(), magnon_noB.max())
+
+    fig, axs = plt.subplots(1, 2, figsize=(12, 5), sharey=True, constrained_layout=True)
+
+    fig.suptitle(f"Dispersion relation comparison {direction}")
+
+    im0 = axs[0].pcolormesh(k_statB, f_statB, magnon_statB, shading='auto',
+                            norm=colors.LogNorm(vmin=vmin, vmax=vmax),
+                            rasterized=rasterized)
+    axs[0].set_title("with static B")
+    axs[0].set_xlabel(r'Spatial frequency $\propto k$ (1/A)')
+    axs[0].set_ylabel('Frequency $f$ in THz')
+
+    im1 = axs[1].pcolormesh(k_noB, f_noB, magnon_noB, shading='auto',
+                            norm=colors.LogNorm(vmin=vmin, vmax=vmax),
+                            rasterized=rasterized)
+    axs[1].set_title("without static B")
+    axs[1].set_xlabel(r'Spatial frequency $\propto k$ (1/A)')
+    axs[1].set_ylabel('Frequency $f$ in THz')
+
+    if zoom:
+        xlim = (-0.1, 0.1)
+        ylim = (-25.0, 25.0)
+
+        for ax in axs:
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
+
+    cbar = fig.colorbar(im1, ax=axs, location='right', shrink=0.9, label='Magnon Density')
+
+    if out_path:
+        print(f"Saving side by side band gap figure to {out_path}..", end="")
+        if out_path.endswith(".pdf"):
+            if rasterized:
+                fig.savefig(out_path, dpi=2400)
+            else:
+                fig.savefig(out_path)
+        else:
+            fig.savefig(out_path, dpi=1200)
+        print(".")
+
+    plt.show()
 
 
 def seebeck_05():
@@ -1138,39 +1205,77 @@ def seebeck_05():
 
 
 def presenting_data_05():
-    dispersion_relation(
+    # dispersion_relation(
+    #     "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+    #     "data/05_staticB/stairs_T2_x_staticB_A.npy",
+    #     title="Dispersion relation [110] (with static B-field)",
+    #     # out_path="out/05_staticB/dispersionRel_statB_110.png"
+    #     # out_path="out/05_staticB/dispersionRel_statB_110.pdf"
+    # )
+    #
+    # dispersion_relation(
+    #     "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+    #     "data/05_staticB/stairs_T2_y_staticB_A.npy",
+    #     title="Dispersion relation [-110] (with static B-field)",
+    #     # out_path="out/05_staticB/dispersionRel_statB_-110.png"
+    #     # out_path="out/05_staticB/dispersionRel_statB_-110.pdf"
+    # )
+    #
+    # dispersion_relation(
+    #     "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+    #     "data/05_staticB/stairs_T2_x_A.npy",
+    #     title="Dispersion relation [110] (no static B field, no DMI)",
+    #     # out_path="out/05_staticB/dispersionRel_110.png"
+    #     # out_path="out/05_staticB/dispersionRel_110.pdf"
+    # )
+    #
+    # dispersion_relation(
+    #     "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+    #     "data/05_staticB/stairs_T2_y_A.npy",
+    #     title="Dispersion relation [-110] (no static B field, no DMI)",
+    #     # out_path="out/05_staticB/dispersionRel_-110.png"
+    #     # out_path="out/05_staticB/dispersionRel_-110.pdf"
+    # )
+
+    side_by_side_comparison(
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+                            "data/05_staticB/stairs_T2_x_staticB_A.npy",
+                            "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+                            "data/05_staticB/stairs_T2_x_A.npy",
+                            "[110]",
+                            out_path="out/05_staticB/band_gap_comparison_110.pdf"
+                            )
+    side_by_side_comparison(
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+                            "data/05_staticB/stairs_T2_y_staticB_A.npy",
+                            "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+                            "data/05_staticB/stairs_T2_y_A.npy",
+                            "[-110]",
+                            out_path="out/05_staticB/band_gap_comparison_-110.pdf"
+                            )
+
+    side_by_side_comparison(
         "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
         "data/05_staticB/stairs_T2_x_staticB_A.npy",
-        title="Dispersion relation [110] (with static B-field)",
-        # out_path="out/05_staticB/dispersionRel_statB_110.png"
-        out_path="out/05_staticB/dispersionRel_statB_110.pdf"
-    )
-
-    dispersion_relation(
-        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
-        "data/05_staticB/stairs_T2_y_staticB_A.npy",
-        title="Dispersion relation [-110] (with static B-field)",
-        # out_path="out/05_staticB/dispersionRel_statB_-110.png"
-        out_path="out/05_staticB/dispersionRel_statB_-110.pdf"
-    )
-
-    dispersion_relation(
         "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
         "data/05_staticB/stairs_T2_x_A.npy",
-        title="Dispersion relation [110] (no static B field, no DMI)",
-        # out_path="out/05_staticB/dispersionRel_110.png"
-        out_path="out/05_staticB/dispersionRel_110.pdf"
-    )
-
-    dispersion_relation(
+        "[110]",
+        out_path="out/05_staticB/dispersionRel_comparison_110.pdf",
+        zoom=False
+        )
+    side_by_side_comparison(
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/05_staticB/stairs_T2_y_staticB_A.npy",
         "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
         "data/05_staticB/stairs_T2_y_A.npy",
-        title="Dispersion relation [-110] (no static B field, no DMI)",
-        # out_path="out/05_staticB/dispersionRel_-110.png"
-        out_path="out/05_staticB/dispersionRel_-110.pdf"
-    )
+        "[-110]",
+        out_path="out/05_staticB/dispersionRel_comparison_-110.pdf",
+        zoom=False
+        )
 
     # seebeck_05()
+
+
 
 
 # %% Main
@@ -1183,10 +1288,9 @@ if __name__ == '__main__':
     # presenting_data_03()
     # presenting_data_04()
 
-    check_boundaries_open_equilibrium()
+    # check_boundaries_open_equilibrium()
 
-    # presenting_data_05()
-
+    presenting_data_05()
 
     pass
 
