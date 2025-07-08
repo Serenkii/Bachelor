@@ -1067,7 +1067,8 @@ def dispersion_relation(path_A, npy_path_A, path_B=None, title="Dispersion relat
     return k_shifted, freqs_shifted, magnon_density
 
 
-def side_by_side_comparison(dat_path_statB, npy_path_statB, dat_path_noB, npy_path_noB, direction, rasterized=True, out_path=None, zoom=True):
+def side_by_side_comparison(dat_path_statB, npy_path_statB, dat_path_noB, npy_path_noB, direction, rasterized=True,
+                            out_path=None, zoom=True, title_left="with static B", title_right="with static B"):
     k_statB, f_statB, magnon_statB = dispersion_relation(
         dat_path_statB,
         npy_path_statB,
@@ -1095,14 +1096,14 @@ def side_by_side_comparison(dat_path_statB, npy_path_statB, dat_path_noB, npy_pa
     im0 = axs[0].pcolormesh(k_statB, f_statB, magnon_statB, shading='auto',
                             norm=colors.LogNorm(vmin=vmin, vmax=vmax),
                             rasterized=rasterized)
-    axs[0].set_title("with static B")
+    axs[0].set_title(title_left)
     axs[0].set_xlabel(r'Spatial frequency $\propto k$ (1/A)')
     axs[0].set_ylabel('Frequency $f$ in THz')
 
     im1 = axs[1].pcolormesh(k_noB, f_noB, magnon_noB, shading='auto',
                             norm=colors.LogNorm(vmin=vmin, vmax=vmax),
                             rasterized=rasterized)
-    axs[1].set_title("without static B")
+    axs[1].set_title(title_right)
     axs[1].set_xlabel(r'Spatial frequency $\propto k$ (1/A)')
     axs[1].set_ylabel('Frequency $f$ in THz')
 
@@ -1261,6 +1262,66 @@ def negative_B_equi():
     path_110 = "/data/scc/marian.gunsch/06_AM_tilted_Tstairs_T2_x_Bn100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
     path_n110 = "/data/scc/marian.gunsch/06_AM_tilted_Tstairs_T2_y_Bn100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
 
+    npy_path_110 = "data/06_staticB/stairs_T2_x_B100_A.npy"
+    npy_path_n110 = "data/06_staticB/stairs_T2_y_B100_A.npy"
+    dispersion_relation(
+        path_110,
+        npy_path_110,
+        title="Dispersion relation [110] (with B=-100T)",
+        out_path="out/06_staticB/dispersionRel_Bn100_-110.pdf"
+    )
+
+    dispersion_relation(
+        path_n110,
+        npy_path_n110,
+        title="Dispersion relation [-110] (with B=-100T)",
+        out_path="out/06_staticB/dispersionRel_Bn100_-110.pdf"
+    )
+
+    side_by_side_comparison(
+        path_110,
+        npy_path_110,
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/05_staticB/stairs_T2_x_A.npy",
+        "[110]",
+        title_left="B=-100T",
+        out_path= "out/06_staticB/dispersionRel_Bn100B0_110.pdf",
+        zoom=False
+        )
+    side_by_side_comparison(
+        path_n110,
+        npy_path_n110,
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/05_staticB/stairs_T2_y_A.npy",
+        "[-110]",
+        title_left="B=-100T",
+        out_path="out/06_staticB/dispersionRel_Bn100B0_-110.pdf",
+        zoom=False
+        )
+
+
+    side_by_side_comparison(
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/05_staticB/stairs_T2_x_staticB_A.npy",
+        path_110,
+        npy_path_110,
+        "[110]",
+        title_left="B=+100T",
+        title_right="B=-100T",
+        out_path="out/06_staticB/dispersionRel_Bn100B100_110.pdf",
+        zoom=False
+        )
+    side_by_side_comparison(
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/05_staticB/stairs_T2_y_staticB_A.npy",
+        path_n110,
+        npy_path_n110,
+        "[-110]",
+        title_left="B=+100T",
+        title_right="B=-100T",
+        out_path="out/06_staticB/dispersionRel_Bn100B100_-110.pdf",
+        zoom=False
+        )
 
 
 

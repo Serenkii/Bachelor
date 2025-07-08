@@ -263,3 +263,5 @@ data/
 # ignore result directory because I am scared files could be too large (unlikely), also one can just create these files locally...
 out/
 
+run_on_scc.sh
+
