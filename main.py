@@ -1274,23 +1274,53 @@ def negative_B_SSE():
     noB_kwargs = dict(alpha=0.7, linestyle="-.", linewidth=1.0)
     posB_kwargs = dict(linestyle="--")
 
-    mag_util.plot_magnetic_profile_from_paths(
+    kwargs_list = [dict(label="B=-100T, [110]"),
+         dict(label="B=-100T, [-110]"),
+         dict(label="B=+100T, [110]",
+              **posB_kwargs),
+         dict(label="B=+100T, [-110]",
+              **posB_kwargs),
+         dict(label="B=0, [110]", **noB_kwargs),
+         dict(label="B=0, [-110]", **noB_kwargs)]
+
+    _, _, magn_list, _ = mag_util.plot_magnetic_profile_from_paths(
         [path_110,
            path_n110,
            f"{prefix}05_AM_tilted_xTstep_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
            f"{prefix}05_AM_tilted_yTstep_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
            f"{prefix}04_AM_tilted_xTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
            f"{prefix}04_AM_tilted_yTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet", ],
-          None, None, None, None, None,
-        [dict(label="B=-100T, [110]"),
-         dict(label="B=-100T, [-110]"),
-         dict(label="B=+100T, [110]",
-              **posB_kwargs),
-         dict(label="B=-100T, [-110]",
-              **posB_kwargs),
-         dict(label="B=0, [110]", **noB_kwargs),
-         dict(label="B=0, [-110]", **noB_kwargs)],
+          None,
+        "out/06_staticB/seebeck_nB",
+        None, None, None,
+        kwargs_list,
         which = "z")
+
+    # Analyzing the peaks
+    lower, upper = 115, 135
+
+    for magnetization, kwargs in zip(magn_list, kwargs_list):
+        for component in magnetization.keys():
+            label = kwargs["label"]
+            data = magnetization[component][lower:upper]
+
+            min_ = np.min(data)
+            max_ = np.max(data)
+            diff_ = max_ - min_
+            print(f"{label}, {component}: \t local max: {max_:.6f} \t local min: {min_:.6f} \t difference: {diff_:.6f}")
+
+    observation = (
+    "For B=0 one can see \n" 
+        "\t that the difference for [110] is smaller than for [-110] \n"
+        "\t That the maximum for [110] is 0.000003 greater than for [-110] \n"
+        "\t That the (abs val of) minimum for [110] is 0.00002 smaller than for [-110] \n"
+    "Comparing B=+-100T one can see \n"
+        "\t B=+100T decreases difference for [110], increases difference for [-110] \n"
+        "\t B=-100T increases difference for [110], decreases difference for [-110] \n"
+        "\t The smaller difference in cases B=+-100T is smaller for [110] than for [-110], for B=0T the difference is also smaller for [110] \n"
+        "\t The bigger difference in cases B=+-100T is smaller for [110] than for [-110], for B=0T the difference is also smaller for [110] \n")
+
+    print(observation)
 
 
 def non_zero_Teq_SSE_statB():
