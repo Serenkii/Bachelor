@@ -12,6 +12,7 @@ import src.physics as physics
 
 default_slice_dict = {'t': 0, 'x': 1, 'y': 2, 'z': 3, '1': 1, '2': 2, '3': 3}
 
+
 def time_avg(spin_data):
     return np.average(spin_data, axis=0)
 
@@ -83,8 +84,8 @@ def save_arrayjob_as_npy(base_path: str, npy_path: str, start: int, stop=None, s
 
     array_job_size = int(np.ceil((1 + (stop - start)) / step))
     print(f"Reading from original data file in {base_path}i...")
-    data_first_A = np.loadtxt(f"{base_path}{start}/{middle_path}A{suffix}")     # TODO: The / could be dangerous!
-    data_first_B = np.loadtxt(f"{base_path}{start}/{middle_path}B{suffix}")     # eg if the index is not at the end
+    data_first_A = np.loadtxt(f"{base_path}{start}/{middle_path}A{suffix}")  # TODO: The / could be dangerous!
+    data_first_B = np.loadtxt(f"{base_path}{start}/{middle_path}B{suffix}")  # eg if the index is not at the end
     if data_first_A.shape != data_first_B.shape:
         raise ValueError(f"Somehow the dimensions of {base_path}{start}/{middle_path}X{suffix} differ for X=A and X=B.")
     data_arrA = np.empty((array_job_size,) + data_first_A.shape, dtype=data_first_A.dtype)
@@ -98,7 +99,8 @@ def save_arrayjob_as_npy(base_path: str, npy_path: str, start: int, stop=None, s
         job_index = start + i * step
         index_list.append(job_index)
         print(f"{job_index}", end="")
-        data_arrA[i] = np.loadtxt(f"{base_path}{job_index}/{middle_path}A{suffix}") # TODO: Just blindly choosing i does not work if start does not start with 0 and step is not 1 etc
+        data_arrA[i] = np.loadtxt(
+            f"{base_path}{job_index}/{middle_path}A{suffix}")  # TODO: Just blindly choosing i does not work if start does not start with 0 and step is not 1 etc
         print("A", end="")
         data_arrB[i] = np.loadtxt(f"{base_path}{job_index}/{middle_path}B{suffix}")
         print("B")
@@ -156,7 +158,6 @@ def save_arrayjob_as_npz(base_path: str, npz_path: str, start: int, stop=None, s
     return data_dict_A, data_dict_B, npz_path
 
 
-
 # TODO: seems to be working
 def load_arrayjob_npyz(save_file_prefix, file_ending=".npy"):
     """
@@ -170,7 +171,6 @@ def load_arrayjob_npyz(save_file_prefix, file_ending=".npy"):
     B = np.load(f"{save_file_prefix}B.{file_ending}")
     print("B")
     return A, B
-
 
 
 def get_mean(file_path_A, file_path_B=None, skip_time_steps=15):
@@ -199,24 +199,7 @@ def get_mean(file_path_A, file_path_B=None, skip_time_steps=15):
     return spins_A, spins_B
 
 
-
-def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, equi_values_cold, rel_T_step_positions, plot_kwargs_list, title_suffix="", dont_calculate_margins=False):
-    """
-    Plots and saves the magnetization and neel vector of the magnetic profiles. All files are read and plotted in the
-    same figure. Equilibrium values can be given and will be subtracted. If none are given, all equilibrium components
-    are set to zero, therefore subtracting does not change the outcome.
-    :param load_paths: The magnetic profile paths that will be loaded.
-    :param skip_rows: The number of rows that will be skipped when reading the files. (Needed if file is broken)
-    :param save_path: The prefix which is used to save the plots.
-    :param equi_values_warm: Format: [(dict(x=..., y..., ...), dict(x=..., ...)), ...] for SL A and SL B
-    :param equi_values_cold: Format: [(dict(x=..., y..., ...), dict(x=..., ...)), ...] for SL A and SL B
-    :param rel_T_step_positions: The relative position of the temperature step. Default is 0.49.
-    :param plot_kwargs: The keywords argument for plotting.
-    :return: Nothing
-    """
-
-    print("Plotting magnetic profile (Magnetization and Neel-Vector)")
-
+def load_path_list(load_paths, skip_rows=None, which="xyz"):
     # Checking input
     if not skip_rows:
         skip_rows = 0
@@ -226,33 +209,43 @@ def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, eq
     if skip_rows.size < len(load_paths):
         raise ValueError("Too few rows in 'skip_rows'.")
 
-    if not rel_T_step_positions:
-        rel_T_step_positions = 0.49
-    rel_T_step_positions = np.array(rel_T_step_positions)
-    if rel_T_step_positions.size == 1:
-        rel_T_step_positions = np.zeros(len(load_paths), dtype=float) + rel_T_step_positions
-    if rel_T_step_positions.size < len(load_paths):
-        raise ValueError("Too few rows in 'rel_T_step_pos'.")
-
-    if not equi_values_warm and not equi_values_cold:
-        equi_values_cold, equi_values_warm = [], []
-        zero_dict = dict(x=0, y=0, z=0)
-        for _ in load_paths:
-            equi_values_cold.append((zero_dict, zero_dict))
-            equi_values_warm.append((zero_dict, zero_dict))
-
     # Read data
     data_A_list, data_B_list = [], []
 
     for path, skip in zip(load_paths, skip_rows):
+        path = path[:-5] if path.endswith(".dat") else path
         data_A_list.append(np.loadtxt(f"{path}A.dat", skiprows=skip))
         data_B_list.append(np.loadtxt(f"{path}B.dat", skiprows=skip))
 
     spins_A_list, spins_B_list = [], []
 
     for data_A, data_B in zip(data_A_list, data_B_list):
-        spins_A_list.append(get_components_as_dict(data_A, 'xyz', 1, True))
-        spins_B_list.append(get_components_as_dict(data_B, 'xyz', 1, True))
+        spins_A_list.append(get_components_as_dict(data_A, which, 1, True))
+        spins_B_list.append(get_components_as_dict(data_B, which, 1, True))
+
+    return spins_A_list, spins_B_list
+
+
+def plot_magnetic_profile(spins_A_list, spins_B_list, save_path, equi_values_warm, equi_values_cold, rel_T_step_positions,
+                          plot_kwargs_list, title_suffix="", dont_calculate_margins=False):
+
+    print("Plotting magnetic profile (Magnetization and Neel-Vector)")
+
+    # Checking input
+    if not rel_T_step_positions:
+        rel_T_step_positions = 0.49
+    rel_T_step_positions = np.array(rel_T_step_positions)
+    if rel_T_step_positions.size == 1:
+        rel_T_step_positions = np.zeros(len(spins_A_list), dtype=float) + rel_T_step_positions
+    if rel_T_step_positions.size < len(spins_A_list):
+        raise ValueError("Too few rows in 'rel_T_step_pos'.")
+
+    if not equi_values_warm and not equi_values_cold:
+        equi_values_cold, equi_values_warm = [], []
+        zero_dict = dict(x=0, y=0, z=0)
+        for _ in spins_A_list:
+            equi_values_cold.append((zero_dict, zero_dict))
+            equi_values_warm.append((zero_dict, zero_dict))
 
     # Calculating magnetization and neel vectors
     magnetization_list, neel_list = [], []
@@ -262,7 +255,6 @@ def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, eq
         for component in spins_A.keys():
             magnetization_list[-1][component] = physics.magnetization(spins_A[component], spins_B[component], False)
             neel_list[-1][component] = physics.neel_vector(spins_A[component], spins_B[component], False)
-
 
     def calculate_margins(data_list_for_component):
         max_len = max(len(sub) for sub in data_list_for_component)
@@ -284,7 +276,9 @@ def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, eq
     magnon_accum_list, delta_neel_list = [], []
 
     for magnetization, neel_vector, equi_val_cold, equi_val_warm, rel_T_step_pos in zip(magnetization_list, neel_list,
-                                                                        equi_values_cold, equi_values_warm, rel_T_step_positions):
+                                                                                        equi_values_cold,
+                                                                                        equi_values_warm,
+                                                                                        rel_T_step_positions):
         abs_T_step_pos = helper.get_absolute_T_step_index(rel_T_step_pos, magnetization["z"].shape[0])
 
         magnon_accum_list.append(dict())
@@ -310,7 +304,8 @@ def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, eq
     # Plotting
     for component in magnon_accum_list[0].keys():
         for quantity_list, title, save_quanti_short in zip((magnon_accum_list, delta_neel_list),
-                                                           (f"Magnetization, {component} {title_suffix}", f"Neel vector, {component} {title_suffix}"),
+                                                           (f"Magnetization, {component} {title_suffix}",
+                                                            f"Neel vector, {component} {title_suffix}"),
                                                            ("magn", "neel")):
             print(f"Plotting {component}...")
             fig, ax = plt.subplots()
@@ -338,6 +333,40 @@ def plot_magnetic_profile(load_paths, skip_rows, save_path, equi_values_warm, eq
                 plt.savefig(save_path_)
 
             plt.show()
+
+    return magnon_accum_list, delta_neel_list
+
+
+
+def plot_magnetic_profile_from_paths(load_paths, skip_rows, save_path, equi_values_warm, equi_values_cold,
+                                     rel_T_step_positions, plot_kwargs_list, title_suffix="",
+                                     dont_calculate_margins=False, which="xyz"):
+    """
+    Plots and saves the magnetization and neel vector of the magnetic profiles. All files are read and plotted in the
+    same figure. Equilibrium values can be given and will be subtracted. If none are given, all equilibrium components
+    are set to zero, therefore subtracting does not change the outcome.
+    :param load_paths: The magnetic profile paths that will be loaded.
+    :param skip_rows: The number of rows that will be skipped when reading the files. (Needed if file is broken)
+    :param save_path: The prefix which is used to save the plots.
+    :param equi_values_warm: Format: [(dict(x=..., y..., ...), dict(x=..., ...)), ...] for SL A and SL B
+    :param equi_values_cold: Format: [(dict(x=..., y..., ...), dict(x=..., ...)), ...] for SL A and SL B
+    :param rel_T_step_positions: The relative position of the temperature step. Default is 0.49.
+    :param plot_kwargs_list: The keywords argument for plotting.
+    :param title_suffix: Suffix to add to the title of the plot.
+    :param dont_calculate_margins: If True, do not try to find sensible margins for the plot.
+    :param which: Which components are plotted. Default is 'xyz' for 'x', 'y' and 'z'.
+    :return: spins_A_list, spins_B_list
+    """
+
+    spins_A_list, spins_B_list = load_path_list(load_paths, skip_rows, which)
+
+    magnon_acc_list, delta_neel_list = plot_magnetic_profile(
+        spins_A_list, spins_B_list, save_path, equi_values_warm, equi_values_cold,
+        rel_T_step_positions, plot_kwargs_list, title_suffix, dont_calculate_margins)
+
+    return spins_A_list, spins_B_list, magnon_acc_list, delta_neel_list
+
+
 
 
 def save_mag_files(file_path_A, save_path_prefix, file_path_B=None, saving_after_index=0, force=False):

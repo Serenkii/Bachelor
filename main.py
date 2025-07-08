@@ -650,18 +650,15 @@ def seebeck_03(file_path_quantity, file_path_quantity_eq_subtracted):
     noDMI_kwargs = dict(alpha=0.7, linestyle="--", linewidth=1.0)
 
     prefix = "/data/scc/marian.gunsch/"
-    mag_util.plot_magnetic_profile(
+    mag_util.plot_magnetic_profile_from_paths(
         [f"{prefix}03_AM_tilted_xTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnet",
          f"{prefix}03_AM_tilted_yTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnet",
          f"{prefix}AM_mag-accumu_tilt_x-axis_kT-7/spin-configs-99-999/mag-profile-99-999.altermagnet",
          f"{prefix}AM_mag-accumu_tilt_y-axis_kT-7/spin-configs-99-999/mag-profile-99-999.altermagnet"], [0, 131, 0, 0],
-        file_path_quantity, None, None, 0.49,
-        [dict(label="DMI, [110]"),
-        dict(label="DMI, [-110]"),
-        dict(label="no DMI, [110]", **noDMI_kwargs),
-        dict(label="no DMI, [-110]", **noDMI_kwargs)],
-        "(T=7meV)"
-    )
+        file_path_quantity, None, None, 0.49, [dict(label="DMI, [110]"),
+                                               dict(label="DMI, [-110]"),
+                                               dict(label="no DMI, [110]", **noDMI_kwargs),
+                                               dict(label="no DMI, [-110]", **noDMI_kwargs)], "(T=7meV)")
 
     # Subtracting equilibrium
     spins_warm_A, spins_warm_B = mag_util.get_mean(
@@ -677,7 +674,7 @@ def seebeck_03(file_path_quantity, file_path_quantity_eq_subtracted):
         spins_warm_nodmi_A[component] *= -1
         spins_warm_nodmi_B[component] *= -1        # for some reason here the spin values (z) for A are negative and for B are positive...
 
-    mag_util.plot_magnetic_profile(
+    mag_util.plot_magnetic_profile_from_paths(
         [f"{prefix}03_AM_tilted_xTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnet",
          f"{prefix}03_AM_tilted_yTstep_DMI/spin-configs-99-999/mag-profile-99-999.altermagnet",
          f"{prefix}AM_mag-accumu_tilt_x-axis_kT-7/spin-configs-99-999/mag-profile-99-999.altermagnet",
@@ -686,17 +683,16 @@ def seebeck_03(file_path_quantity, file_path_quantity_eq_subtracted):
                                            (spins_warm_A, spins_warm_B),
                                            (spins_warm_nodmi_A, spins_warm_nodmi_B),
                                            (spins_warm_nodmi_A, spins_warm_nodmi_B)], [(spins_cold_A, spins_cold_B),
-                                                                           (spins_cold_A, spins_cold_B),
-                                                                           (dict(x=0, y=0, z=1), dict(x=0, y=0, z=-1)),
-                                                                           # maybe 1 and -1 swapped
-                                                                           (dict(x=0, y=0, z=1), dict(x=0, y=0, z=-1))],
-        0.49,
+                                                                                       (spins_cold_A, spins_cold_B),
+                                                                                       (dict(x=0, y=0, z=1),
+                                                                                        dict(x=0, y=0, z=-1)),
+                                                                                       # maybe 1 and -1 swapped
+                                                                                       (dict(x=0, y=0, z=1),
+                                                                                        dict(x=0, y=0, z=-1))], 0.49,
         [dict(label="DMI, [110]"),
-        dict(label="DMI, [-110]"),
-        dict(label="no DMI, [110]", **noDMI_kwargs),
-        dict(label="no DMI, [-110]", **noDMI_kwargs)],
-        "(T=7meV, equi subtracted)"
-    )
+         dict(label="DMI, [-110]"),
+         dict(label="no DMI, [110]", **noDMI_kwargs),
+         dict(label="no DMI, [-110]", **noDMI_kwargs)], "(T=7meV, equi subtracted)")
 
 
 
@@ -791,22 +787,15 @@ def seebeck_04(save_prefix="out/04_lowerT/seebeck_T2-2", save_prefix_eq="out/04_
 
     noDMI_kwargs = dict(alpha=0.7, linestyle="--", linewidth=1.0)
 
-    mag_util.plot_magnetic_profile(
+    mag_util.plot_magnetic_profile_from_paths(
         ["/data/scc/marian.gunsch/04_AM_tilted_xTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
          "/data/scc/marian.gunsch/04_AM_tilted_yTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
          "/data/scc/marian.gunsch/04_AM_tilted_xTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
-         "/data/scc/marian.gunsch/04_AM_tilted_yTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet"],
-        0,
-        save_prefix,
-        None,
-        None,
-        0.49,
-        [dict(label="no DMI, [110]", **noDMI_kwargs),
-         dict(label="no DMI, [-110]", **noDMI_kwargs),
-         dict(label="DMI, [110]"),
-         dict(label="DMI, [-110]"),],
-        "(T=2meV)"
-    )
+         "/data/scc/marian.gunsch/04_AM_tilted_yTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet"], 0,
+        save_prefix, None, None, 0.49, [dict(label="no DMI, [110]", **noDMI_kwargs),
+                                        dict(label="no DMI, [-110]", **noDMI_kwargs),
+                                        dict(label="DMI, [110]"),
+                                        dict(label="DMI, [-110]"), ], "(T=2meV)")
 
     print("\nNow the magnetic profile with the equilibrium subtracted will be plotted.")
     prefix = "/data/scc/marian.gunsch/"
@@ -816,22 +805,17 @@ def seebeck_04(save_prefix="out/04_lowerT/seebeck_T2-2", save_prefix_eq="out/04_
     equi_cold_noDMI = (dict(x=0, y=0, z=1), dict(x=0, y=0, z=-1))
     equi_cold_DMI = mag_util.get_mean(f"{prefix}03_AM_tilted_Tstairs_DMI_T0/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat")
 
-    mag_util.plot_magnetic_profile(
+    mag_util.plot_magnetic_profile_from_paths(
         ["/data/scc/marian.gunsch/04_AM_tilted_xTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
          "/data/scc/marian.gunsch/04_AM_tilted_yTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
          "/data/scc/marian.gunsch/04_AM_tilted_xTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
-         "/data/scc/marian.gunsch/04_AM_tilted_yTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet"],
-        0,
-        save_prefix_eq,
-        [equi_warm_noDMI, equi_warm_noDMI, equi_warm_DMI, equi_warm_DMI],
-        [equi_cold_noDMI, equi_cold_noDMI, equi_cold_DMI, equi_cold_DMI],
-        0.49,
+         "/data/scc/marian.gunsch/04_AM_tilted_yTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet"], 0,
+        save_prefix_eq, [equi_warm_noDMI, equi_warm_noDMI, equi_warm_DMI, equi_warm_DMI],
+        [equi_cold_noDMI, equi_cold_noDMI, equi_cold_DMI, equi_cold_DMI], 0.49,
         [dict(label="no DMI, [110]", **noDMI_kwargs),
          dict(label="no DMI, [-110]", **noDMI_kwargs),
          dict(label="DMI, [110]"),
-         dict(label="DMI, [-110]"),],
-        "(T=2meV, equilibrium subtracted)"
-    )
+         dict(label="DMI, [-110]"), ], "(T=2meV, equilibrium subtracted)")
 
 
 
@@ -1034,6 +1018,9 @@ def dispersion_relation(path_A, npy_path_A, path_B=None, title="Dispersion relat
     Sp_F = np.fft.fftshift(Sp_F_)
     k_shifted = np.fft.fftshift(k_vectors)
 
+    print(f"k_min = {np.min(k_shifted)} \t k_max = {np.max(k_shifted)}")
+    print(f"f_min = {np.min(freqs_shifted)} \t f_max = {np.max(freqs_shifted)}")
+
     magnon_density = np.abs(Sp_F) ** 2
 
     if dont_plot:
@@ -1151,7 +1138,7 @@ def seebeck_05():
     save_path = "out/05_staticB/default_save_file"
 
     prefix = "/data/scc/marian.gunsch/"
-    mag_util.plot_magnetic_profile(
+    mag_util.plot_magnetic_profile_from_paths(
         [f"{prefix}05_AM_tilted_xTstep_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
          f"{prefix}05_AM_tilted_yTstep_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
          f"{prefix}05_AM_tilted_xTstep_DMI_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
@@ -1160,8 +1147,7 @@ def seebeck_05():
          f"{prefix}04_AM_tilted_yTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
          f"{prefix}04_AM_tilted_xTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
          f"{prefix}04_AM_tilted_yTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet"],
-        [0, 0, 0, 0, 0, 0, 0, 0],
-        "out/05_staticB/seebeck_T2_completeComparison", None, None, 0.49,
+        [0, 0, 0, 0, 0, 0, 0, 0], "out/05_staticB/seebeck_T2_completeComparison", None, None, 0.49,
         [dict(label="B=100T, no DMI, [110]"),
          dict(label="B=100T, no DMI, [-110]"),
          dict(label="B=100T, DMI, [110]"),
@@ -1169,37 +1155,29 @@ def seebeck_05():
          dict(label="B=0, no DMI, [110]", **noB_kwargs),
          dict(label="B=0, no DMI, [-110]", **noB_kwargs),
          dict(label="B=0, DMI, [110]", **noB_kwargs),
-         dict(label="B=0, DMI, [-110]", **noB_kwargs)],
-        "(T=2meV)"
-    )
+         dict(label="B=0, DMI, [-110]", **noB_kwargs)], "(T=2meV)")
 
-    mag_util.plot_magnetic_profile(
+    mag_util.plot_magnetic_profile_from_paths(
         [f"{prefix}05_AM_tilted_xTstep_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
          f"{prefix}05_AM_tilted_yTstep_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
          f"{prefix}04_AM_tilted_xTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
-         f"{prefix}04_AM_tilted_yTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",],
-        [0, 0, 0, 0],
-        "out/05_staticB/seebeck_T2_nodmiComparison", None, None, 0.49,
-        [dict(label="B=100T, no DMI, [110]"),
-         dict(label="B=100T, no DMI, [-110]"),
-         dict(label="B=0, no DMI, [110]", **noB_kwargs),
-         dict(label="B=0, no DMI, [-110]", **noB_kwargs)],
-        "(T=2meV)"
-    )
+         f"{prefix}04_AM_tilted_yTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet", ], [0, 0, 0, 0],
+        "out/05_staticB/seebeck_T2_nodmiComparison", None, None, 0.49, [dict(label="B=100T, no DMI, [110]"),
+                                                                        dict(label="B=100T, no DMI, [-110]"),
+                                                                        dict(label="B=0, no DMI, [110]", **noB_kwargs),
+                                                                        dict(label="B=0, no DMI, [-110]",
+                                                                             **noB_kwargs)], "(T=2meV)")
 
-    mag_util.plot_magnetic_profile(
-         [f"{prefix}05_AM_tilted_xTstep_DMI_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
+    mag_util.plot_magnetic_profile_from_paths(
+        [f"{prefix}05_AM_tilted_xTstep_DMI_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
          f"{prefix}05_AM_tilted_yTstep_DMI_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
          f"{prefix}04_AM_tilted_xTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
-         f"{prefix}04_AM_tilted_yTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet"],
-        [0, 0, 0, 0],
-        "out/05_staticB/seebeck_T2_dmi_comparison", None, None, 0.49,
-        [dict(label="B=100T, DMI, [110]"),
-         dict(label="B=100T, DMI, [-110]"),
-         dict(label="B=0, DMI, [110]", **noB_kwargs),
-         dict(label="B=0, DMI, [-110]", **noB_kwargs)],
-        "(T=2meV)"
-    )
+         f"{prefix}04_AM_tilted_yTstep_DMI_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet"], [0, 0, 0, 0],
+        "out/05_staticB/seebeck_T2_dmi_comparison", None, None, 0.49, [dict(label="B=100T, DMI, [110]"),
+                                                                       dict(label="B=100T, DMI, [-110]"),
+                                                                       dict(label="B=0, DMI, [110]", **noB_kwargs),
+                                                                       dict(label="B=0, DMI, [-110]", **noB_kwargs)],
+        "(T=2meV)")
 
 
 def presenting_data_05():
@@ -1271,8 +1249,96 @@ def presenting_data_05():
         zoom=False
         )
 
-    # seebeck_05()
+    seebeck_05()
 
+
+# %% 06 Static B field: effect of negative field, field dependence of SSE, non zero equilibrium
+
+
+
+def negative_B_equi():
+    print("EFFECT OF A NEGATIVE B FIELD ON EQUILIBRIUM")
+    path_110 = "/data/scc/marian.gunsch/06_AM_tilted_Tstairs_T2_x_Bn100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    path_n110 = "/data/scc/marian.gunsch/06_AM_tilted_Tstairs_T2_y_Bn100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+
+
+
+
+def negative_B_SSE():
+    print("EFFECT OF A NEGATIVE B FIELD ON SPIN SEEBECK EFFECT")
+    path_110 = "/data/scc/marian.gunsch/06_AM_tilted_xTstep_T2_Bn100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    path_n110 = "/data/scc/marian.gunsch/06_AM_tilted_yTstep_T2_Bn100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+
+    prefix = "/data/scc/marian.gunsch/"
+
+    noB_kwargs = dict(alpha=0.7, linestyle="-.", linewidth=1.0)
+    posB_kwargs = dict(linestyle="--")
+
+    mag_util.plot_magnetic_profile_from_paths(
+        [path_110,
+           path_n110,
+           f"{prefix}05_AM_tilted_xTstep_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
+           f"{prefix}05_AM_tilted_yTstep_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
+           f"{prefix}04_AM_tilted_xTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet",
+           f"{prefix}04_AM_tilted_yTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnet", ],
+          None, None, None, None, None,
+        [dict(label="B=-100T, [110]"),
+         dict(label="B=-100T, [-110]"),
+         dict(label="B=+100T, [110]",
+              **posB_kwargs),
+         dict(label="B=-100T, [-110]",
+              **posB_kwargs),
+         dict(label="B=0, [110]", **noB_kwargs),
+         dict(label="B=0, [-110]", **noB_kwargs)],
+        which = "z")
+
+
+def non_zero_Teq_SSE_statB():
+    print("EFFECT OF A FINITE TEMPERATURE ON THE RIGHT WHEN HAVING A STATIC MAGNETIC FIELD")
+    path_110 = "/data/scc/marian.gunsch/06_AM_tilted_xTstep_T2Teq05_B100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    path_110 = "/data/scc/marian.gunsch/06_AM_tilted_yTstep_T2Teq05_B100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+
+
+def magnetic_field_dependence_SSE():
+    print("ANALYSIS OF SPIN SEEBECK EFFECT FOR DIFFERENT MAGNETIC FIELD STRENGTHS")
+    path1 = "/data/scc/marian.gunsch/05_AM_tilted_"
+    # then x or y
+    path2 = "Tstep_T2_B"
+    # then 50, 60, ... or 100
+    path3 = "/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+
+
+def presenting_data_06():
+    print("[06] To further investigate the effect of a static magnetic field (in z direction) on an altermagnet, the "
+          "following things are analyzed:\n"
+          "- The effect of a negative B field in equilibrium. Do the bands shift in the opposite way? (As we would "
+          "expect)\n"
+          "- The effect of a negative B field on the SSE. Therefore a simulation with a temperature step is "
+          "analyzed.\n"
+          "- Spin Seebeck Effect with a static B field and a nonzero equilibrium temperature on the right.\n"
+          "- The effect of different field strengths on the SSE: 50 to 100 Tesla with 10 Tesla steps:\n"
+          "\t - The different maxima for different crystallographic directions\n"
+          "\t - The different propagation lengths for different crystallographic directions and different B fields.\n"
+          "\t - The propagation lengths plotted as a function of B-field (for both directions), fit for value where "
+          "propagation length for both directions are equal.\n")
+
+    print(seperator)
+
+    negative_B_equi()
+
+    print(seperator)
+
+    negative_B_SSE()
+
+    print(seperator)
+
+    non_zero_Teq_SSE_statB()
+
+    print(seperator)
+
+    magnetic_field_dependence_SSE()
+
+    print(seperator)
 
 
 
@@ -1288,7 +1354,9 @@ if __name__ == '__main__':
 
     # check_boundaries_open_equilibrium()
 
-    presenting_data_05()
+    # presenting_data_05()
+
+    presenting_data_06()
 
     pass
 
