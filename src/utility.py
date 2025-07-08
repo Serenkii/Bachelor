@@ -37,3 +37,29 @@ def save_file_as_npy(old: str, new: str, force=False):
 
 def time_avg(spin_data):
     return np.average(spin_data, axis=0)
+
+
+def exp_fit_func(x, A, alpha, b):
+    r"""
+    Function of form $A e^{-\alpha (x-b)}$
+    :param x:
+    :param A:
+    :param alpha:
+    :param b:
+    :return:
+    """
+    return A * np.exp(- alpha (x - b))
+
+def linear_fit_func(x, m, c):
+    r"""
+    Function of form $m * x + c$
+    :param x:
+    :param m:
+    :param c:
+    :return:
+    """
+
+
+def perform_exp_fit():
+    pass
+

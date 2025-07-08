@@ -1068,7 +1068,7 @@ def dispersion_relation(path_A, npy_path_A, path_B=None, title="Dispersion relat
 
 
 def side_by_side_comparison(dat_path_statB, npy_path_statB, dat_path_noB, npy_path_noB, direction, rasterized=True,
-                            out_path=None, zoom=True, title_left="with static B", title_right="with static B"):
+                            out_path=None, zoom=True, title_left="with static B", title_right="without static B"):
     k_statB, f_statB, magnon_statB = dispersion_relation(
         dat_path_statB,
         npy_path_statB,
@@ -1387,16 +1387,66 @@ def negative_B_SSE():
 def non_zero_Teq_SSE_statB():
     print("EFFECT OF A FINITE TEMPERATURE ON THE RIGHT WHEN HAVING A STATIC MAGNETIC FIELD")
     path_110 = "/data/scc/marian.gunsch/06_AM_tilted_xTstep_T2Teq05_B100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
-    path_110 = "/data/scc/marian.gunsch/06_AM_tilted_yTstep_T2Teq05_B100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    path_n110 = "/data/scc/marian.gunsch/06_AM_tilted_yTstep_T2Teq05_B100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+
+    # path_110 = "/data/scc/marian.gunsch/06_AM_tilted_xTstep_T15Teq05_B100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    # path_n110 = "/data/scc/marian.gunsch/06_AM_tilted_yTstep_T15Teq05_B100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+
+    mag_util.plot_magnetic_profile_from_paths(
+        [path_110,
+         path_n110,
+         "/data/scc/marian.gunsch/05_AM_tilted_xTstep_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet",
+         "/data/scc/marian.gunsch/05_AM_tilted_yTstep_T2_staticB/spin-configs-99-999/mag-profile-99-999.altermagnet"],
+        None,
+        "out/06_staticB/seebeck_B100_Teq05",
+        None,
+        None,
+        None,
+        [dict(label="B=100T, k*Teq=0.5meV, [110]"),
+         dict(label="B=100T, k*Teq=0.5meV, [-110]"),
+         dict(label="B=100T, Teq=0, [110]", alpha=0.8, linewidth=0.7, linestyle="--"),
+         dict(label="B=100T, Teq=0, [-110]", alpha=0.8, linewidth=0.7, linestyle="--")],
+         which="z"
+    )
 
 
 def magnetic_field_dependence_SSE():
     print("ANALYSIS OF SPIN SEEBECK EFFECT FOR DIFFERENT MAGNETIC FIELD STRENGTHS")
-    path1 = "/data/scc/marian.gunsch/05_AM_tilted_"
-    # then x or y
-    path2 = "Tstep_T2_B"
-    # then 50, 60, ... or 100
-    path3 = "/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+
+    def get_path(direction, field_strength):
+        return (f"/data/scc/marian.gunsch/05_AM_tilted_{direction}Tstep_T2_B{field_strength}"
+                f"/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat")
+
+    field_strength_list = [50, 60, 70, 80, 90, 100]
+    direction_list = ["x", "y"]
+    direction_name_list = ["[110]", "[-110]"]
+    color_list = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple", "tab:brown"]
+    linestyle_list = ["-", "-."]
+
+    path_list = []
+    kwargs_list = []
+
+    for field_strength, color in zip(field_strength_list, color_list):
+        for direction, cryst_direction, linestyle in zip(direction_list, direction_name_list, linestyle_list):
+            path_list.append(get_path(direction, field_strength))
+            kwargs_list.append(dict(label=f"B={field_strength}T, {cryst_direction}", color=color, linestyle=linestyle,
+                                    linewidth=0.6, alpha=0.8))
+
+    mag_util.plot_magnetic_profile_from_paths(
+        path_list, None, "out/06_staticB/seebeck_mag_profile_B50B100", None,
+        None, None, kwargs_list, which="z")
+
+    for field_strength in field_strength_list:
+        for direction in direction_list:
+            path = get_path(direction, field_strength)
+            data = np.loadtxt(path)
+            spin_A, spin_B = mag_util.get_component(data)
+            magnetization = physics.magnetization(spin_A, spin_B, True)
+            # TODO: - take data right from T step, determine local max min value (e.g. by using absolute value)
+            # TODO: - this extremum is the first data point included in the fit
+            # TODO: - fit to 200 (or 225) to reduce impact of the zero values on the right
+            # TODO: - fit functions defined in utility
+            # TODO: - use scipy curve fit
 
 
 def presenting_data_06():
@@ -1415,15 +1465,15 @@ def presenting_data_06():
 
     print(seperator)
 
-    negative_B_equi()
+    # negative_B_equi()
 
     print(seperator)
 
-    negative_B_SSE()
+    # negative_B_SSE()
 
     print(seperator)
 
-    non_zero_Teq_SSE_statB()
+    # non_zero_Teq_SSE_statB()
 
     print(seperator)
 
