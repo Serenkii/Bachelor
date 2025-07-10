@@ -414,3 +414,15 @@ def load_mag_npy_files(path_A, path_B=None):
     path_B = path_B or f"{path_A[:-6]}_B.npy"
     print(f"Loading data from {path_A} and {path_B}...")
     return np.load(path_A), np.load(path_B)
+
+
+def infer_path_B(path, also_return_path_A=False):
+    if path.endswith(".dat"):
+        path = path[:-5]
+
+    path_B = f"{path}B.dat"
+
+    if also_return_path_A:
+        return f"{path}A.dat", path_B
+
+    return path_B

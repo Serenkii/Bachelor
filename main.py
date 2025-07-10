@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 
 import scipy as sp
+from scipy.optimize import curve_fit
 
 import src.utility as util
 import src.mag_util as mag_util
@@ -937,6 +938,20 @@ def check_boundaries_open_equilibrium():
     plot_2d("/data/scc/marian.gunsch/04_AM_tilted_Tstairs_T2_openbou//spin-configs-99-999/spin-config-99-999-005000.dat", width_xy=99999, save_path="out/04_lowerT/open_bound_stairs_noDMI", title_suffix="(Open boundaries, no DMI)")
     plot_2d("/data/scc/marian.gunsch/04_AM_tilted_Tstairs_T2/spin-configs-99-999/spin-config-99-999-005000.dat", width_xy=99999, save_path="out/04_lowerT/period_bound_stairs_noDMI", title_suffix="(Periodic boundaries, no DMI)")
 
+    mag_util.plot_magnetic_profile_from_paths(
+        ["/data/scc/marian.gunsch/04_AM_tilted_Tstairs_T2_openbou/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+         "/data/scc/marian.gunsch/04_AM_tilted_Tstairs_T2/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+         "/data/scc/marian.gunsch/04_AM_tilted_Tstairs_DMI_T2_openbou/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+         "/data/scc/marian.gunsch/04_AM_tilted_Tstairs_DMI_T2/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"],
+        None, "out/04_lowerT/open_bound_comparison", None, None, None,
+        [dict(label="Open, no DMI"),
+         dict(label="Periodic, no DMI", linewidth=1, alpha=0.5),
+         dict(label="Open, DMI"),
+         dict(label="Periodic, DMI", linewidth=1, alpha=0.5),],
+        dont_calculate_margins=True,
+        which="yz"
+    )
+
 
 def presenting_data_04():
     print("[04] As previous attempts working with the equilibrium data for DMI have failed, I am trying once again "
@@ -1410,17 +1425,22 @@ def non_zero_Teq_SSE_statB():
     )
 
 
-def magnetic_field_dependence_SSE():
+def magnetic_field_dependence_SSE(suppress_plots=[True, True, False], seebeck_plot_path=None, fit_plot_save_path=None,
+                                  alpha_plot_path=None, prop_length_plot_path=None, other_fit_func=True):
     print("ANALYSIS OF SPIN SEEBECK EFFECT FOR DIFFERENT MAGNETIC FIELD STRENGTHS")
 
     def get_path(direction, field_strength):
+        if field_strength == 0:
+            return f"/data/scc/marian.gunsch/04_AM_tilted_{direction}Tstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+        if field_strength == -100:
+            return f"/data/scc/marian.gunsch/06_AM_tilted_{direction}Tstep_T2_Bn100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
         return (f"/data/scc/marian.gunsch/05_AM_tilted_{direction}Tstep_T2_B{field_strength}"
                 f"/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat")
 
-    field_strength_list = [50, 60, 70, 80, 90, 100]
+    field_strength_list = [-100, 0, 50, 60, 70, 80, 90, 100]
     direction_list = ["x", "y"]
     direction_name_list = ["[110]", "[-110]"]
-    color_list = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple", "tab:brown"]
+    color_list = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple", "tab:brown", "tab:pink", "tab:gray"]
     linestyle_list = ["-", "-."]
 
     path_list = []
@@ -1432,21 +1452,118 @@ def magnetic_field_dependence_SSE():
             kwargs_list.append(dict(label=f"B={field_strength}T, {cryst_direction}", color=color, linestyle=linestyle,
                                     linewidth=0.6, alpha=0.8))
 
-    mag_util.plot_magnetic_profile_from_paths(
-        path_list, None, "out/06_staticB/seebeck_mag_profile_B50B100", None,
-        None, None, kwargs_list, which="z")
+    if not suppress_plots[0]:
+        mag_util.plot_magnetic_profile_from_paths(
+            path_list, None, seebeck_plot_path, None,
+            None, None, kwargs_list, which="z")
 
-    for field_strength in field_strength_list:
-        for direction in direction_list:
+    x_bot = 127     # or 126
+    x_top = 200
+
+    alpha_list_dict = dict(x=[], y=[])
+    beta_list_dict = dict(x=[], y=[])
+
+    fig, ax = plt.subplots()
+    ax.set_title(f"B dependent Seebeck with Fits")
+
+    for field_strength, color in zip(field_strength_list, color_list):
+        for direction, cryst_direction in zip(direction_list, direction_name_list):
+            print(f"Calculating fit for B={field_strength}T, {cryst_direction}")
+
             path = get_path(direction, field_strength)
-            data = np.loadtxt(path)
-            spin_A, spin_B = mag_util.get_component(data)
+            data_A = np.loadtxt(path)
+            data_B = np.loadtxt(mag_util.infer_path_B(path))
+            spin_A, spin_B = mag_util.get_component(data_A, which="z"), mag_util.get_component(data_B, which="z")
             magnetization = physics.magnetization(spin_A, spin_B, True)
-            # TODO: - take data right from T step, determine local max min value (e.g. by using absolute value)
-            # TODO: - this extremum is the first data point included in the fit
-            # TODO: - fit to 200 (or 225) to reduce impact of the zero values on the right
-            # TODO: - fit functions defined in utility
-            # TODO: - use scipy curve fit
+
+            x_data = np.arange(len(magnetization), dtype=float)
+
+            local_extremum = np.argmax(np.abs(magnetization)[x_bot:x_top]) + x_bot + 1  # TODO: maybe we want to be one to the right of the actual extremum
+
+            data_for_fit = magnetization[local_extremum:x_top]
+
+            x_data_for_fit = np.arange(len(data_for_fit), dtype=float)  # TODO - need to know distance between lattice points
+
+            fit_func = util.exp_fit_func_2 if other_fit_func else util.exp_fit_func
+
+            if not other_fit_func:
+                initial_A = 0.001 if direction == "x" else -0.0007
+                popt, pcov = curve_fit(fit_func, x_data_for_fit, data_for_fit, p0=[initial_A, 0.1])
+            else:
+                initial_A = 0.0005 if direction == "x" else -0.0004
+                initial_B = 0.0005 if direction == "x" else -0.0004
+                popt, pcov = curve_fit(fit_func, x_data_for_fit, data_for_fit,
+                                       p0=[initial_A, 0.1, initial_B, 0.1], maxfev=10000)
+
+            print(f"direction={direction}, B={field_strength}T, popt={popt}", )
+
+            alpha_list_dict[direction].append(popt[1])
+            if other_fit_func:
+                beta_list_dict[direction].append(popt[3])
+
+            if suppress_plots[1]:
+                continue
+            x_plot_fit = x_data - local_extremum
+
+            ax.plot(x_data, magnetization, label=f"B={field_strength}T, {cryst_direction}",
+                    linestyle="-", linewidth=0.3, marker="o", markersize=0.8, alpha=0.8, color=color)
+            ax.plot(x_data, fit_func(x_plot_fit, *popt), label=f"Fit: B={field_strength}T, {cryst_direction}",
+                    linestyle="--", linewidth=0.6, alpha=0.7, color=color[4:])
+
+
+    if not suppress_plots[1]:
+        ax.set_ylim(-0.0018, 0.0018)
+
+        ax.legend(fontsize='xx-small', title_fontsize="xx-small", ncols=2)
+
+        if fit_plot_save_path:
+            print(f"Saving to {fit_plot_save_path}")
+            fig.savefig(fit_plot_save_path)
+
+        fig.show()
+
+    np.save("data/06_staticB/alpha_110.npy", alpha_list_dict['x'])
+    np.save("data/06_staticB/alpha_n110.npy", alpha_list_dict['y'])
+
+    if not suppress_plots[2]:
+        fig, ax = plt.subplots()
+        ax.set_title("alpha dependent on B")
+        ax.set_xlabel("B field in T")
+        ax.set_ylabel("alpha in unit 1/index (no dimension)")
+        ax.plot(field_strength_list, alpha_list_dict['x'], label="alpha [110]", marker="o", linestyle="")
+        ax.plot(field_strength_list, alpha_list_dict['y'], label="alpha [-110]", marker="s", linestyle="")
+
+        if other_fit_func:
+            ax.plot(field_strength_list, beta_list_dict['x'], label="beta [110]", marker="o", linestyle="")
+            ax.plot(field_strength_list, beta_list_dict['y'], label="beta [-110]", marker="s", linestyle="")
+
+        ax.legend()
+
+        if alpha_plot_path:
+            print(f"Saving to {alpha_plot_path}")
+            fig.savefig(alpha_plot_path)
+
+        fig.show()
+
+        fig, ax = plt.subplots()
+        ax.set_title("propagation length dependent on B")
+        ax.set_xlabel("B field in T")
+        ax.set_ylabel("propagation length in unit index (no dimension)")
+        ax.plot(field_strength_list, 1.0 / np.array(alpha_list_dict['x']), label="1/alpha [110]", marker="o", linestyle="")
+        ax.plot(field_strength_list, 1.0 / np.array(alpha_list_dict['y']), label="1/alpha [-110]", marker="o", linestyle="")
+
+        if other_fit_func:
+            ax.plot(field_strength_list, 1.0 / np.array(beta_list_dict['x']), label="1/beta [110]", marker="o", linestyle="")
+            ax.plot(field_strength_list, 1.0 / np.array(beta_list_dict['y']), label="1/beta [-110]", marker="s", linestyle="")
+
+        ax.legend()
+
+        if prop_length_plot_path:
+            print(f"Saving to {prop_length_plot_path}")
+            fig.savefig(prop_length_plot_path)
+
+        fig.show()
+
 
 
 def presenting_data_06():
@@ -1477,7 +1594,18 @@ def presenting_data_06():
 
     print(seperator)
 
-    magnetic_field_dependence_SSE()
+    magnetic_field_dependence_SSE([False, False, False],
+                                  "out/06_staticB/seebeck_mag_profile_B50B100",
+                                  "out/06_staticB/sse_Bdepend_fits.pdf",
+                                  "out/06_staticB/alpha_dep_on_B.pdf",
+                                  "out/06_staticB/prop_length_dep_on_B.pdf",
+                                  False)
+    magnetic_field_dependence_SSE([True, False, False],
+                                  "out/06_staticB/seebeck_mag_profile_B50B100-2",
+                                  "out/06_staticB/sse_Bdepend_fits-2.pdf",
+                                  "out/06_staticB/alpha_dep_on_B-2.pdf",
+                                  "out/06_staticB/prop_length_dep_on_B-2.pdf",
+                                  True)
 
     print(seperator)
 
@@ -1498,6 +1626,8 @@ if __name__ == '__main__':
     # presenting_data_05()
 
     presenting_data_06()
+
+    check_boundaries_open_equilibrium()
 
     pass
 

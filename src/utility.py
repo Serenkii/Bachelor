@@ -39,16 +39,28 @@ def time_avg(spin_data):
     return np.average(spin_data, axis=0)
 
 
-def exp_fit_func(x, A, alpha, b):
+def exp_fit_func(x, A, alpha):
     r"""
-    Function of form $A e^{-\alpha (x-b)}$
+    Function of form $A e^{-\alpha (x)}$
     :param x:
     :param A:
     :param alpha:
-    :param b:
     :return:
     """
-    return A * np.exp(- alpha (x - b))
+    return A * np.exp(- alpha * x)
+
+def exp_fit_func_2(x, A, alpha, B, beta):
+    r"""
+    Function of form $A e^{-\alpha (x)} + B e^{-\beta (x)}$
+    :param x:
+    :param A:
+    :param alpha:
+    :param B:
+    :param beta:
+    :return:
+    """
+    return A * np.exp(- alpha * x) + B * np.exp(- beta * x)
+
 
 def linear_fit_func(x, m, c):
     r"""
