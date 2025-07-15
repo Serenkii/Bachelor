@@ -12,6 +12,8 @@ import src.physics as physics
 
 default_slice_dict = {'t': 0, 'x': 1, 'y': 2, 'z': 3, '1': 1, '2': 2, '3': 3}
 
+default_force_overwrite = True
+
 
 def time_avg(spin_data):
     return np.average(spin_data, axis=0)
@@ -35,7 +37,7 @@ def get_component(data, which='z', skip_time_steps=150):
     return data[skip_time_steps:, slice_dict[which]::3]
 
 
-def get_components_as_tuple(data, which='xyz', skip_time_steps=0, do_time_avg=False):
+def get_components_as_tuple(data, which='xyz', skip_time_steps=150, do_time_avg=False):
     for component in which:
         if do_time_avg:
             yield time_avg(get_component(data, component, skip_time_steps=skip_time_steps))
@@ -43,7 +45,7 @@ def get_components_as_tuple(data, which='xyz', skip_time_steps=0, do_time_avg=Fa
             yield get_component(data, component, skip_time_steps=skip_time_steps)
 
 
-def get_components_as_dict(data, which='xyz', skip_time_steps=0, do_time_avg=False):
+def get_components_as_dict(data, which='xyz', skip_time_steps=150, do_time_avg=False):
     return_dict = dict()
     for component in which:
         if component in return_dict.keys():
@@ -58,7 +60,7 @@ def get_components_as_dict(data, which='xyz', skip_time_steps=0, do_time_avg=Fal
 # TODO: Test PROBABLY INDEX ERROR
 def save_arrayjob_as_npy(base_path: str, npy_path: str, start: int, stop=None, step=1,
                          middle_path="spin-configs-99-999/mag-profile-99-999.altermagnet", suffix=".dat",
-                         force=False):
+                         force=default_force_overwrite):
     """
     Reads file at '{base_path}{index}/{middle_path}X{suffix}' for X=A and X=B and saves it to npy_path. Only works if all array jobs have finished or rather have produced the same amount of lines.
     :param base_path:
@@ -115,7 +117,7 @@ def save_arrayjob_as_npy(base_path: str, npy_path: str, start: int, stop=None, s
 # TODO: seems to be working
 def save_arrayjob_as_npz(base_path: str, npz_path: str, start: int, stop=None, step=1,
                          middle_path="spin-configs-99-999/mag-profile-99-999.altermagnet", suffix=".dat",
-                         force=False):
+                         force=default_force_overwrite):
     """
     Reads file at '{base_path}{index}/{middle_path}X{suffix}' for X=A and X=B and saves it to npy_path. Only works if all array jobs have finished or rather have produced the same amount of lines.
     :param base_path:
@@ -199,7 +201,15 @@ def get_mean(file_path_A, file_path_B=None, skip_time_steps=15):
     return spins_A, spins_B
 
 
-def load_path_list(load_paths, skip_rows=None, which="xyz"):
+def load_from_path_list(load_paths, skip_rows=None, which="xyz", return_raw_list=False):
+    """
+    Loads the specified components from a list of paths.
+    :param load_paths: The magnetic profile paths that will be loaded.
+    :param skip_rows: The number of rows that will be skipped when reading the files. (Needed if file is broken)
+    :param which: Which components are plotted
+    :param return_raw_list: If 'which' only contains one component, setting this to True will return a list of arrays instead of a list of dictionaries containing arrays.
+    :return: A list of dictionaries with the keys of 'which'. Each entry in the dictionaries contains an array with the data for the specific component.
+    """
     # Checking input
     if not skip_rows:
         skip_rows = 0
@@ -219,16 +229,34 @@ def load_path_list(load_paths, skip_rows=None, which="xyz"):
 
     spins_A_list, spins_B_list = [], []
 
-    for data_A, data_B in zip(data_A_list, data_B_list):
-        spins_A_list.append(get_components_as_dict(data_A, which, 1, True))
-        spins_B_list.append(get_components_as_dict(data_B, which, 1, True))
+    if not return_raw_list or len(which) > 1:
+        for data_A, data_B in zip(data_A_list, data_B_list):
+            spins_A_list.append(get_components_as_dict(data_A, which, 150, True))
+            spins_B_list.append(get_components_as_dict(data_B, which, 150, True))
+    else:
+        for data_A, data_B in zip(data_A_list, data_B_list):
+            spins_A_list.append(time_avg(get_component(data_A, which)))
+            spins_B_list.append(time_avg(get_component(data_B, which)))
 
     return spins_A_list, spins_B_list
 
 
+
 def plot_magnetic_profile(spins_A_list, spins_B_list, save_path, equi_values_warm, equi_values_cold, rel_T_step_positions,
                           plot_kwargs_list, title_suffix="", dont_calculate_margins=False):
+    """
 
+    :param spins_A_list:
+    :param spins_B_list:
+    :param save_path: The prefix which is used to save the plots.
+    :param equi_values_warm: Format: [(dict(x=..., y..., ...), dict(x=..., ...)), ...] for SL A and SL B
+    :param equi_values_cold: Format: [(dict(x=..., y..., ...), dict(x=..., ...)), ...] for SL A and SL B
+    :param rel_T_step_positions: The relative position of the temperature step. Default is 0.49.
+    :param plot_kwargs_list: The keywords argument for plotting.
+    :param title_suffix: Suffix to add to the title of the plot.
+    :param dont_calculate_margins: If True, do not try to find sensible margins for the plot.
+    :return: magnon_acc_list, delta_neel_list
+    """
     print("Plotting magnetic profile (Magnetization and Neel-Vector)")
 
     # Checking input
@@ -240,12 +268,17 @@ def plot_magnetic_profile(spins_A_list, spins_B_list, save_path, equi_values_war
     if rel_T_step_positions.size < len(spins_A_list):
         raise ValueError("Too few rows in 'rel_T_step_pos'.")
 
-    if not equi_values_warm and not equi_values_cold:
-        equi_values_cold, equi_values_warm = [], []
+    if not equi_values_warm:
+        equi_values_warm = []
         zero_dict = dict(x=0, y=0, z=0)
         for _ in spins_A_list:
-            equi_values_cold.append((zero_dict, zero_dict))
-            equi_values_warm.append((zero_dict, zero_dict))
+            equi_values_warm.append((dict(x=0, y=0, z=1), dict(x=0, y=0, z=-1)))
+
+    if not equi_values_cold:
+        equi_values_cold = []
+        zero_dict = dict(x=0, y=0, z=0)
+        for _ in spins_A_list:
+            equi_values_cold.append((dict(x=0, y=0, z=1), dict(x=0, y=0, z=-1)))
 
     # Calculating magnetization and neel vectors
     magnetization_list, neel_list = [], []
@@ -355,10 +388,10 @@ def plot_magnetic_profile_from_paths(load_paths, skip_rows, save_path, equi_valu
     :param title_suffix: Suffix to add to the title of the plot.
     :param dont_calculate_margins: If True, do not try to find sensible margins for the plot.
     :param which: Which components are plotted. Default is 'xyz' for 'x', 'y' and 'z'.
-    :return: spins_A_list, spins_B_list
+    :return: spins_A_list, spins_B_list, magnon_acc_list, delta_neel_list
     """
 
-    spins_A_list, spins_B_list = load_path_list(load_paths, skip_rows, which)
+    spins_A_list, spins_B_list = load_from_path_list(load_paths, skip_rows, which)
 
     magnon_acc_list, delta_neel_list = plot_magnetic_profile(
         spins_A_list, spins_B_list, save_path, equi_values_warm, equi_values_cold,
@@ -369,7 +402,7 @@ def plot_magnetic_profile_from_paths(load_paths, skip_rows, save_path, equi_valu
 
 
 
-def save_mag_files(file_path_A, save_path_prefix, file_path_B=None, saving_after_index=0, force=False):
+def save_mag_files(file_path_A, save_path_prefix, file_path_B=None, saving_after_index=0, force=default_force_overwrite):
     """
     Loads the text files in the specified (paths) and saves them in the save_path. Only saves from line/timestep
     saving_after_index. If force is False (default) no files will be loaded or saved, if the save files exist already.

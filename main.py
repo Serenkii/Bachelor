@@ -20,6 +20,10 @@ seperator = "-------------------------------------------------------------\n"
 
 plot_paths = True
 
+# %% configure matplotlib
+# mpl.use('Qt5Agg')   # for interactive plots https://stackoverflow.com/questions/49844189/how-to-get-interactive-plot-of-pyplot-when-using-pycharm
+# See here: https://matplotlib.org/stable/users/explain/figure/backends.html
+
 # %% Meeting in May
 
 def temperature_dependent_nernst(save=False, save_path='out/T-dependent-nernst.png', delta_x=0):
@@ -940,14 +944,10 @@ def check_boundaries_open_equilibrium():
 
     mag_util.plot_magnetic_profile_from_paths(
         ["/data/scc/marian.gunsch/04_AM_tilted_Tstairs_T2_openbou/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
-         "/data/scc/marian.gunsch/04_AM_tilted_Tstairs_T2/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
-         "/data/scc/marian.gunsch/04_AM_tilted_Tstairs_DMI_T2_openbou/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
-         "/data/scc/marian.gunsch/04_AM_tilted_Tstairs_DMI_T2/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"],
+         "/data/scc/marian.gunsch/04_AM_tilted_Tstairs_DMI_T2_openbou/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",],
         None, "out/04_lowerT/open_bound_comparison", None, None, None,
-        [dict(label="Open, no DMI"),
-         dict(label="Periodic, no DMI", linewidth=1, alpha=0.5),
-         dict(label="Open, DMI"),
-         dict(label="Periodic, DMI", linewidth=1, alpha=0.5),],
+        [dict(label="Open, no DMI", linestyle="--", alpha=0.8),
+         dict(label="Open, DMI", linestyle="--", alpha=0.8),],
         dont_calculate_margins=True,
         which="yz"
     )
@@ -1000,7 +1000,7 @@ def presenting_data_04():
 
 # %% 05 Static B field
 
-def dispersion_relation(path_A, npy_path_A, path_B=None, title="Dispersion relation", out_path=None, rasterized=True, dont_plot=False):
+def dispersion_relation(path_A, npy_path_A, path_B=None, title="Dispersion relation", dx=1e-10, dt=50e-16, out_path=None, rasterized=True, dont_plot=False):
     print(f"Displaying the dispersion relation of the data in path '{path_A}'...")
 
     mag_util.save_mag_files(path_A, npy_path_A, saving_after_index=-100000)
@@ -1196,38 +1196,93 @@ def seebeck_05():
         "(T=2meV)")
 
 
+def compare_with_analytical_dispersion_relation(dat_path_simulation, npy_path_simulation, mat_path_analytical,
+                                                omega_selection=(0,2), title="Comparison analytical", save_path=None, plot_paths=True, rasterized=True):
+
+    k_vals, freqs, magnon_density = dispersion_relation(
+        dat_path_simulation,
+        npy_path_simulation,
+        dont_plot=True,
+        dx=2e-10
+    )
+
+    temp = sp.io.loadmat(mat_path_analytical)
+    print(temp.keys())
+    omega_ana1 = temp['omega1'][omega_selection[0]]
+    omega_ana2 = temp['omega1'][omega_selection[1]]
+    k_ana = np.squeeze(temp['k_lin']) * 1e10 * 2
+
+    omega_sim = freqs * 2 * np.pi
+    k_vals *= 2 * np.pi
+
+    # plotting
+    fig, ax = plt.subplots()
+    ax.set_title(title)
+    ax.set_ylabel('Frequency ω in rad/s')
+    ax.set_xlabel(r'k (1/m)')
+
+    im = ax.pcolormesh(k_vals, omega_sim, magnon_density, shading='auto',
+                       norm=colors.LogNorm(vmin=magnon_density.min(), vmax=magnon_density.max()),
+                       rasterized=rasterized)
+
+    if plot_paths:
+        fig.text(0.5, 1.0, f"{dat_path_simulation}", ha="center", va="top", color="green", size=6)
+
+
+    fig.colorbar(im, ax=ax, label='Magnon Density')
+
+    ax.plot(k_ana[96:160], omega_ana1[96:160], color='red')
+    ax.plot(k_ana[96:160], omega_ana2[96:160], color='red', label='Analytical solution')
+
+    ax.legend()
+
+    if save_path:
+        print(f"Saving comparison to analytical to {save_path}..", end="")
+        if save_path.endswith(".pdf"):
+            if rasterized:
+                fig.savefig(save_path, dpi=2400)
+            else:
+                fig.savefig(save_path)
+        else:
+            fig.savefig(save_path, dpi=1200)
+        print(".")
+
+    plt.show()
+
+
+
 def presenting_data_05():
-    # dispersion_relation(
-    #     "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
-    #     "data/05_staticB/stairs_T2_x_staticB_A.npy",
-    #     title="Dispersion relation [110] (with static B-field)",
-    #     # out_path="out/05_staticB/dispersionRel_statB_110.png"
-    #     # out_path="out/05_staticB/dispersionRel_statB_110.pdf"
-    # )
-    #
-    # dispersion_relation(
-    #     "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
-    #     "data/05_staticB/stairs_T2_y_staticB_A.npy",
-    #     title="Dispersion relation [-110] (with static B-field)",
-    #     # out_path="out/05_staticB/dispersionRel_statB_-110.png"
-    #     # out_path="out/05_staticB/dispersionRel_statB_-110.pdf"
-    # )
-    #
-    # dispersion_relation(
-    #     "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
-    #     "data/05_staticB/stairs_T2_x_A.npy",
-    #     title="Dispersion relation [110] (no static B field, no DMI)",
-    #     # out_path="out/05_staticB/dispersionRel_110.png"
-    #     # out_path="out/05_staticB/dispersionRel_110.pdf"
-    # )
-    #
-    # dispersion_relation(
-    #     "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
-    #     "data/05_staticB/stairs_T2_y_A.npy",
-    #     title="Dispersion relation [-110] (no static B field, no DMI)",
-    #     # out_path="out/05_staticB/dispersionRel_-110.png"
-    #     # out_path="out/05_staticB/dispersionRel_-110.pdf"
-    # )
+    dispersion_relation(
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/05_staticB/stairs_T2_x_staticB_A.npy",
+        title="Dispersion relation [110] (with static B-field)",
+        # out_path="out/05_staticB/dispersionRel_statB_110.png"
+        # out_path="out/05_staticB/dispersionRel_statB_110.pdf"
+    )
+
+    dispersion_relation(
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/05_staticB/stairs_T2_y_staticB_A.npy",
+        title="Dispersion relation [-110] (with static B-field)",
+        # out_path="out/05_staticB/dispersionRel_statB_-110.png"
+        # out_path="out/05_staticB/dispersionRel_statB_-110.pdf"
+    )
+
+    dispersion_relation(
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/05_staticB/stairs_T2_x_A.npy",
+        title="Dispersion relation [110] (no static B field, no DMI)",
+        # out_path="out/05_staticB/dispersionRel_110.png"
+        # out_path="out/05_staticB/dispersionRel_110.pdf"
+    )
+
+    dispersion_relation(
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/05_staticB/stairs_T2_y_A.npy",
+        title="Dispersion relation [-110] (no static B field, no DMI)",
+        # out_path="out/05_staticB/dispersionRel_-110.png"
+        # out_path="out/05_staticB/dispersionRel_-110.pdf"
+    )
 
     side_by_side_comparison(
         "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
@@ -1267,6 +1322,54 @@ def presenting_data_05():
 
     seebeck_05()
 
+    compare_with_analytical_dispersion_relation(
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/05_staticB/stairs_T2_x_staticB_A.npy",
+        "data/05_staticB/noDMI_B.mat",
+        title="B=100T, no DMI, sim in [110]",
+        save_path="out/05_staticB/dispersion_ana_110_B100_nodmi.png",
+    )
+
+    compare_with_analytical_dispersion_relation(
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y_Bstatic/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/05_staticB/stairs_T2_y_staticB_A.npy",
+        "data/05_staticB/noDMI_B.mat",
+        title="B=100T, no DMI, sim in [-110]",
+        save_path="out/05_staticB/dispersion_ana_n110_B100_nodmi.png",
+    )
+
+    compare_with_analytical_dispersion_relation(
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_x/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/05_staticB/stairs_T2_x_A.npy",
+        "data/05_staticB/noDMI_noB.mat",
+        title="B=0, no DMI, sim in [110]",
+        save_path="out/05_staticB/dispersion_ana_110_B0_nodmi.png",
+    )
+
+    compare_with_analytical_dispersion_relation(
+        "/data/scc/marian.gunsch/05_AM_tilted_Tstairs_T2_y/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/05_staticB/stairs_T2_y_A.npy",
+        "data/05_staticB/noDMI_noB.mat",
+        title="B=0, no DMI, sim in [-110]",
+        save_path="out/05_staticB/dispersion_ana_n110_B0_nodmi.png",
+    )
+
+    compare_with_analytical_dispersion_relation(
+        "/data/scc/marian.gunsch/06_AM_tilted_Tstairs_T2_x_Bn100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/06_staticB/stairs_T2_x_Bn100_A.npy",
+        "data/05_staticB/noDMI_B-100T.mat",
+        title="B=-100T, no DMI, sim in [110]",
+        save_path="out/05_staticB/dispersion_ana_110_Bn100_nodmi.png",
+    )
+
+    compare_with_analytical_dispersion_relation(
+        "/data/scc/marian.gunsch/06_AM_tilted_Tstairs_T2_y_Bn100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat",
+        "data/06_staticB/stairs_T2_y_Bn100_A.npy",
+        "data/05_staticB/noDMI_B-100T.mat",
+        title="B=-100T, no DMI, sim in [-110]",
+        save_path="out/05_staticB/dispersion_ana_n110_Bn100_nodmi.png",
+    )
+
 
 # %% 06 Static B field: effect of negative field, field dependence of SSE, non zero equilibrium
 
@@ -1277,8 +1380,8 @@ def negative_B_equi():
     path_110 = "/data/scc/marian.gunsch/06_AM_tilted_Tstairs_T2_x_Bn100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
     path_n110 = "/data/scc/marian.gunsch/06_AM_tilted_Tstairs_T2_y_Bn100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
 
-    npy_path_110 = "data/06_staticB/stairs_T2_x_B100_A.npy"
-    npy_path_n110 = "data/06_staticB/stairs_T2_y_B100_A.npy"
+    npy_path_110 = "data/06_staticB/stairs_T2_x_Bn100_A.npy"
+    npy_path_n110 = "data/06_staticB/stairs_T2_y_Bn100_A.npy"
     dispersion_relation(
         path_110,
         npy_path_110,
@@ -1404,8 +1507,8 @@ def non_zero_Teq_SSE_statB():
     path_110 = "/data/scc/marian.gunsch/06_AM_tilted_xTstep_T2Teq05_B100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
     path_n110 = "/data/scc/marian.gunsch/06_AM_tilted_yTstep_T2Teq05_B100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
 
-    # path_110 = "/data/scc/marian.gunsch/06_AM_tilted_xTstep_T15Teq05_B100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
-    # path_n110 = "/data/scc/marian.gunsch/06_AM_tilted_yTstep_T15Teq05_B100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    path_110 = "/data/scc/marian.gunsch/06_AM_tilted_xTstep_T15Teq05_B100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    path_n110 = "/data/scc/marian.gunsch/06_AM_tilted_yTstep_T15Teq05_B100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
 
     mag_util.plot_magnetic_profile_from_paths(
         [path_110,
@@ -1425,37 +1528,25 @@ def non_zero_Teq_SSE_statB():
     )
 
 
-def magnetic_field_dependence_SSE(suppress_plots=[True, True, False], seebeck_plot_path=None, fit_plot_save_path=None,
-                                  alpha_plot_path=None, prop_length_plot_path=None, other_fit_func=True):
-    print("ANALYSIS OF SPIN SEEBECK EFFECT FOR DIFFERENT MAGNETIC FIELD STRENGTHS")
+def get_path_from_direction_field_strength(direction: str, field_strength: int):
+    simulation_index = "05"
+    if field_strength == 0:
+        return f"/data/scc/marian.gunsch/04_AM_tilted_{direction}Tstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    if field_strength < 0:
+        field_strength = f"n{int(np.abs(field_strength))}"
+        simulation_index = "06"
+    return (f"/data/scc/marian.gunsch/{simulation_index}_AM_tilted_{direction}Tstep_T2_B{field_strength}"
+            f"/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat")
 
-    def get_path(direction, field_strength):
-        if field_strength == 0:
-            return f"/data/scc/marian.gunsch/04_AM_tilted_{direction}Tstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
-        if field_strength == -100:
-            return f"/data/scc/marian.gunsch/06_AM_tilted_{direction}Tstep_T2_Bn100/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
-        return (f"/data/scc/marian.gunsch/05_AM_tilted_{direction}Tstep_T2_B{field_strength}"
-                f"/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat")
 
-    field_strength_list = [-100, 0, 50, 60, 70, 80, 90, 100]
+def propagation_length_SSE_depend_on_B(field_strength_list=None, suppress_plots=[True, True, False], fit_plot_save_path=None,
+                                       alpha_plot_path=None, prop_length_plot_path=None, other_fit_func=True):
+    print("FITS AND PROPAGATION LENGTH")
+
+    field_strength_list = field_strength_list or [-100, 0, 50, 60, 70, 80, 90, 100]
     direction_list = ["x", "y"]
     direction_name_list = ["[110]", "[-110]"]
     color_list = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple", "tab:brown", "tab:pink", "tab:gray"]
-    linestyle_list = ["-", "-."]
-
-    path_list = []
-    kwargs_list = []
-
-    for field_strength, color in zip(field_strength_list, color_list):
-        for direction, cryst_direction, linestyle in zip(direction_list, direction_name_list, linestyle_list):
-            path_list.append(get_path(direction, field_strength))
-            kwargs_list.append(dict(label=f"B={field_strength}T, {cryst_direction}", color=color, linestyle=linestyle,
-                                    linewidth=0.6, alpha=0.8))
-
-    if not suppress_plots[0]:
-        mag_util.plot_magnetic_profile_from_paths(
-            path_list, None, seebeck_plot_path, None,
-            None, None, kwargs_list, which="z")
 
     x_bot = 127     # or 126
     x_top = 200
@@ -1470,7 +1561,7 @@ def magnetic_field_dependence_SSE(suppress_plots=[True, True, False], seebeck_pl
         for direction, cryst_direction in zip(direction_list, direction_name_list):
             print(f"Calculating fit for B={field_strength}T, {cryst_direction}")
 
-            path = get_path(direction, field_strength)
+            path = get_path_from_direction_field_strength(direction, field_strength)
             data_A = np.loadtxt(path)
             data_B = np.loadtxt(mag_util.infer_path_B(path))
             spin_A, spin_B = mag_util.get_component(data_A, which="z"), mag_util.get_component(data_B, which="z")
@@ -1501,7 +1592,7 @@ def magnetic_field_dependence_SSE(suppress_plots=[True, True, False], seebeck_pl
             if other_fit_func:
                 beta_list_dict[direction].append(popt[3])
 
-            if suppress_plots[1]:
+            if suppress_plots[0]:
                 continue
             x_plot_fit = x_data - local_extremum
 
@@ -1511,7 +1602,7 @@ def magnetic_field_dependence_SSE(suppress_plots=[True, True, False], seebeck_pl
                     linestyle="--", linewidth=0.6, alpha=0.7, color=color[4:])
 
 
-    if not suppress_plots[1]:
+    if not suppress_plots[0]:
         ax.set_ylim(-0.0018, 0.0018)
 
         ax.legend(fontsize='xx-small', title_fontsize="xx-small", ncols=2)
@@ -1525,7 +1616,7 @@ def magnetic_field_dependence_SSE(suppress_plots=[True, True, False], seebeck_pl
     np.save("data/06_staticB/alpha_110.npy", alpha_list_dict['x'])
     np.save("data/06_staticB/alpha_n110.npy", alpha_list_dict['y'])
 
-    if not suppress_plots[2]:
+    if not suppress_plots[1]:
         fig, ax = plt.subplots()
         ax.set_title("alpha dependent on B")
         ax.set_xlabel("B field in T")
@@ -1564,6 +1655,47 @@ def magnetic_field_dependence_SSE(suppress_plots=[True, True, False], seebeck_pl
 
         fig.show()
 
+def magnon_acc_SSE_depend_on_B(field_strength_list=None, seebeck_plot_path=None, seebeck_magnon_acc_path=None):
+    print("MAGNETIZATION AND MAGNON ACCUMULATION")
+
+    field_strength_list = field_strength_list or [-100, 0, 50, 60, 70, 80, 90, 100]
+    direction_list = ["x", "y"]
+    direction_name_list = ["[110]", "[-110]"]
+    color_list = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple", "tab:brown", "tab:pink", "tab:gray"]
+    linestyle_list = ["-", "-."]
+
+    path_list = []
+    kwargs_list = []
+
+    for field_strength, color in zip(field_strength_list, color_list):
+        for direction, cryst_direction, linestyle in zip(direction_list, direction_name_list, linestyle_list):
+            path_list.append(get_path_from_direction_field_strength(direction, field_strength))
+            kwargs_list.append(dict(label=f"B={field_strength}T, {cryst_direction}", color=color, linestyle=linestyle,
+                                    linewidth=0.6, alpha=0.8))
+
+    spins_A_list, spins_B_list = mag_util.load_from_path_list(path_list, which="z", return_raw_list=False)
+
+    mag_util.plot_magnetic_profile(
+        spins_A_list, spins_B_list, seebeck_plot_path, None, None,
+        None, kwargs_list)
+
+    # Now with subtracting equilibrium
+    lower_index = 10
+    upper_index = 50
+
+    spins_A_list_equi = [dict(z=spins_A['z'][lower_index:upper_index]) for spins_A in spins_A_list]
+    spins_B_list_equi = [dict(z=spins_B['z'][lower_index:upper_index]) for spins_B in spins_B_list]
+
+    mag_util.plot_magnetic_profile(
+        spins_A_list_equi, spins_B_list_equi, None, None, None,
+        None, kwargs_list)
+
+    spins_equi_values = [(dict(z=np.mean(spins_A['z'])), dict(z=np.mean(spins_B['z'])))
+                         for spins_A, spins_B in zip(spins_A_list_equi, spins_B_list_equi)]
+
+    mag_util.plot_magnetic_profile(
+        spins_A_list, spins_B_list, seebeck_magnon_acc_path, spins_equi_values, None,
+        None, kwargs_list)
 
 
 def presenting_data_06():
@@ -1582,30 +1714,31 @@ def presenting_data_06():
 
     print(seperator)
 
-    # negative_B_equi()
+    negative_B_equi()
 
     print(seperator)
 
-    # negative_B_SSE()
+    negative_B_SSE()
 
     print(seperator)
 
-    # non_zero_Teq_SSE_statB()
+    non_zero_Teq_SSE_statB()
 
     print(seperator)
+    print("ANALYSIS OF SPIN SEEBECK EFFECT FOR DIFFERENT MAGNETIC FIELD STRENGTHS")
 
-    magnetic_field_dependence_SSE([False, False, False],
-                                  "out/06_staticB/seebeck_mag_profile_B50B100",
-                                  "out/06_staticB/sse_Bdepend_fits.pdf",
-                                  "out/06_staticB/alpha_dep_on_B.pdf",
-                                  "out/06_staticB/prop_length_dep_on_B.pdf",
-                                  False)
-    magnetic_field_dependence_SSE([True, False, False],
-                                  "out/06_staticB/seebeck_mag_profile_B50B100-2",
-                                  "out/06_staticB/sse_Bdepend_fits-2.pdf",
-                                  "out/06_staticB/alpha_dep_on_B-2.pdf",
-                                  "out/06_staticB/prop_length_dep_on_B-2.pdf",
-                                  True)
+    propagation_length_SSE_depend_on_B(None, [False, False],
+                                       "out/06_staticB/sse_Bdepend_fits.pdf", "out/06_staticB/alpha_dep_on_B.pdf",
+                                       "out/06_staticB/prop_length_dep_on_B.pdf", False)
+    # magnetic_field_dependence_SSE(None, [False, False],
+    #                               "out/06_staticB/seebeck_mag_profile_B50B100-2",
+    #                               "out/06_staticB/sse_Bdepend_fits-2.pdf",
+    #                               "out/06_staticB/alpha_dep_on_B-2.pdf",
+    #                               "out/06_staticB/prop_length_dep_on_B-2.pdf",
+    #                               True)
+
+    magnon_acc_SSE_depend_on_B(None, "out/06_staticB/seebeck_mag_profile_B50B100",
+                               "out/06_staticB/seebeck_delta_mag_neel_B50B100")
 
     print(seperator)
 
@@ -1623,11 +1756,9 @@ if __name__ == '__main__':
 
     # check_boundaries_open_equilibrium()
 
-    # presenting_data_05()
+    presenting_data_05()
 
     presenting_data_06()
-
-    check_boundaries_open_equilibrium()
 
     pass
 
