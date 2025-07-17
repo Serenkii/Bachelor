@@ -54,7 +54,8 @@ def read_spin_config_dat(path, is_tilted=True):
     """
     Reads the data in a spin configuration file and formats it into a multidimensional array. The first two components
     correspond to the x and y position of each spin. The average over all z components is already taken, as the z layers
-    are independent of each other anyway. When handling the returned array, one can select a sublattice and a spin
+    are independent of each other anyway. IS IT THO???? I DONT THINK SO!!!!!
+    When handling the returned array, one can select a sublattice and a spin
     component via the select_SL_and_component function.
     :param path: The path of the spin configuration file.
     :param is_tilted: If the tilted configuration is used. This method has not been tested for the non-tilted setup.
@@ -89,7 +90,7 @@ def read_spin_config_dat(path, is_tilted=True):
 
     if np.any(value_grid > 1e6):
         raise ValueError(f"A value of the value_grid containing the data of the specified path '{path}' could not be "
-                         f"set using the available data in the spin configuration file. Check the file (any maybe"
+                         f"set using the available data in the spin configuration file. Check the file (and maybe"
                          f"also this function).")
 
     return value_grid

@@ -123,3 +123,25 @@ SL_A_mins = np.nanmin(SL_A, axis=0)
 SL_B_maxs = np.nanmax(SL_B, axis=0)
 SL_B_mins = np.nanmin(SL_B, axis=0)
 
+# %%
+
+# print("These values seem to show, that there is an effect. Now need to verify, it is not SSE.\n")
+#
+#     # Comparing with SSE effect
+#
+#     seebeckT2_path = "/data/scc/marian.gunsch/04_AM_tilted_xTstep_T2-2/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+#     mag_util.plot_magnetic_profile_from_paths(
+#         [seebeckT2_path,], None, None, None, None, None,
+#         [dict(label="T=2meV, seebeck"),],
+#         which="z"
+#     )
+#
+#     sse_spin_z_A = mag_util.time_avg(mag_util.get_component(np.loadtxt(seebeckT2_path)))
+#     sse_spin_z_B = mag_util.time_avg(mag_util.get_component(np.loadtxt(mag_util.infer_path_B(seebeckT2_path))))
+#
+#     sse_avg_spin_A = np.mean(sse_spin_z_A[15:-15])
+#     sse_avg_spin_B = np.mean(sse_spin_z_B[15:-15])
+#
+#     print(f"sse_avg_spin_A = {sse_avg_spin_A:.5f} \t sse_avg_spin_B = {sse_avg_spin_B:.5f}")
+#     print(f"sne_avg_spin_A = {sne_avg_spin_A:.5f} \t sne_avg_spin_B = {sne_avg_spin_B:.5f}")
+

@@ -996,6 +996,8 @@ def presenting_data_04():
 
     check_boundaries_open_equilibrium()
 
+    compare_nernst_with_equilibrium((True, True))
+
 
 
 # %% 05 Static B field
@@ -1336,6 +1338,7 @@ def presenting_data_05():
         "data/05_staticB/noDMI_B.mat",
         title="B=100T, no DMI, sim in [-110]",
         save_path="out/05_staticB/dispersion_ana_n110_B100_nodmi.png",
+        omega_selection=(1,3)
     )
 
     compare_with_analytical_dispersion_relation(
@@ -1352,6 +1355,7 @@ def presenting_data_05():
         "data/05_staticB/noDMI_noB.mat",
         title="B=0, no DMI, sim in [-110]",
         save_path="out/05_staticB/dispersion_ana_n110_B0_nodmi.png",
+        omega_selection=(1,3)
     )
 
     compare_with_analytical_dispersion_relation(
@@ -1368,6 +1372,7 @@ def presenting_data_05():
         "data/05_staticB/noDMI_B-100T.mat",
         title="B=-100T, no DMI, sim in [-110]",
         save_path="out/05_staticB/dispersion_ana_n110_Bn100_nodmi.png",
+        omega_selection=(1,3)
     )
 
 
@@ -1743,6 +1748,196 @@ def presenting_data_06():
     print(seperator)
 
 
+# %% 02,04,07 Verifying Spin Nernst
+
+
+
+def compare_nernst_with_equilibrium(run=(True, True)):
+    # equiT2_open_path = "/data/scc/marian.gunsch/04_AM_tilted_Tstairs_T2_openbou/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    equiT2_open_path = "/data/scc/marian.gunsch/04_AM_tilted_yTstairs_T2_openbou/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    # No ABC, open, open, open
+
+    # equiT2DMI_open_path = "/data/scc/marian.gunsch/04_AM_tilted_Tstairs_DMI_T2_openbou/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    equiT2DMI_open_path = "/data/scc/marian.gunsch/04_AM_tilted_yTstairs_DMI_T2_openbou/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+
+    nernstT4_path = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T4/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    # No ABC, open open open
+
+    equiT2_path_bulk = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_T2meV/AM_Teq2meV-99-999.dat"
+    equiT7_path_bulk = "data/temp/altermagnet-equilibrium-7meV.dat"
+    nernstT2_path = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+    nernstT7_path = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T7/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+
+    def compare_nernst_with_equilibrium_1():
+        mag_util.plot_magnetic_profile_from_paths(
+            [equiT2_open_path, nernstT4_path], None, None, None, None, None,
+            [dict(label="T=2meV, open"), dict(label="nernst effect, Delta T = 4 meV")],
+            which="z", dont_calculate_margins=True
+        )
+
+        # Checking where the magnetization comes from
+        step_pos = 0.49
+        N = 256
+        warm_portion = helper.get_absolute_T_step_index(step_pos, N) / N
+        cold_portion = 1.0 - warm_portion
+
+        for equi_path, sne_path, T in zip([equiT2_path_bulk, equiT7_path_bulk], [nernstT2_path, nernstT7_path], [2, 7]):
+            print(f"Comparison for T={T}meV")
+            temp_A, temp_B = bulk_util.get_mean(equi_path)
+            eq_spin_z_A = temp_A['z']
+            eq_spin_z_B = temp_B['z']
+
+            spinT0_z_A = 1
+            spinT0_z_B = -1
+
+            eq_avg_spin_A = warm_portion * eq_spin_z_A + cold_portion * spinT0_z_A  # average spin if we clipped two equilibriums
+            eq_avg_spin_B = warm_portion * eq_spin_z_B + cold_portion * spinT0_z_B  # together (left Twarm, right T0)
+
+            sne_spin_z_A = mag_util.time_avg(mag_util.get_component(np.loadtxt(sne_path)))
+            sne_spin_z_B = mag_util.time_avg(mag_util.get_component(np.loadtxt(mag_util.infer_path_B(sne_path))))
+
+            sne_avg_spin_A = np.mean(sne_spin_z_A[15:-15])
+            sne_avg_spin_B = np.mean(sne_spin_z_B[15:-15])
+
+            print(f"eq_avg_spin_A =  {eq_avg_spin_A:.5f} \t eq_avg_spin_B =  {eq_avg_spin_B:.5f}")
+            print(f"sne_avg_spin_A = {sne_avg_spin_A:.5f} \t sne_avg_spin_B = {sne_avg_spin_B:.5f}")
+
+            eq_magn = physics.magnetization(eq_avg_spin_A, eq_avg_spin_B)
+            eq_neel = physics.neel_vector(eq_avg_spin_A, eq_avg_spin_B)
+            sne_magn = physics.magnetization(sne_avg_spin_A, sne_avg_spin_B)
+            sne_neel = physics.neel_vector(sne_avg_spin_A, sne_avg_spin_B)
+
+            print(f"eq_magn =  {eq_magn:.5f} \t eq_neel =  {eq_neel:.5f}")
+            print(f"sne_magn = {sne_magn:.5f} \t sne_neel = {sne_neel:.5f}")
+            print()
+        print("What I have seen now, is that there is some sort of effect, could also be SSE tho.")
+
+
+    def compare_nernst_with_equilibrium_2():
+        print("2")
+        sne_spin_z_A = mag_util.time_avg(mag_util.get_component(np.loadtxt(nernstT4_path)))   # T4 or T2?
+        sne_spin_z_B = mag_util.time_avg(mag_util.get_component(np.loadtxt(mag_util.infer_path_B(nernstT4_path))))
+
+        eqopen_spin_z_A = mag_util.time_avg(mag_util.get_component(np.loadtxt(equiT2_open_path)))[::1]   # TODO [::-1] or not,
+        eqopen_spin_z_B = mag_util.time_avg(mag_util.get_component(np.loadtxt(mag_util.infer_path_B(equiT2_open_path))))[::1]
+
+        eqopen_magn = physics.magnetization(eqopen_spin_z_A, eqopen_spin_z_B)
+        sne_magn = physics.magnetization(sne_spin_z_A, sne_spin_z_B)
+
+        if True is True:
+            fig, (ax1, ax2) = plt.subplots(1, 2, sharey=True, figsize=(8, 4))
+
+            fig.suptitle("")
+
+            ax1.plot(sne_spin_z_A, label="SNE (T=4meV), SL A, [-110]", marker="o", linestyle="--")
+            ax2.plot(sne_spin_z_A, marker="o", linestyle="--")
+            ax1.plot(np.abs(sne_spin_z_B), label="SNE (T=4meV), SL B, [-110]", marker="o", linestyle="--")
+            ax2.plot(np.abs(sne_spin_z_B), marker="o", linestyle="--")
+            ax1.plot(eqopen_spin_z_A, label="equi (T=2meV), SL A, [-110]", marker="s", linestyle="--")
+            ax2.plot(eqopen_spin_z_A, marker="s", linestyle="--")
+            ax1.plot(np.abs(eqopen_spin_z_B), label="equi (T=2meV), SL B, [-110]", marker="s", linestyle="--")
+            ax2.plot(np.abs(eqopen_spin_z_B), marker="s", linestyle="--")
+
+            ax1.set_xlim(-0.5, 6.2)
+            ax2.set_xlim(248.8, 255.5)
+
+            ax1.spines['right'].set_visible(False)
+            ax2.spines['left'].set_visible(False)
+            ax1.yaxis.tick_left()
+            ax2.yaxis.tick_right()
+
+            ax1.legend()
+
+            fig.savefig("out/nernst_comparison_equi-3.pdf")
+
+            plt.tight_layout()
+            plt.show()
+        if True is True:
+            fig, (ax1, ax2) = plt.subplots(1, 2, sharey=True, figsize=(8, 4))
+
+            fig.suptitle("Magnetization")
+
+            ax1.plot(eqopen_magn, label="Equi (T=2meV), [-110]", marker="s", linestyle="--")
+            ax2.plot(eqopen_magn, marker="s", linestyle="--")
+            ax1.plot(sne_magn, label="SNE (T=4meV), [-110]", marker="o", linestyle="--")
+            ax2.plot(sne_magn, marker="o", linestyle="--")
+
+            ax1.set_xlim(-0.5, 6.2)
+            ax2.set_xlim(248.8, 255.5)
+
+            ax1.spines['right'].set_visible(False)
+            ax2.spines['left'].set_visible(False)
+            ax1.yaxis.tick_left()
+            ax2.yaxis.tick_right()
+
+            ax1.legend()
+
+            fig.savefig("out/nernst_comparison_equi-magn.pdf")
+
+            plt.tight_layout()
+            plt.show()
+
+
+
+    if run[0]:
+        compare_nernst_with_equilibrium_1()
+    if run[1]:
+        compare_nernst_with_equilibrium_2()
+
+
+def nernst_manual_layer_averaging():
+    configT4_path = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T4/spin-configs-99-999/spin-config-99-999-005000.dat"
+
+    configT4_data = spinconf_util.read_spin_config_dat(configT4_path)
+
+    N = 256
+    rel_T_pos = 0.49
+    T_step = helper.get_absolute_T_step_index(rel_T_pos, N)
+
+    for left, right, title, save_path in zip([T_step - 5, 0, T_step + 70],
+                                  [T_step + 5, T_step - 70, N],
+                                  ["near step", "warm region", "cold region"],
+                                             ["out/07_nernst/nearStep", "out/07_nernst/warmRegion_70", "out/07_nernst/coldRegion_70"]):
+
+        cut_data = spinconf_util.average_z_layers(configT4_data[:,left:right])
+
+        magnetization_config = physics.magnetization(spinconf_util.select_SL_and_component(cut_data, 'A', 'z'),
+                                                     spinconf_util.select_SL_and_component(cut_data, 'B', 'z'))
+
+        magnetization_profile = np.average(magnetization_config, axis=(1, 2))   # average over x axis, and single z layer
+
+
+        data_grid = np.squeeze(magnetization_config)
+        X, Y = np.meshgrid(np.arange(left, right, 1, dtype=int),
+                           np.arange(0, data_grid.shape[0], 1, dtype=int),
+                           sparse=True, indexing='xy')
+
+        fig, ax = plt.subplots()
+        ax.set_aspect('equal', 'box')
+        ax.set_title(title)
+        im = ax.pcolormesh(X, Y, data_grid, norm=colors.CenteredNorm(), cmap='RdBu_r')
+        fig.colorbar(im, ax=ax)
+        ax.margins(x=0, y=0)
+        fig.tight_layout()
+        fig.savefig(f"{save_path}_config.pdf")
+        plt.show()
+
+        fig, ax = plt.subplots()
+        ax.set_title(title)
+        ax.set_xlabel("Index (position)")
+        ax.set_ylabel("magnetization")
+        ax.plot(magnetization_profile)
+        fig.savefig(f"{save_path}_profile.pdf")
+        plt.show()
+
+
+
+
+
+
+def presenting_data_07():
+    # compare_nernst_with_equilibrium((False, True))
+    nernst_manual_layer_averaging()
 
 # %% Main
 
@@ -1754,11 +1949,13 @@ if __name__ == '__main__':
     # presenting_data_03()
     # presenting_data_04()
 
-    # check_boundaries_open_equilibrium()
+    # presenting_data_05()
 
-    presenting_data_05()
+    # presenting_data_06()
 
-    presenting_data_06()
+    # compare_nernst_with_equilibrium((False, True))
+
+    presenting_data_07()
 
     pass
 
