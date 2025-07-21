@@ -50,7 +50,7 @@ def select_SL_and_component(value_arr, sublattice, spin_component):
     return value_arr[:, :, :, sl_dict[sublattice], spin_dict[spin_component]]
 
 
-def read_spin_config_dat(path, is_tilted=True):
+def read_spin_config_dat(path, is_tilted=True, fixed_version=False):
     """
     Reads the data in a spin configuration file and formats it into a multidimensional array. The first two components
     correspond to the x and y position of each spin. The average over all z components is already taken, as the z layers
@@ -59,6 +59,7 @@ def read_spin_config_dat(path, is_tilted=True):
     component via the select_SL_and_component function.
     :param path: The path of the spin configuration file.
     :param is_tilted: If the tilted configuration is used. This method has not been tested for the non-tilted setup.
+    :param fixed_version: If a new definition for indices shall be used
     :return: A multidimensional array containing the spin components, averaged over all z layers.
     """
     if not is_tilted:
@@ -82,11 +83,17 @@ def read_spin_config_dat(path, is_tilted=True):
         data[:, 3].astype(int) - 1  # sublattice 1 or 2 (now called SL 0 and 1)
     )
 
-    shape = (lengths['x'], lengths['y'], lengths['z'], number_sublattices, 3)
+    if fixed_version:
+        shape = (lengths['x'], lengths['y'], lengths['z'], number_sublattices, 3)
+
+    else:
+        shape = (lengths['y'], lengths['x'], lengths['z'], number_sublattices, 3)
+        i, j = j, i     # TODO: I don't know about my past decisions...
+
     value_grid = np.zeros(shape) + 1e9
-    value_grid[j, i, k, sl, 0] = data[:, 4]  # 4=x, 5=y, 6=z
-    value_grid[j, i, k, sl, 1] = data[:, 5]  # (components of spin)
-    value_grid[j, i, k, sl, 2] = data[:, 6]  # j i k instead of i j k because indices are weird...
+    value_grid[i, j, k, sl, 0] = data[:, 4]  # 4=x, 5=y, 6=z
+    value_grid[i, j, k, sl, 1] = data[:, 5]  # (components of spin)
+    value_grid[i, j, k, sl, 2] = data[:, 6]  # j i k instead of i j k because indices are weird... TODO: idk about that
 
     if np.any(value_grid > 1e6):
         raise ValueError(f"A value of the value_grid containing the data of the specified path '{path}' could not be "
@@ -132,7 +139,7 @@ def read_spin_config_arrjob(path_prefix, path_suffix, start, stop=None, step=1, 
     return data_arr
 
 
-def plot_colormap(data_grid, title="", rel_step_pos=0.49, show_step=False, zoom=False, save_path=None, fig_comment=None):
+def plot_colormap(data_grid, title="", rel_step_pos=0.49, show_step=False, zoom=False, save_path=None, fig_comment=None, fixed_version=False):
     """
     Creates a 2d color-plot for a given data grid.
     :param data_grid: The data which will be plotted in a 2d color-plot.
@@ -142,12 +149,18 @@ def plot_colormap(data_grid, title="", rel_step_pos=0.49, show_step=False, zoom=
     :param zoom: If True, only the data around the temperature step will be shown.
     :param save_path: The path, in which the figure will be saved.
     :param fig_comment: If specified, will add a text on the figure displaying this string.
+    :param fixed_version: Does not work with show step and zoom
     :return:
     """
     data_grid = np.squeeze(data_grid)
-    X, Y = np.meshgrid(np.arange(0, data_grid.shape[1], 1, dtype=int),
-                       np.arange(0, data_grid.shape[0], 1, dtype=int),
-                       sparse=True, indexing='xy')
+    if not fixed_version:
+        X, Y = np.meshgrid(np.arange(0, data_grid.shape[1], 1, dtype=int),
+                           np.arange(0, data_grid.shape[0], 1, dtype=int),
+                           sparse=True, indexing='xy')
+    else:
+        X, Y = np.meshgrid(np.arange(0, data_grid.shape[0], 1, dtype=int),
+                           np.arange(0, data_grid.shape[1], 1, dtype=int),
+                           sparse=True, indexing='xy')
 
     fig, ax = plt.subplots()
     if zoom:
@@ -155,7 +168,14 @@ def plot_colormap(data_grid, title="", rel_step_pos=0.49, show_step=False, zoom=
     else:
         ax.set_aspect('equal', 'box')
     ax.set_title(title)
-    im = ax.pcolormesh(X, Y, data_grid, norm=colors.CenteredNorm(), cmap='RdBu_r')
+    if not fixed_version:
+        im = ax.pcolormesh(X, Y, data_grid, norm=colors.CenteredNorm(), cmap='RdBu_r')
+    else:
+        im = ax.pcolormesh(X, Y, data_grid.T, norm=colors.CenteredNorm(), cmap='RdBu_r')
+        # Note that the column index corresponds to the x-coordinate, and the row index corresponds to y.
+        # https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.pcolormesh.html#axes-pcolormesh-grid-orientation
+        # ahhh fuck numpy, why is this so confusing, why array[z,y,x] :( :( :(
+        # I should have been consistent and do something like: data_grid[component, sl, z, y, x] TODO!
     fig.colorbar(im, ax=ax)
 
     if show_step:
@@ -181,11 +201,11 @@ def plot_colormap(data_grid, title="", rel_step_pos=0.49, show_step=False, zoom=
 
 
 # TODO: Test!!!
-def calculate_spin_currents(data_grid, direction):
-    if direction in ["transversal", "y", "trans"]:
+def calculate_spin_currents(data_grid, direction, fixed_version=False):
+    if direction in ["transversal", "y", "trans"] and not fixed_version or direction in ["longitudinal", "x", "long"] and fixed_version:
         slice1 = (slice(0, -1), slice(None))  # equals [:-1, :]
         slice2 = (slice(1, None), slice(None))  # equals [1:, :]
-    elif direction in ["longitudinal", "x", "long"]:
+    elif direction in ["longitudinal", "x", "long"] and not fixed_version or direction in ["transversal", "y", "trans"] and fixed_version:
         slice1 = (slice(None), slice(0, -1))  # equals [:, :-1]
         slice2 = (slice(None), slice(1, None))  # equals [:, 1:]
     else:

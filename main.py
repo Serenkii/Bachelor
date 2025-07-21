@@ -1931,13 +1931,83 @@ def nernst_manual_layer_averaging():
         plt.show()
 
 
+def spin_current_nernst():
+    config_file = "/data/scc/marian.gunsch/07_AM_tilted_xTstep_y/spin-configs-99-999/spin-config-99-999-005000.dat"
+
+    config_data = spinconf_util.read_spin_config_dat(config_file, True, True)
+
+    *spin_currents, j5 = spinconf_util.average_z_layers(*spinconf_util.calculate_spin_currents(config_data, "y", True))
+    spin_currents = [np.squeeze(spin_current) for spin_current in spin_currents]
+
+    N = 256
+    rel_T_pos = 0.49
+    T_step = helper.get_absolute_T_step_index(rel_T_pos, N)
+
+    for left, right, title, save_path in zip([0, T_step - 5, 0, T_step + 30, T_step + 50],
+                                             [N, T_step + 5, T_step - 30, N, N],
+                                             ["complete", "near step", "warm region 30", "cold region 30", "cold region 50"],
+                                             ["out/07_nernst/currentT", "out/07_nernst/currentT_nearStep", "out/07_nernst/currentT_warmRegion_30",
+                                              "out/07_nernst/currentT_coldRegion_30", "out/07_nernst/currentT_coldRegion_50"]):
+        spin_currents_cutout = [spin_current[left:right] for spin_current in spin_currents]
+
+        X, Y = np.meshgrid(np.arange(0, spin_currents_cutout[0].shape[0], 1, dtype=int),
+                           np.arange(0, spin_currents_cutout[0].shape[1], 1, dtype=int),
+                           sparse=True, indexing="xy")
+
+        fig, axs = plt.subplots(2, 2, figsize=(10, 8))
+        fig.suptitle(title)
+
+        axs = axs.flatten()
+        titles = ["j_inter_p", "j_inter_m", "j_intra_A", "j_intra_B"]
+
+        for i in range(len(titles)):
+            titles[i] = f"{titles[i]}, transversal"
+
+        for ax, data_grid, title_ in zip(axs, spin_currents_cutout, titles):
+            im = ax.pcolormesh(X, Y, data_grid.T, norm=colors.CenteredNorm(), cmap='RdBu_r')
+            ax.set_title(title_)
+            ax.set_aspect('equal', 'box')
+            ax.margins(x=0, y=0)
+            fig.colorbar(im, ax=ax)
+
+        fig.tight_layout()
+
+        if True:
+            fig.text(0.5, 0.5, config_file, color="green", ha="center", va="center")
+
+        if save_path:
+            save_path_ = f"{save_path}.pdf"
+            print(f"Saving to {save_path_}...")
+            fig.savefig(save_path_)
+
+        plt.show()
+
+
+        fig, axs = plt.subplots(2, 2, figsize=(10, 8))
+        fig.suptitle(title)
+
+        axs = axs.flatten()
+        titles = ["j_inter_p", "j_inter_m", "j_intra_A", "j_intra_B"]
+
+        for ax, data_grid, title_ in zip(axs, spin_currents_cutout, titles):
+            spin_current_profile = np.mean(data_grid, axis=0)
+            ax.set_title(title_)
+            ax.set_xlabel("Index (position)")
+            ax.set_ylabel("spin current")
+            ax.plot(spin_current_profile)
+
+        if save_path:
+            fig.savefig(f"{save_path}_profile.pdf")
+        plt.show()
+
 
 
 
 
 def presenting_data_07():
     # compare_nernst_with_equilibrium((False, True))
-    nernst_manual_layer_averaging()
+    # nernst_manual_layer_averaging()
+    spin_current_nernst()
 
 # %% Main
 
