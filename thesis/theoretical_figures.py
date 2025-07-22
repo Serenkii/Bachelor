@@ -3,6 +3,53 @@ import thesis.mpl_configuration
 
 import matplotlib.pyplot as plt
 
+
+# %%
+from PIL import Image, ImageChops, ImageEnhance
+import fitz
+
+def crop_pdf_to_content(input_pdf, output_pdf, dpi=1500, margin_x0=0, margin_y0=0, margin_x1=0, margin_y1=0):
+    print(f"Trying to crop pdf {input_pdf}...", end="\t")
+
+    doc = fitz.open(input_pdf)
+
+    for page in doc:
+        pix = page.get_pixmap(dpi=dpi, alpha=False)
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+
+        # Increase contrast to make faint lines more visible
+        enhancer = ImageEnhance.Contrast(img)
+        img = enhancer.enhance(10.0)  # You can try 3.0, 5.0, or higher
+
+        # Convert white to transparency for better bbox detection
+        bg = Image.new("RGB", img.size, (255, 255, 255))
+        diff = ImageChops.difference(img, bg)
+        bbox = diff.getbbox()
+
+        if bbox:
+            x0, y0, x1, y1 = bbox
+            x0, y0, x1, y1 = bbox
+            x0 = max(x0 - margin_x0, 0)
+            y0 = max(y0 - margin_y0, 0)
+            x1 = min(x1 + margin_x1, img.width)
+            y1 = min(y1 + margin_y1, img.height)
+            scale_x = page.rect.width / pix.width
+            scale_y = page.rect.height / pix.height
+
+            crop_rect = fitz.Rect(
+                x0 * scale_x,
+                (pix.height - y1) * scale_y,
+                x1 * scale_x,
+                (pix.height - y0) * scale_y
+            )
+
+            page.set_cropbox(crop_rect)
+
+    print(f"Saving into {output_pdf}...")
+    doc.save(output_pdf)
+
+
+# %%
 # draw a vector
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
@@ -160,9 +207,23 @@ def llg_equation(save_name=None, thermal_noise=0.0):
     fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # No border padding
 
     if save_name:
-        fig.savefig(save_name, bbox_inches='tight')
+        fig.savefig(save_name, bbox_inches='tight', pad_inches=0)
+
+        crop_pdf_to_content(save_name,
+                            f"{save_name[:-4]}_cropped.pdf",
+                            margin_y0=400, margin_y1=-100, margin_x0=100, margin_x1=100)
 
     plt.show()
 
+
+
+def dmi():
+    pass
+
+
+
 if __name__ == '__main__':
     llg_equation("out/theoretical_figures/llg_equation.pdf")
+    # llg_equation("out/theoretical_figures/llg_equation_T.pdf", 2)
+
+
