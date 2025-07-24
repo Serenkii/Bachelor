@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 # %%
 from PIL import Image, ImageChops, ImageEnhance
-import fitz
+# import fitz
 
 def crop_pdf_to_content(input_pdf, output_pdf, dpi=1500, margin_x0=0, margin_y0=0, margin_x1=0, margin_y1=0):
     print(f"Trying to crop pdf {input_pdf}...", end="\t")
@@ -53,13 +53,27 @@ def crop_pdf_to_content(input_pdf, output_pdf, dpi=1500, margin_x0=0, margin_y0=
 # draw a vector
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
-
+import matplotlib.patches as patches
 
 class Arrow3D(FancyArrowPatch):
 
     def __init__(self, xs, ys, zs, *args, **kwargs):
         super().__init__((0, 0), (0, 0), *args, **kwargs)
         self._verts3d = xs, ys, zs
+
+    @classmethod
+    def from_midpoint_and_direction(cls, midpoint, direction, *args, length_arrow=None, **kwargs):
+        midpoint = np.array(midpoint)
+        direction = np.array(direction)
+        if length_arrow:
+            norm = np.sqrt(np.dot(direction, direction))
+            direction *= length_arrow / norm
+        half_vec = direction * 0.5
+        start = midpoint - half_vec
+        end = midpoint + half_vec
+        xs, ys, zs = [start[0], end[0]], [start[1], end[1]], [start[2], end[2]]
+        return cls(xs, ys, zs, *args, **kwargs)
+
 
     def draw(self, renderer):
         xs3d, ys3d, zs3d = self._verts3d
@@ -218,12 +232,51 @@ def llg_equation(save_name=None, thermal_noise=0.0):
 
 
 def dmi():
-    pass
+    b = 0.1
+    D = 0.5
+    S = 1
+    S1 = np.array([0, b, S])
+    S2 = np.array([0, b, -S])
+    D_vec = np.array([D, 0, 0])
 
+    def arrow_2d_from_midpoint(midpoint, direction, *args, length_arrow=None, **kwargs):
+        midpoint = np.array(midpoint)
+        direction = np.array(direction)
+        if length_arrow:
+            norm = np.sqrt(np.dot(direction, direction))
+            direction *= length_arrow / norm
+        half_vec = direction * 0.5
+        start = midpoint - half_vec
+        end = midpoint + half_vec
+        return FancyArrowPatch(start, end, *args, **kwargs)
 
+    fig, ax = plt.subplots()
+    S1_arrow = arrow_2d_from_midpoint([-1, 0], S1[1:], shrinkA=0, shrinkB=0, mutation_scale=30, lw=3, arrowstyle="-|>", color="k")
+    ax.add_artist(S1_arrow)
+    ax.plot(-1, 0, linestyle="", marker="o", markersize="10", color="b")
+    S2_arrow = arrow_2d_from_midpoint([1, 0], S2[1:], shrinkA=0, shrinkB=0, mutation_scale=30, lw=3, arrowstyle="-|>", color="k")
+    ax.add_artist(S2_arrow)
+    ax.plot(1, 0, linestyle="", marker="o", markersize="10", color="b")
+
+    circle_in = patches.Circle((1, 1), 0.2, fill=False, edgecolor='black')
+    ax.add_patch(circle_in)
+    ax.plot([1 - 0.14, 1 + 0.14], [1 - 0.14, 1 + 0.14], color='black')  # diagonal \
+    ax.plot([1 - 0.14, 1 + 0.14], [1 + 0.14, 1 - 0.14], color='black')  # diagonal /
+
+    # Arrow coming **out** of the plane (circle with a dot)
+    circle_out = patches.Circle((-1, 1), 0.2, fill=False, edgecolor='black')
+    dot = patches.Circle((-1, 1), 0.05, color='black')
+    ax.add_patch(circle_out)
+    ax.add_patch(dot)
+
+    ax.set_xlim(-2, 2)
+    ax.set_ylim(-2, 2)
+    ax.set_aspect('equal')
+
+    plt.show()
 
 if __name__ == '__main__':
-    llg_equation("out/theoretical_figures/llg_equation.pdf")
+    # llg_equation("out/theoretical_figures/llg_equation.pdf")
     # llg_equation("out/theoretical_figures/llg_equation_T.pdf", 2)
 
-
+    dmi()
