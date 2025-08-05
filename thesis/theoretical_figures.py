@@ -11,8 +11,8 @@ seeblau = "#00a9e0"
 
 from PIL import Image, ImageChops, ImageEnhance
 
-
 import fitz
+
 
 def crop_pdf_to_content(input_pdf, output_pdf, dpi=1500, margin_x0=0, margin_y0=0, margin_x1=0, margin_y1=0):
     print(f"Trying to crop pdf {input_pdf}...", end="\t")
@@ -34,7 +34,6 @@ def crop_pdf_to_content(input_pdf, output_pdf, dpi=1500, margin_x0=0, margin_y0=
 
         if bbox:
             x0, y0, x1, y1 = bbox
-            x0, y0, x1, y1 = bbox
             x0 = max(x0 - margin_x0, 0)
             y0 = max(y0 - margin_y0, 0)
             x1 = min(x1 + margin_x1, img.width)
@@ -55,8 +54,7 @@ def crop_pdf_to_content(input_pdf, output_pdf, dpi=1500, margin_x0=0, margin_y0=
     doc.save(output_pdf)
 
 
-# %%
-# draw a vector
+# %% draw a vector / fancy arrow
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 import matplotlib.patches as patches
@@ -93,10 +91,12 @@ class Arrow3D(FancyArrowPatch):
         proj = self.axes.get_proj()
         xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, proj)
         self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
-        return np.min(zs)  # Used for depth sorting
+        print("WARNING: Method created with no clue what I am doing.")
+        return min(np.min(xs), np.min(ys), np.min(zs)) - 1e3  # Used for depth sorting
+        # TODO: I have no idea if this makes sense
 
 
-# %%
+# %% LLG
 def llg_equation(save_name=None, thermal_noise=0.0):
     font_size = 12
 
@@ -251,7 +251,7 @@ def llg_equation(save_name=None, thermal_noise=0.0):
 def vector_in_plane_2d(axis, position: tuple, radius=0.2, color="black", **kwargs):
     circle_in = patches.Circle(position, radius, fill=False, edgecolor=color, **kwargs)
     axis.add_patch(circle_in)
-    diag_half = np.sqrt(2) * 0.2 * 0.5      # = 1/np.sqrt(2) * 0.2
+    diag_half = np.sqrt(2) * 0.2 * 0.5  # = 1/np.sqrt(2) * 0.2
     axis.plot([position[0] - diag_half, position[0] + diag_half], [position[1] - diag_half, position[1] + diag_half],
               color=color, **kwargs)  # diagonal \
     axis.plot([position[0] - diag_half, position[0] + diag_half], [position[1] + diag_half, position[1] - diag_half],
@@ -330,7 +330,6 @@ def dmi1(save_name=None):
     ax.text(pos[0] + 0.2, pos[1] - 0.05, "$y$", size=font_size, ha="left", va="top")
     ax.text(pos[0] + 0.05, pos[1] + 0.2, "$z$", size=font_size, ha="left", va="bottom")
 
-
     ax.set_xlim(-2, 2)
     ax.set_ylim(-1, 1)
     ax.set_aspect('equal')
@@ -341,7 +340,6 @@ def dmi1(save_name=None):
         fig.savefig(save_name, bbox_inches='tight', pad_inches=0)
 
     plt.show()
-
 
 
 def dmi2(save_name=None):
@@ -426,14 +424,213 @@ def dmi2(save_name=None):
     plt.show()
 
 
-def spin_waves():
-    
+# %% Spin waves
+def spin_waves(save_name):
+    N = 8
+    phi0 = 0
+    n = np.arange(N)
+    amplitude = 0.3
+    a = 1
+    k = 2 * np.pi / (N * a)
+    phi = phi0 + k * n * a
+    plane_component = amplitude * np.exp(- 1j * phi)
+    Sx = np.real(plane_component)
+    Sy = - np.imag(plane_component)
+    Sz = np.sqrt(1 - amplitude ** 2)
 
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+
+    for l in n:
+        spin_arrow = Arrow3D([l, l + Sx[l]], [0, Sy[l]], [0, Sz], mutation_scale=20,
+                             shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="k", zorder=0)
+        ax.add_artist(spin_arrow)
+
+    n_continuous = np.linspace(Sx[0] - 0.8, N - 1 + Sx[-1] + 0.2, 100)
+    phi_continuous = phi0 + k * n_continuous * a
+    Sy_continuous = - np.imag(amplitude * np.exp(- 1j * phi_continuous))
+    ax.plot(n_continuous, Sy_continuous, zs=Sz, zdir='z', linestyle="--", marker="", color=seeblau, linewidth=1)
+
+    angle = np.linspace(0, 2 * np.pi)
+    circle_x = amplitude * np.cos(angle)
+    circle_y = amplitude * np.sin(angle)
+    for l in n:
+        ax.plot(circle_x + l, circle_y, zs=Sz, zdir='z', linestyle="-", marker="", color=seeblau, linewidth=1)
+
+    ax.plot(np.linspace(Sx[0] - 0.8, N - 1 + Sx[-1] + 0.2, 10), 0.0, zs=0, zdir='z', marker="", linestyle=":",
+            color="k", linewidth=0.5)
+    ax.plot(n, 0.0, zs=0, zdir='z', marker="o", linestyle="", color="k", markersize=2)
+
+    ax.view_init(elev=30., azim=-100, roll=0)
+
+    ax.set_xlim(Sx[0] - 0.8 - 0.2, N - 1 + Sx[-1] + 0.2 + 0.2)
+    ax.set_ylim(-0.5, 0.5)
+    ax.set_zlim(0.0, 1.0)
+    ax.set_box_aspect((1.0, 1.0, 1.0), zoom=4)
+    ax.set_aspect("equal")
+
+    ax.set_axis_off()
+
+    # fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # No border padding
+
+    if save_name:
+        fig.savefig(save_name, bbox_inches='tight', pad_inches=0)
+
+        crop_pdf_to_content(save_name,
+                            f"{save_name[:-4]}_cropped.pdf",
+                            margin_y0=-150, margin_y1=300, margin_x0=50, margin_x1=150)
+
+    plt.show()
+
+
+# %% AFM modes
+
+def afm_modes(save_name=None):
+    font_size = 12
+
+    H_E = 2  # exchange
+    H_A = 0.2  # anisotropy
+    H_C = np.sqrt(2 * H_E * H_A + H_A * H_A)
+
+    S1_over_S2_a = - ((H_E + H_A) + H_C) / H_E
+    S1_over_S2_b = - ((H_E + H_A) - H_C) / H_E
+
+    Sx_2_a = 0.2
+    Sy_2_a = 0.0
+    Sz_2_a = - np.sqrt(1 - Sx_2_a ** 2 - Sy_2_a ** 2)
+    Sx_1_a = S1_over_S2_a * Sx_2_a
+    Sy_1_a = 0.0
+    Sz_1_a = np.sqrt(1 - Sx_1_a ** 2 - Sy_1_a ** 2)
+
+    Sx_1_b = 0.2
+    Sy_1_b = 0.0
+    Sz_1_b = np.sqrt(1 - Sx_2_a ** 2 - Sy_2_a ** 2)
+    Sx_2_b = Sx_1_b / S1_over_S2_b
+    Sy_2_b = 0.0
+    Sz_2_b = - np.sqrt(1 - Sx_2_b ** 2 - Sy_2_b ** 2)
+
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+
+    # spin arrows
+    arrow_S2_a = Arrow3D([-1, -1 + Sx_2_a], [0, Sy_2_a], [0, Sz_2_a], mutation_scale=20,
+                         shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="r", zorder=0)
+    ax.add_artist(arrow_S2_a)
+    arrow_S1_a = Arrow3D([-1, -1 + Sx_1_a], [0, Sy_1_a], [0, Sz_1_a], mutation_scale=20,
+                         shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="b", zorder=0)
+    ax.add_artist(arrow_S1_a)
+
+    arrow_S2_b = Arrow3D([1, 1 + Sx_2_b], [0, Sy_2_b], [0, Sz_2_b], mutation_scale=20,
+                         shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="r", zorder=0)
+    ax.add_artist(arrow_S2_b)
+    arrow_S1_b = Arrow3D([1, 1 + Sx_1_b], [0, Sy_1_b], [0, Sz_1_b], mutation_scale=20,
+                         shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="b", zorder=0)
+    ax.add_artist(arrow_S1_b)
+
+    # precession circles
+    phi = np.linspace(0, 2 * np.pi)
+    circle_x = np.cos(phi)
+    circle_y = np.sin(phi)
+
+    circle_kwargs = dict(linestyle="--", linewidth=0.8)
+    ax.plot(Sx_1_a * circle_x - 1, Sx_1_a * circle_y, Sz_1_a, **circle_kwargs, color="b")
+    ax.plot(Sx_2_a * circle_x - 1, Sx_2_a * circle_y, Sz_2_a, **circle_kwargs, color="r")
+    ax.plot(Sx_1_b * circle_x + 1, Sx_1_b * circle_y, Sz_1_b, **circle_kwargs, color="b")
+    ax.plot(Sx_2_b * circle_x + 1, Sx_2_b * circle_y, Sz_2_b, **circle_kwargs, color="r")
+
+    # precession direction arrow
+    def draw_direction_arrow(x_pos, chirality, radius=0.3):
+        # curved arrow for precession direction
+        # define an arc from angle theta1 to theta2
+        theta = np.linspace(np.pi / 1.5 + 0.2, 2 * np.pi + np.pi / 3 - 0.2, 30)  # arc from 0 to ~120 degrees
+        theta = theta[::chirality]
+        x_arc = radius * np.cos(theta) + x_pos  # centered at x = x_pos
+        y_arc = radius * np.sin(theta)
+        z_arc = np.zeros_like(theta)
+
+        # draw arc
+        ax.plot(x_arc, y_arc, z_arc, color="k", linestyle="-", linewidth=1, zorder=100)
+
+        # compute direction of arrowhead (tangent to arc at the end)
+        dx = -radius * np.sin(theta[-1]) * chirality
+        dy = radius * np.cos(theta[-1]) * chirality
+        dz = 0
+
+        arrowhead = Arrow3D.from_midpoint_and_direction(
+            midpoint=[x_arc[-1], y_arc[-1], 0],  # move back to avoid overshooting
+            direction=[dx, dy, dz],
+            mutation_scale=15,
+            lw=0.0,
+            arrowstyle="-|>",
+            color="k",
+            length_arrow=0.3
+        )
+        ax.add_artist(arrowhead)
+
+    draw_direction_arrow(-1, 1, radius=0.35)
+    draw_direction_arrow(1, -1, radius=0.35)
+
+    # text labels
+    ax.text(-1, 0, 1.1, r"$\omega_{\alpha} > 0$", size=font_size, va="bottom", ha="center")
+    ax.text(1, 0, 1.1, r"$\omega_{\beta} < 0$", size=font_size, va="bottom", ha="center")
+
+    ax.text(Sx_1_a - 1, 0, 0.5 * Sz_1_a, r"$\vec{S}_1$", size=font_size, va="center", ha="right", color="b")
+    ax.text(Sx_2_a - 1, 0, 0.5 * Sz_2_a, r"$\vec{S}_2$", size=font_size, va="center", ha="left", color="r")
+    ax.text(Sx_1_b + 1, 0, 0.5 * Sz_1_b, r"$\vec{S}_1$", size=font_size, va="center", ha="left", color="b")
+    ax.text(Sx_2_b + 1, 0, 0.5 * Sz_2_b, r"$\vec{S}_2$", size=font_size, va="center", ha="right", color="r")
+
+    # z axis
+    ax.plot([-1.0, -1.0], [0.0, 0.0], [-1.0, 1.0], marker="", linestyle="--", color="k", linewidth=0.8)
+    ax.plot([1.0, 1.0], [0.0, 0.0], [-1.0, 1.0], marker="", linestyle="--", color="k", linewidth=0.8)
+    z_axis_arrow = Arrow3D([0.0, 0.0], [0, 0.0], [0.2, 0.8], mutation_scale=10,
+                           shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="k", zorder=0)
+    ax.add_artist(z_axis_arrow)
+    ax.text(0.05, 0.0, 0.8, r"$z$", size=font_size, va="top", ha="left")
+
+    # view specs
+    ax.view_init(elev=20., azim=-90, roll=0)
+
+    ax.set_xlim(-2.0, 2.0)
+    ax.set_ylim(-1.0, 1.0)
+    ax.set_zlim(-1.0, 1.5)
+    ax.set_box_aspect((1.0, 1.0, 1.0), zoom=4)
+    ax.set_aspect("equal")
+
+    ax.set_axis_off()
+
+    fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # No border padding
+
+    if save_name:
+        fig.savefig(save_name, bbox_inches='tight', pad_inches=0)
+
+        crop_pdf_to_content(save_name,
+                            f"{save_name[:-4]}_cropped.pdf",
+                            margin_y0=250, margin_y1=0, margin_x0=100, margin_x1=150)
+
+    plt.show()
+
+
+# %% Main
+
+
+save_name = "out/theoretical_figures/afm_modes.pdf"
 
 if __name__ == '__main__':
     # llg_equation("out/theoretical_figures/llg_equation.pdf")
     # llg_equation("out/theoretical_figures/llg_equation_T.pdf", 2)
 
-    dmi1("out/theoretical_figures/dmi1.pdf")
+    # dmi1("out/theoretical_figures/dmi1.pdf")
 
-    dmi2("out/theoretical_figures/dmi2.pdf")
+    # dmi2("out/theoretical_figures/dmi2.pdf")
+
+    # spin_waves("out/theoretical_figures/spin_wave.pdf")
+
+    afm_modes("out/theoretical_figures/afm_modes.pdf")
+
+
+
+# %% cropping testing
+
+crop_pdf_to_content(save_name,
+                    f"{save_name[:-4]}_cropped.pdf",
+                    margin_y0=250, margin_y1=0, margin_x0=100, margin_x1=150)
+
+

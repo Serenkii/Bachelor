@@ -11,7 +11,7 @@ def configure():
         "xtick.labelsize": 12,
         "ytick.labelsize": 12,
         "legend.fontsize": 12,
-        "figure.dpi": 100,
+        "figure.dpi": 300,
         # any other rcParams you like…
     })
 
