@@ -3,10 +3,16 @@ import thesis.mpl_configuration
 
 import matplotlib.pyplot as plt
 
+# %%
+
+seeblau = "#00a9e0"
 
 # %%
+
 from PIL import Image, ImageChops, ImageEnhance
-# import fitz
+
+import fitz
+
 
 def crop_pdf_to_content(input_pdf, output_pdf, dpi=1500, margin_x0=0, margin_y0=0, margin_x1=0, margin_y1=0):
     print(f"Trying to crop pdf {input_pdf}...", end="\t")
@@ -28,7 +34,6 @@ def crop_pdf_to_content(input_pdf, output_pdf, dpi=1500, margin_x0=0, margin_y0=
 
         if bbox:
             x0, y0, x1, y1 = bbox
-            x0, y0, x1, y1 = bbox
             x0 = max(x0 - margin_x0, 0)
             y0 = max(y0 - margin_y0, 0)
             x1 = min(x1 + margin_x1, img.width)
@@ -49,11 +54,11 @@ def crop_pdf_to_content(input_pdf, output_pdf, dpi=1500, margin_x0=0, margin_y0=
     doc.save(output_pdf)
 
 
-# %%
-# draw a vector
+# %% draw a vector / fancy arrow
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 import matplotlib.patches as patches
+
 
 class Arrow3D(FancyArrowPatch):
 
@@ -74,7 +79,6 @@ class Arrow3D(FancyArrowPatch):
         xs, ys, zs = [start[0], end[0]], [start[1], end[1]], [start[2], end[2]]
         return cls(xs, ys, zs, *args, **kwargs)
 
-
     def draw(self, renderer):
         xs3d, ys3d, zs3d = self._verts3d
         proj = self.axes.get_proj()  # <- use projection matrix from Axes3D
@@ -87,10 +91,12 @@ class Arrow3D(FancyArrowPatch):
         proj = self.axes.get_proj()
         xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, proj)
         self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
-        return np.min(zs)  # Used for depth sorting
+        print("WARNING: Method created with no clue what I am doing.")
+        return min(np.min(xs), np.min(ys), np.min(zs)) - 1e3  # Used for depth sorting
+        # TODO: I have no idea if this makes sense
 
 
-# %%
+# %% LLG
 def llg_equation(save_name=None, thermal_noise=0.0):
     font_size = 12
 
@@ -105,34 +111,44 @@ def llg_equation(save_name=None, thermal_noise=0.0):
     mu_s = 0.3
     frac = gamma / ((1 + alpha ** 2) * mu_s)
 
-    thermal_noise_amplitude = thermal_noise      # Change this value to get stochastic
+    thermal_noise_amplitude = thermal_noise  # Change this value to get stochastic
 
     def a(t):
         return dA0 * np.exp(-t / tau) + A
+
     def Sx(t):
-        return a(t) * np.cos(w*t)
+        return a(t) * np.cos(w * t)
+
     def Sy(t):
-        return a(t) * np.sin(w*t)
+        return a(t) * np.sin(w * t)
+
     def Sz(t):
-        return np.sqrt(1 - a(t)**2)
+        return np.sqrt(1 - a(t) ** 2)
+
     def S(t):
         return np.array([Sx(t), Sy(t), Sz(t)])
+
     def thermal_noise(t, i=None):
         ran = np.random.default_rng(i)
         return ran.normal(0, thermal_noise_amplitude, 3)
+
     def H(t, i):
         return H0 + thermal_noise(t, i)
+
     def damping(S, H):
         return - frac * alpha * np.cross(S, np.cross(S, H))
+
     def gilbert_torque(S, H):
         return - frac * np.cross(S, H)
+
     def dS(S, H, dt):
         return dt * (damping(S, H) + gilbert_torque(S, H))
+
     def S_llg(S0, t_arr):
         S = np.empty(shape=(t_arr.shape[0], 3))
         S[0] = S0
         for i in range(1, t_arr.size):
-            S[i] = S[i-1] + dS(S[i-1], H(t_arr[i-1], i), t_arr[i]-t_arr[i-1])
+            S[i] = S[i - 1] + dS(S[i - 1], H(t_arr[i - 1], i), t_arr[i] - t_arr[i - 1])
         return S
 
     t = np.linspace(-0.4, 20, 20000)
@@ -148,7 +164,7 @@ def llg_equation(save_name=None, thermal_noise=0.0):
 
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 
-    u, v = np.mgrid[0:2 * np.pi:20j, 0:(np.pi/2):10j]
+    u, v = np.mgrid[0:2 * np.pi:20j, 0:(np.pi / 2):10j]
     x = np.cos(u) * np.sin(v)
     y = np.sin(u) * np.sin(v)
     z = np.cos(v)
@@ -158,27 +174,27 @@ def llg_equation(save_name=None, thermal_noise=0.0):
 
     S_L = S_llg(S(0), t)
     # S_L = S_llg(np.array([0.0, 0.0, 1.0]), t)
-    ax.plot(S_L[:,0], S_L[:,1], S_L[:,2], linestyle="--", linewidth=0.8, color="#00a9e0")
+    ax.plot(S_L[:, 0], S_L[:, 1], S_L[:, 2], linestyle="--", linewidth=0.8, color="#00a9e0")
 
     t0 = -0.2
     i_t = np.argmin(np.abs(t - t0))
 
     H0_arrow = Arrow3D([- 0.0 * H0[0], 1.2 * H0[0]], [- 0.0 * H0[1], 1.2 * H0[1]], [- 0.0 * H0[2], 1.2 * H0[2]],
-                       mutation_scale=20, shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="k",)
+                       mutation_scale=20, shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="k", )
     ax.add_artist(H0_arrow)
     ax.text(1.1 * H0[0] - 0.08, 1.1 * H0[1], 1.1 * H0[2] + 0.02, r'$\vec{H}_i$', size=font_size, ha="right", va="top")
 
     if thermal_noise_amplitude != 0.0:
         H_ = H(t0, i_t)
         H_arrow = Arrow3D([- 0.0 * H_[0], 1.2 * H_[0]], [- 0.0 * H_[1], 1.2 * H_[1]], [- 0.0 * H_[2], 1.2 * H_[2]],
-                           mutation_scale=20,
-                           shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="k", )
+                          mutation_scale=20,
+                          shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="k", )
         ax.add_artist(H_arrow)
 
     # S_arrow = Arrow3D([0, Sx(t0)], [0, Sy(t0)], [0, Sz(t0)], mutation_scale=20,
     #                   shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="k",)
-    S_arrow = Arrow3D([0, S_L[i_t,0]], [0, S_L[i_t,1]], [0, S_L[i_t,2]], mutation_scale=20,
-                      shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="k",)
+    S_arrow = Arrow3D([0, S_L[i_t, 0]], [0, S_L[i_t, 1]], [0, S_L[i_t, 2]], mutation_scale=20,
+                      shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="k", )
     ax.add_artist(S_arrow)
     ax.text(*(S_L[i_t] - np.array([0.02, 0.02, 0.1])), r'$\vec{S}_i$', size=font_size, ha="left", va="top")
 
@@ -189,11 +205,12 @@ def llg_equation(save_name=None, thermal_noise=0.0):
     damping_vec += S_L[i_t]
     # damping_arrow = Arrow3D([Sx(t0), damping_vec[0]], [Sy(t0), damping_vec[1]], [Sz(t0), damping_vec[2]],
     #                         mutation_scale=20, shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="k")
-    damping_arrow = Arrow3D([S_L[i_t,0], damping_vec[0]], [S_L[i_t,1], damping_vec[1]], [S_L[i_t,2], damping_vec[2]],
+    damping_arrow = Arrow3D([S_L[i_t, 0], damping_vec[0]], [S_L[i_t, 1], damping_vec[1]], [S_L[i_t, 2], damping_vec[2]],
                             mutation_scale=20, shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="#53c412")
     ax.add_artist(damping_arrow)
-    ax.text(*(damping_vec + np.array([0.07, 0.02, -0.09])), r'$- \vec{S}_i \times \left(\vec{S}_i \times \vec{H}_i \right)$',
-            size=font_size, ha="right", va="top", color="#53c412")  #backgroundcolor=(1.0, 1.0, 1.0, 0.6)
+    ax.text(*(damping_vec + np.array([0.07, 0.02, -0.09])),
+            r'$- \vec{S}_i \times \left(\vec{S}_i \times \vec{H}_i \right)$',
+            size=font_size, ha="right", va="top", color="#53c412")  # backgroundcolor=(1.0, 1.0, 1.0, 0.6)
 
     # gilbert_vec = gilbert_torque(S(t0), H(t0))
     gilbert_vec = gilbert_torque(S_L[i_t], H(t0, i_t))
@@ -202,7 +219,7 @@ def llg_equation(save_name=None, thermal_noise=0.0):
     gilbert_vec += S_L[i_t]
     # gilbert_arrow = Arrow3D([Sx(t0), gilbert_vec[0]], [Sy(t0), gilbert_vec[1]], [Sz(t0), gilbert_vec[2]],
     #                         mutation_scale=20, shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="k")
-    gilbert_arrow = Arrow3D([S_L[i_t,0], gilbert_vec[0]], [S_L[i_t,1], gilbert_vec[1]], [S_L[i_t,2], gilbert_vec[2]],
+    gilbert_arrow = Arrow3D([S_L[i_t, 0], gilbert_vec[0]], [S_L[i_t, 1], gilbert_vec[1]], [S_L[i_t, 2], gilbert_vec[2]],
                             mutation_scale=20, shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="#f47c20")
     ax.add_artist(gilbert_arrow)
     ax.text(*(gilbert_vec - np.array([0.05, 0.05, 0.08])), r'$- \vec{S}_i \times \vec{H}_i$',
@@ -213,7 +230,7 @@ def llg_equation(save_name=None, thermal_noise=0.0):
     ax.set_xlim(-1.0, 1.0)
     ax.set_ylim(-1.0, 1.0)
     ax.set_zlim(0.0, 1.0)
-    ax.set_box_aspect((1.0,1.0,1.0), zoom=4)
+    ax.set_box_aspect((1.0, 1.0, 1.0), zoom=4)
     ax.set_aspect("equal")
 
     ax.set_axis_off()
@@ -230,8 +247,104 @@ def llg_equation(save_name=None, thermal_noise=0.0):
     plt.show()
 
 
+# %% DMI
+def vector_in_plane_2d(axis, position: tuple, radius=0.2, color="black", **kwargs):
+    circle_in = patches.Circle(position, radius, fill=False, edgecolor=color, **kwargs)
+    axis.add_patch(circle_in)
+    diag_half = np.sqrt(2) * 0.2 * 0.5  # = 1/np.sqrt(2) * 0.2
+    axis.plot([position[0] - diag_half, position[0] + diag_half], [position[1] - diag_half, position[1] + diag_half],
+              color=color, **kwargs)  # diagonal \
+    axis.plot([position[0] - diag_half, position[0] + diag_half], [position[1] + diag_half, position[1] - diag_half],
+              color=color, **kwargs)  # diagonal /
 
-def dmi():
+
+def vector_out_plane_2d(axis, position: tuple, radius=0.2, radius_dot=None, color="black", **kwargs):
+    radius_dot = radius_dot or radius * 0.25
+    circle_out = patches.Circle(position, radius, fill=False, edgecolor=color, **kwargs)
+    dot = patches.Circle(position, radius_dot, color=color, **kwargs)
+    axis.add_patch(circle_out)
+    axis.add_patch(dot)
+
+
+def arrow_2d_from_midpoint(midpoint, direction, *args, length_arrow=None, **kwargs):
+    midpoint = np.array(midpoint)
+    direction = np.array(direction)
+    if length_arrow:
+        norm = np.sqrt(np.dot(direction, direction))
+        direction *= length_arrow / norm
+    half_vec = direction * 0.5
+    start = midpoint - half_vec
+    end = midpoint + half_vec
+    return FancyArrowPatch(start, end, *args, **kwargs)
+
+
+def dmi1(save_name=None):
+    font_size = 14
+
+    b = 0.0
+    D = 0.5
+    S = 1
+    S1 = np.array([0, b, S])
+    S2 = np.array([0, b, -S])
+    D_vec = np.array([D, 0, 0])
+
+    print(np.dot(-D_vec, np.cross(S1, S2)))
+
+    fig, ax = plt.subplots()
+
+    # connecting lines
+    ax.plot([-1, 1], [0, 0], marker="", linestyle="-", linewidth=0.5, color="k")
+
+    # Spin 1
+    S1_arrow = arrow_2d_from_midpoint([-1, 0], S1[1:], shrinkA=0, shrinkB=0, mutation_scale=30, lw=3, arrowstyle="-|>",
+                                      color="k")
+    ax.add_artist(S1_arrow)
+    ax.plot(-1, 0, linestyle="", marker="o", markersize=10, color=seeblau)
+    ax.text(-1.1, 0, r"$\vec{S}_i$", size=font_size, color=seeblau, ha="right", va="bottom")
+
+    # Spin 2
+    S2_arrow = arrow_2d_from_midpoint([1, 0], S2[1:], shrinkA=0, shrinkB=0, mutation_scale=30, lw=3, arrowstyle="-|>",
+                                      color="k")
+    ax.add_artist(S2_arrow)
+    ax.plot(1, 0, linestyle="", marker="o", markersize=10, color=seeblau)
+    ax.text(1.1, 0, r"$\vec{S}_j$", size=font_size, color=seeblau, ha="left", va="bottom")
+
+    # red atom
+    ax.plot(0, 0, marker="p", linestyle="", markersize=15, color="r")
+
+    # symmetry point
+    ax.plot(0, 0, marker=".", linestyle="", color="green")
+    ax.text(0.1, 0.1, r"$I$", size=font_size, color="green", ha="left", va="bottom")
+
+    # coordinate system
+    pos = (1.3, -0.5)
+    length = 0.3
+    vector_out_plane_2d(ax, (1.3, -0.5), 0.1)
+    y_arrow = FancyArrowPatch(pos, (pos[0] + length, pos[1]),
+                              shrinkA=0, shrinkB=0, mutation_scale=10, lw=1, arrowstyle="-|>", color="k")
+    z_arrow = FancyArrowPatch(pos, (pos[0], pos[1] + length),
+                              shrinkA=0, shrinkB=0, mutation_scale=10, lw=1, arrowstyle="-|>", color="k")
+    ax.add_artist(y_arrow)
+    ax.add_artist(z_arrow)
+    ax.text(pos[0] - 0.07, pos[1] - 0.07, "$x$", size=font_size, ha="right", va="top")
+    ax.text(pos[0] + 0.2, pos[1] - 0.05, "$y$", size=font_size, ha="left", va="top")
+    ax.text(pos[0] + 0.05, pos[1] + 0.2, "$z$", size=font_size, ha="left", va="bottom")
+
+    ax.set_xlim(-2, 2)
+    ax.set_ylim(-1, 1)
+    ax.set_aspect('equal')
+
+    ax.set_axis_off()
+
+    if save_name:
+        fig.savefig(save_name, bbox_inches='tight', pad_inches=0)
+
+    plt.show()
+
+
+def dmi2(save_name=None):
+    font_size = 14
+
     b = 0.1
     D = 0.5
     S = 1
@@ -239,44 +352,285 @@ def dmi():
     S2 = np.array([0, b, -S])
     D_vec = np.array([D, 0, 0])
 
-    def arrow_2d_from_midpoint(midpoint, direction, *args, length_arrow=None, **kwargs):
-        midpoint = np.array(midpoint)
-        direction = np.array(direction)
-        if length_arrow:
-            norm = np.sqrt(np.dot(direction, direction))
-            direction *= length_arrow / norm
-        half_vec = direction * 0.5
-        start = midpoint - half_vec
-        end = midpoint + half_vec
-        return FancyArrowPatch(start, end, *args, **kwargs)
+    print(np.dot(-D_vec, np.cross(S1, S2)))
 
     fig, ax = plt.subplots()
-    S1_arrow = arrow_2d_from_midpoint([-1, 0], S1[1:], shrinkA=0, shrinkB=0, mutation_scale=30, lw=3, arrowstyle="-|>", color="k")
+
+    # connecting lines
+    ax.plot([-1, 1], [0, 0], marker="", linestyle="-", linewidth=0.5, color="k")
+    ax.plot([-1, 0, 1], [0, 0.45, 0], marker="", color="grey", linewidth=0.3)
+
+    # Spin 1
+    S1_arrow = arrow_2d_from_midpoint([-1, 0], S1[1:], shrinkA=0, shrinkB=0, mutation_scale=30, lw=3, arrowstyle="-|>",
+                                      color="k")
     ax.add_artist(S1_arrow)
-    ax.plot(-1, 0, linestyle="", marker="o", markersize="10", color="b")
-    S2_arrow = arrow_2d_from_midpoint([1, 0], S2[1:], shrinkA=0, shrinkB=0, mutation_scale=30, lw=3, arrowstyle="-|>", color="k")
+    ax.plot(-1, 0, linestyle="", marker="o", markersize=10, color=seeblau)
+    ax.text(-1.1, 0, r"$\vec{S}_i$", size=font_size, color=seeblau, ha="right", va="bottom")
+
+    # Spin 2
+    S2_arrow = arrow_2d_from_midpoint([1, 0], S2[1:], shrinkA=0, shrinkB=0, mutation_scale=30, lw=3, arrowstyle="-|>",
+                                      color="k")
     ax.add_artist(S2_arrow)
-    ax.plot(1, 0, linestyle="", marker="o", markersize="10", color="b")
+    ax.plot(1, 0, linestyle="", marker="o", markersize=10, color=seeblau)
+    ax.text(1.1, 0, r"$\vec{S}_j$", size=font_size, color=seeblau, ha="left", va="bottom")
 
-    circle_in = patches.Circle((1, 1), 0.2, fill=False, edgecolor='black')
-    ax.add_patch(circle_in)
-    ax.plot([1 - 0.14, 1 + 0.14], [1 - 0.14, 1 + 0.14], color='black')  # diagonal \
-    ax.plot([1 - 0.14, 1 + 0.14], [1 + 0.14, 1 - 0.14], color='black')  # diagonal /
+    # symmetry axis
+    ax.plot([0, 0], [-0.8, 0.8], marker="", linestyle="-.", color="green")
+    ax.text(0.4, -0.6, r"$C_2$", size=font_size, color="green", ha="left", va="top")
 
-    # Arrow coming **out** of the plane (circle with a dot)
-    circle_out = patches.Circle((-1, 1), 0.2, fill=False, edgecolor='black')
-    dot = patches.Circle((-1, 1), 0.05, color='black')
-    ax.add_patch(circle_out)
-    ax.add_patch(dot)
+    # red atom
+    ax.plot(0, 0.45, marker="p", linestyle="", markersize=15, color="r")
+
+    # dmi vector
+    vector_out_plane_2d(ax, (0, 0), color="orange", zorder=5)
+    ax.text(0.15, -0.15, r"$\vec{D}_{ij}$", size=font_size, color="orange", ha="left", va="top")
+
+    # Add curved arrow (rotation indicator)
+    center = (0, -0.65)
+    width = 0.6
+    height = 0.2
+    theta2 = 50  # ending angle in degrees
+
+    arc = patches.Arc(center, width, height, angle=0, theta1=130, theta2=theta2, lw=0.8, color='black', zorder=5)
+    ax.add_patch(arc)
+
+    # Convert angle to radians
+    angle_rad = np.radians(theta2)
+
+    # Compute the endpoint of the arc
+    x_end = center[0] + (width / 2) * np.cos(angle_rad)
+    y_end = center[1] + (height / 2) * np.sin(angle_rad)
+
+    # Compute a nearby point slightly before the end (for direction)
+    angle_back = np.radians(theta2 - 5)
+    x_back = center[0] + (width / 2) * np.cos(angle_back)
+    y_back = center[1] + (height / 2) * np.sin(angle_back)
+
+    # Add arrowhead
+    ax.annotate("",
+                xy=(x_end, y_end),
+                xytext=(x_back, y_back),
+                arrowprops=dict(arrowstyle="-|>", color='black', lw=0.8))
 
     ax.set_xlim(-2, 2)
-    ax.set_ylim(-2, 2)
+    ax.set_ylim(-1, 1)
     ax.set_aspect('equal')
 
+    ax.set_axis_off()
+
+    if save_name:
+        fig.savefig(save_name, bbox_inches='tight', pad_inches=0)
+
     plt.show()
+
+
+# %% Spin waves
+def spin_waves(save_name):
+    N = 8
+    phi0 = 0
+    n = np.arange(N)
+    amplitude = 0.3
+    a = 1
+    k = 2 * np.pi / (N * a)
+    phi = phi0 + k * n * a
+    plane_component = amplitude * np.exp(- 1j * phi)
+    Sx = np.real(plane_component)
+    Sy = - np.imag(plane_component)
+    Sz = np.sqrt(1 - amplitude ** 2)
+
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+
+    for l in n:
+        spin_arrow = Arrow3D([l, l + Sx[l]], [0, Sy[l]], [0, Sz], mutation_scale=20,
+                             shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="k", zorder=0)
+        ax.add_artist(spin_arrow)
+
+    n_continuous = np.linspace(Sx[0] - 0.8, N - 1 + Sx[-1] + 0.2, 100)
+    phi_continuous = phi0 + k * n_continuous * a
+    Sy_continuous = - np.imag(amplitude * np.exp(- 1j * phi_continuous))
+    ax.plot(n_continuous, Sy_continuous, zs=Sz, zdir='z', linestyle="--", marker="", color=seeblau, linewidth=1)
+
+    angle = np.linspace(0, 2 * np.pi)
+    circle_x = amplitude * np.cos(angle)
+    circle_y = amplitude * np.sin(angle)
+    for l in n:
+        ax.plot(circle_x + l, circle_y, zs=Sz, zdir='z', linestyle="-", marker="", color=seeblau, linewidth=1)
+
+    ax.plot(np.linspace(Sx[0] - 0.8, N - 1 + Sx[-1] + 0.2, 10), 0.0, zs=0, zdir='z', marker="", linestyle=":",
+            color="k", linewidth=0.5)
+    ax.plot(n, 0.0, zs=0, zdir='z', marker="o", linestyle="", color="k", markersize=2)
+
+    ax.view_init(elev=30., azim=-100, roll=0)
+
+    ax.set_xlim(Sx[0] - 0.8 - 0.2, N - 1 + Sx[-1] + 0.2 + 0.2)
+    ax.set_ylim(-0.5, 0.5)
+    ax.set_zlim(0.0, 1.0)
+    ax.set_box_aspect((1.0, 1.0, 1.0), zoom=4)
+    ax.set_aspect("equal")
+
+    ax.set_axis_off()
+
+    # fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # No border padding
+
+    if save_name:
+        fig.savefig(save_name, bbox_inches='tight', pad_inches=0)
+
+        crop_pdf_to_content(save_name,
+                            f"{save_name[:-4]}_cropped.pdf",
+                            margin_y0=-150, margin_y1=300, margin_x0=50, margin_x1=150)
+
+    plt.show()
+
+
+# %% AFM modes
+
+def afm_modes(save_name=None):
+    font_size = 12
+
+    H_E = 2  # exchange
+    H_A = 0.2  # anisotropy
+    H_C = np.sqrt(2 * H_E * H_A + H_A * H_A)
+
+    S1_over_S2_a = - ((H_E + H_A) + H_C) / H_E
+    S1_over_S2_b = - ((H_E + H_A) - H_C) / H_E
+
+    Sx_2_a = 0.2
+    Sy_2_a = 0.0
+    Sz_2_a = - np.sqrt(1 - Sx_2_a ** 2 - Sy_2_a ** 2)
+    Sx_1_a = S1_over_S2_a * Sx_2_a
+    Sy_1_a = 0.0
+    Sz_1_a = np.sqrt(1 - Sx_1_a ** 2 - Sy_1_a ** 2)
+
+    Sx_1_b = 0.2
+    Sy_1_b = 0.0
+    Sz_1_b = np.sqrt(1 - Sx_2_a ** 2 - Sy_2_a ** 2)
+    Sx_2_b = Sx_1_b / S1_over_S2_b
+    Sy_2_b = 0.0
+    Sz_2_b = - np.sqrt(1 - Sx_2_b ** 2 - Sy_2_b ** 2)
+
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+
+    # spin arrows
+    arrow_S2_a = Arrow3D([-1, -1 + Sx_2_a], [0, Sy_2_a], [0, Sz_2_a], mutation_scale=20,
+                         shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="r", zorder=0)
+    ax.add_artist(arrow_S2_a)
+    arrow_S1_a = Arrow3D([-1, -1 + Sx_1_a], [0, Sy_1_a], [0, Sz_1_a], mutation_scale=20,
+                         shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="b", zorder=0)
+    ax.add_artist(arrow_S1_a)
+
+    arrow_S2_b = Arrow3D([1, 1 + Sx_2_b], [0, Sy_2_b], [0, Sz_2_b], mutation_scale=20,
+                         shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="r", zorder=0)
+    ax.add_artist(arrow_S2_b)
+    arrow_S1_b = Arrow3D([1, 1 + Sx_1_b], [0, Sy_1_b], [0, Sz_1_b], mutation_scale=20,
+                         shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="b", zorder=0)
+    ax.add_artist(arrow_S1_b)
+
+    # precession circles
+    phi = np.linspace(0, 2 * np.pi)
+    circle_x = np.cos(phi)
+    circle_y = np.sin(phi)
+
+    circle_kwargs = dict(linestyle="--", linewidth=0.8)
+    ax.plot(Sx_1_a * circle_x - 1, Sx_1_a * circle_y, Sz_1_a, **circle_kwargs, color="b")
+    ax.plot(Sx_2_a * circle_x - 1, Sx_2_a * circle_y, Sz_2_a, **circle_kwargs, color="r")
+    ax.plot(Sx_1_b * circle_x + 1, Sx_1_b * circle_y, Sz_1_b, **circle_kwargs, color="b")
+    ax.plot(Sx_2_b * circle_x + 1, Sx_2_b * circle_y, Sz_2_b, **circle_kwargs, color="r")
+
+    # precession direction arrow
+    def draw_direction_arrow(x_pos, chirality, radius=0.3):
+        # curved arrow for precession direction
+        # define an arc from angle theta1 to theta2
+        theta = np.linspace(np.pi / 1.5 + 0.2, 2 * np.pi + np.pi / 3 - 0.2, 30)  # arc from 0 to ~120 degrees
+        theta = theta[::chirality]
+        x_arc = radius * np.cos(theta) + x_pos  # centered at x = x_pos
+        y_arc = radius * np.sin(theta)
+        z_arc = np.zeros_like(theta)
+
+        # draw arc
+        ax.plot(x_arc, y_arc, z_arc, color="k", linestyle="-", linewidth=1, zorder=100)
+
+        # compute direction of arrowhead (tangent to arc at the end)
+        dx = -radius * np.sin(theta[-1]) * chirality
+        dy = radius * np.cos(theta[-1]) * chirality
+        dz = 0
+
+        arrowhead = Arrow3D.from_midpoint_and_direction(
+            midpoint=[x_arc[-1], y_arc[-1], 0],  # move back to avoid overshooting
+            direction=[dx, dy, dz],
+            mutation_scale=15,
+            lw=0.0,
+            arrowstyle="-|>",
+            color="k",
+            length_arrow=0.3
+        )
+        ax.add_artist(arrowhead)
+
+    draw_direction_arrow(-1, 1, radius=0.35)
+    draw_direction_arrow(1, -1, radius=0.35)
+
+    # text labels
+    ax.text(-1, 0, 1.1, r"$\omega_{\alpha} > 0$", size=font_size, va="bottom", ha="center")
+    ax.text(1, 0, 1.1, r"$\omega_{\beta} < 0$", size=font_size, va="bottom", ha="center")
+
+    ax.text(Sx_1_a - 1, 0, 0.5 * Sz_1_a, r"$\vec{S}_1$", size=font_size, va="center", ha="right", color="b")
+    ax.text(Sx_2_a - 1, 0, 0.5 * Sz_2_a, r"$\vec{S}_2$", size=font_size, va="center", ha="left", color="r")
+    ax.text(Sx_1_b + 1, 0, 0.5 * Sz_1_b, r"$\vec{S}_1$", size=font_size, va="center", ha="left", color="b")
+    ax.text(Sx_2_b + 1, 0, 0.5 * Sz_2_b, r"$\vec{S}_2$", size=font_size, va="center", ha="right", color="r")
+
+    # z axis
+    ax.plot([-1.0, -1.0], [0.0, 0.0], [-1.0, 1.0], marker="", linestyle="--", color="k", linewidth=0.8)
+    ax.plot([1.0, 1.0], [0.0, 0.0], [-1.0, 1.0], marker="", linestyle="--", color="k", linewidth=0.8)
+    z_axis_arrow = Arrow3D([0.0, 0.0], [0, 0.0], [0.2, 0.8], mutation_scale=10,
+                           shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="k", zorder=0)
+    ax.add_artist(z_axis_arrow)
+    ax.text(0.05, 0.0, 0.8, r"$z$", size=font_size, va="top", ha="left")
+
+    # view specs
+    ax.view_init(elev=20., azim=-90, roll=0)
+
+    ax.set_xlim(-2.0, 2.0)
+    ax.set_ylim(-1.0, 1.0)
+    ax.set_zlim(-1.0, 1.5)
+    ax.set_box_aspect((1.0, 1.0, 1.0), zoom=4)
+    ax.set_aspect("equal")
+
+    ax.set_axis_off()
+
+    fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # No border padding
+
+    if save_name:
+        fig.savefig(save_name, bbox_inches='tight', pad_inches=0)
+
+        crop_pdf_to_content(save_name,
+                            f"{save_name[:-4]}_cropped.pdf",
+                            margin_y0=250, margin_y1=0, margin_x0=100, margin_x1=150)
+
+    plt.show()
+
+
+# %% Main
+
+
+save_name = "out/theoretical_figures/afm_modes.pdf"
 
 if __name__ == '__main__':
     # llg_equation("out/theoretical_figures/llg_equation.pdf")
     # llg_equation("out/theoretical_figures/llg_equation_T.pdf", 2)
 
-    dmi()
+    # dmi1("out/theoretical_figures/dmi1.pdf")
+
+    # dmi2("out/theoretical_figures/dmi2.pdf")
+
+    # spin_waves("out/theoretical_figures/spin_wave.pdf")
+
+    afm_modes("out/theoretical_figures/afm_modes.pdf")
+
+
+
+# %% cropping testing
+
+crop_pdf_to_content(save_name,
+                    f"{save_name[:-4]}_cropped.pdf",
+                    margin_y0=250, margin_y1=0, margin_x0=100, margin_x1=150)
+
+
