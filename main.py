@@ -1752,26 +1752,39 @@ def presenting_data_06():
 
 
 
+# TODO: Have not checked if the thing with step direction works
 
+def spin_current_nernst(config_path, step_direction='x', is_tilted=True, distance_from_step=70, save_suffix="", title_suffix=""):
+    config_file = config_path
 
-def spin_current_nernst():
-    config_file = "/data/scc/marian.gunsch/07_AM_tilted_xTstep_y/spin-configs-99-999/spin-config-99-999-005000.dat"
+    config_data = spinconf_util.read_spin_config_dat(config_file, is_tilted, fixed_version=True)
 
-    config_data = spinconf_util.read_spin_config_dat(config_file, True, True)
+    direction = "transversal"
 
-    *spin_currents, j5 = spinconf_util.average_z_layers(*spinconf_util.calculate_spin_currents(config_data, "y", True))
+    *spin_currents, j5 = spinconf_util.average_z_layers(*spinconf_util.calculate_spin_currents(config_data, direction, True))
     spin_currents = [np.squeeze(spin_current) for spin_current in spin_currents]
 
     N = 256
     rel_T_pos = 0.49
     T_step = helper.get_absolute_T_step_index(rel_T_pos, N)
 
-    for left, right, title, save_path in zip([0, T_step - 5, 0, T_step + 30, T_step + 50],
-                                             [N, T_step + 5, T_step - 30, N, N],
-                                             ["complete", "near step", "warm region 30", "cold region 30", "cold region 50"],
-                                             ["out/07_nernst/currentT", "out/07_nernst/currentT_nearStep", "out/07_nernst/currentT_warmRegion_30",
-                                              "out/07_nernst/currentT_coldRegion_30", "out/07_nernst/currentT_coldRegion_50"]):
-        spin_currents_cutout = [spin_current[left:right] for spin_current in spin_currents]
+    for left, right, title, save_path in zip(
+            [T_step - 5, 0, T_step + distance_from_step, 0],
+            [T_step + 5, T_step - distance_from_step, N, -1],
+            [f"near step ({direction}) {title_suffix}", f"warm region ({direction}) {title_suffix}",
+             f"cold region ({direction}) {title_suffix}", f"complete grid ({direction}) {title_suffix}"],
+            [f"out/08_nernst/nearStep_{save_suffix}", f"out/08_nernst/warmRegion_{distance_from_step}_{save_suffix}",
+             f"out/08_nernst/coldRegion_{distance_from_step}_{save_suffix}", f"out/08_nernst/completeRegion_{save_suffix}"]
+    ):
+
+        if step_direction == 'x':
+            spin_currents_cutout = [spin_current[left:right] for spin_current in spin_currents]
+            axes = (1,)       # average over x axis, and single z layer
+        elif step_direction == 'y':
+            spin_currents_cutout = [spin_current[:, left:right] for spin_current in spin_currents]
+            axes = (0,)
+        else:
+            raise ValueError("step_direction must be 'x' or 'y'")
 
         X, Y = np.meshgrid(np.arange(0, spin_currents_cutout[0].shape[0], 1, dtype=int),
                            np.arange(0, spin_currents_cutout[0].shape[1], 1, dtype=int),
@@ -1813,11 +1826,12 @@ def spin_current_nernst():
         titles = ["j_inter_p", "j_inter_m", "j_intra_A", "j_intra_B"]
 
         for ax, data_grid, title_ in zip(axs, spin_currents_cutout, titles):
-            spin_current_profile = np.mean(data_grid, axis=0)
+            spin_current_profile = np.mean(data_grid, axis=axes)
             ax.set_title(title_)
             ax.set_xlabel("Index (position)")
             ax.set_ylabel("spin current")
-            ax.plot(spin_current_profile)
+            x_axis = np.arange(spin_current_profile.shape[0]) + left
+            ax.plot(x_axis, spin_current_profile)
 
         if save_path:
             fig.savefig(f"{save_path}_profile.pdf")
@@ -1828,8 +1842,11 @@ def spin_current_nernst():
 
 
 def presenting_data_07():
-    spin_current_nernst()
-
+    # spin_current_nernst("/data/scc/marian.gunsch/07_AM_tilted_xTstep_y/spin-configs-99-999/spin-config-99-999-005000.dat")
+    spin_current_nernst("/data/scc/marian.gunsch/07_AM_tilted_xTstep_yABC_/spin-configs-99-999/spin-config-99-999-005000.dat",
+                        save_suffix="110_", title_suffix="110_")
+    spin_current_nernst("/data/scc/marian.gunsch/07_AM_tilted_xTstep_yABC_/spin-configs-99-999/spin-config-99-999-005000.dat",
+                        distance_from_step=30, save_suffix="110_", title_suffix="110_")
 
 # %% 08 Magnetization Nernst / Verifying Spin Nernst (2/?)
 
@@ -1985,7 +2002,7 @@ def nernst_manual_layer_averaging(config_path, step_direction='x', is_tilted=Tru
             cut_data = spinconf_util.average_z_layers(config_data[:, left:right])
             axes = (1, 2)       # average over x axis, and single z layer
         elif step_direction == 'y':
-            cut_data = spinconf_util.average_z_layers(config_data[:, left:right])
+            cut_data = spinconf_util.average_z_layers(config_data[left:right])
             axes = (0, 2)
         else:
             raise ValueError("step_direction must be 'x' or 'y'")
@@ -2023,18 +2040,29 @@ def nernst_manual_layer_averaging(config_path, step_direction='x', is_tilted=Tru
 def presenting_data_08():
     # compare_nernst_with_equilibrium((False, True))
     nernst_manual_layer_averaging(
-        "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T4/spin-configs-99-999/spin-config-99-999-005000.dat"
+        "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T4/spin-configs-99-999/spin-config-99-999-005000.dat",
+        title_suffix="Tstep in [110], T=4",
+        save_suffix="tilt_xTstep_T4"
     )
-    nernst_manual_layer_averaging(
-        "/data/scc/marian.gunsch/08_tilted_yTstep/T4/spin-configs-99-999/spin-config-99-999-005000.dat",
-        'y'
-    )
+    # File not generated yet!
+    # nernst_manual_layer_averaging(
+    #     "/data/scc/marian.gunsch/08_tilted_yTstep/T4/spin-configs-99-999/spin-config-99-999-005000.dat",
+    #     'y',
+    #     title_suffix="Tstep in [-110], T=4",
+    #     save_suffix="tilt_yTstep_T4"
+    # )
     nernst_manual_layer_averaging(
         "/data/scc/marian.gunsch/08_xTstep/T4/spin-configs-99-999/spin-config-99-999-005000.dat",
+        is_tilted=False,
+        title_suffix="Tstep in [100], T=4",
+        save_suffix="xTstep_T4"
     )
     nernst_manual_layer_averaging(
         "/data/scc/marian.gunsch/08_yTstep/T4/spin-configs-99-999/spin-config-99-999-005000.dat",
-        'y'
+        'y',
+        is_tilted=False,
+        title_suffix="Tstep in [010], T=4",
+        save_suffix="yTstep_T4"
     )
 
 
@@ -2055,7 +2083,10 @@ if __name__ == '__main__':
 
     # compare_nernst_with_equilibrium((False, True))
 
+
     presenting_data_07()
+
+    # presenting_data_08()
 
     pass
 

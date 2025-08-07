@@ -50,20 +50,19 @@ def select_SL_and_component(value_arr, sublattice, spin_component):
     return value_arr[:, :, :, sl_dict[sublattice], spin_dict[spin_component]]
 
 
-def read_spin_config_dat(path, is_tilted=True, fixed_version=False):
+def read_spin_config_dat(path, is_tilted=True, shift=None, fixed_version=False):
     """
     Reads the data in a spin configuration file and formats it into a multidimensional array. The first two components
     correspond to the x and y position of each spin. The average over all z components is already taken, as the z layers
-    are independent of each other anyway. IS IT THO???? I DONT THINK SO!!!!!
+    are independent of each other anyway. IS THE AVERAGE TAKEN THO???? I DONT THINK SO!!!!!
     When handling the returned array, one can select a sublattice and a spin
     component via the select_SL_and_component function.
+    :param shift:
     :param path: The path of the spin configuration file.
     :param is_tilted: If the tilted configuration is used. This method has not been tested for the non-tilted setup.
     :param fixed_version: If a new definition for indices shall be used
     :return: A multidimensional array containing the spin components, averaged over all z layers.
     """
-    if not is_tilted:
-        raise NotImplementedError("Non-tilted is untested!")
 
     number_sublattices = 2
 
@@ -90,15 +89,29 @@ def read_spin_config_dat(path, is_tilted=True, fixed_version=False):
         shape = (lengths['y'], lengths['x'], lengths['z'], number_sublattices, 3)
         i, j = j, i     # TODO: I don't know about my past decisions...
 
-    value_grid = np.zeros(shape) + 1e9
+    value_grid = np.zeros(shape)
+    value_grid[:] = np.nan
     value_grid[i, j, k, sl, 0] = data[:, 4]  # 4=x, 5=y, 6=z
     value_grid[i, j, k, sl, 1] = data[:, 5]  # (components of spin)
     value_grid[i, j, k, sl, 2] = data[:, 6]  # j i k instead of i j k because indices are weird... TODO: idk about that
 
-    if np.any(value_grid > 1e6):
-        raise ValueError(f"A value of the value_grid containing the data of the specified path '{path}' could not be "
-                         f"set using the available data in the spin configuration file. Check the file (and maybe"
-                         f"also this function).")
+    if not is_tilted:
+        if shift is None or shift.lower()=="none":
+            pass
+        elif shift.lower()=="left":
+            raise NotImplementedError("Shift not implemented.")
+        elif shift.lower()=="right":
+            raise NotImplementedError("Shift not implemented.")
+        else:
+            raise ValueError(f"Shift {shift} not recognized. Options: none, left, right")
+
+    if not is_tilted or shift is not None:
+        if np.isnan(value_grid).any():
+            raise ValueError(f"A value of the value_grid containing the data of the specified path '{path}' could not be "
+                             f"set using the available data in the spin configuration file. Check the file (and maybe"
+                             f"also this function).")
+    else:
+        print("Warning! The returned value_grid contains nan-data because of the specific lattice structure.")
 
     return value_grid
 
@@ -329,7 +342,9 @@ for neel)
 - Implement possibility to convolute data or to e.g. average data e.g. in blocks of 2x2 or 4x4 or 8x8
 """
 
-if __name__ == "__main__":
+_run =  [1,]
+
+if __name__ == "__main__" and 0 in _run:
 
     # %% Testing
 
@@ -414,3 +429,14 @@ if __name__ == "__main__":
     plot_colormap(average_z_layers(magnon_count_A), "magnon count A", rel_Tstep_pos, show_step, zoom)
     plot_colormap(average_z_layers(magnon_count_B), "magnon count B", rel_Tstep_pos, show_step, zoom)
 
+
+if __name__ == "__main__" and 1 in _run:
+
+    # %% Testing not-tilted file
+    non_tilted_path = "/data/scc/marian.gunsch/08_yTstep/T4/spin-configs-99-999/spin-config-99-999-005000.dat"
+
+    data = read_spin_config_dat(non_tilted_path, False)
+
+    # tilted_path = "/data/scc/marian.gunsch/08_tilted_yTstep/T4/spin-configs-99-999/spin-config-99-999-000000.dat"
+    #
+    # data = read_spin_config_dat(tilted_path, True)
