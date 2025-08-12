@@ -2,17 +2,20 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 def configure():
+    latex_preamble = r"\usepackage{miller}"
+
     # Use LaTeX for all text
     mpl.rcParams.update({
         "text.usetex": True,
         "font.family": "serif",
         "font.serif": ["Palatino"],
+        "font.size": 12,
         "axes.labelsize": 14,
         "xtick.labelsize": 12,
         "ytick.labelsize": 12,
         "legend.fontsize": 12,
         "figure.dpi": 300,
-        # any other rcParams you like…
+        "text.latex.preamble": latex_preamble,
     })
 
 

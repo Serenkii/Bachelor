@@ -2,10 +2,12 @@ import numpy as np
 import thesis.mpl_configuration
 
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 # %%
 
 seeblau = "#00a9e0"
+font_size = 12
 
 # %%
 
@@ -56,9 +58,10 @@ def crop_pdf_to_content(input_pdf, output_pdf, dpi=1500, margin_x0=0, margin_y0=
 
 # %% draw a vector / fancy arrow
 from matplotlib.patches import FancyArrowPatch
+from matplotlib.patches import ArrowStyle
 from mpl_toolkits.mplot3d import proj3d
 import matplotlib.patches as patches
-
+from matplotlib.path import Path
 
 class Arrow3D(FancyArrowPatch):
 
@@ -608,10 +611,223 @@ def afm_modes(save_name=None):
     plt.show()
 
 
+# %% Toy Model
+
+def toy_model(save_name=None):
+    colors = ["red", "blue"]
+
+    fig, ax = plt.subplots()
+    N = 6
+    corner_dN = 2
+
+    def draw_points():
+        for y in range(N):
+            for x in range(N):
+                if x >= N - corner_dN and y >= N - corner_dN:
+                    continue
+                color = colors[(x + y) % 2]
+                ax.plot(x, -y, color=color, linestyle="", marker="o", ms=8)
+
+    def draw_axes(position, box_width, distance_txt=0.05, text_size=10):
+        position = np.array(position)
+        arrow_kwargs = dict(shrinkA=0, shrinkB=0, mutation_scale=6, lw=1, arrowstyle="<|-|>", color="k")
+
+        previous_font_size = mpl.rcParams["font.size"]
+        mpl.rcParams["font.size"] = text_size
+
+        start = position - np.array([box_width / 2, 0])
+        end = position + np.array([box_width / 2, 0])
+        arrow = FancyArrowPatch(start, end, **arrow_kwargs)
+        ax.add_patch(arrow)
+        ax.text(end[0], end[1] - distance_txt, r"$x$", va="top", ha="right")
+        ax.text(end[0], end[1] + distance_txt, r"$\hkl[100]$",  va="bottom", ha="center")
+        ax.text(start[0], start[1] + distance_txt, r"$\hkl[-100]$",  va="bottom", ha="center")
+
+        start = position - np.array([0, box_width / 2])
+        end = position + np.array([0, box_width / 2])
+        arrow = FancyArrowPatch(start, end, **arrow_kwargs)
+        ax.add_patch(arrow)
+        ax.text(end[0] - distance_txt * 2, end[1], r"$y$", va="top", ha="right")
+        ax.text(end[0], end[1] + distance_txt, r"$\hkl[010]$", va="bottom", ha="center")
+        ax.text(start[0], start[1] - distance_txt, r"$\hkl[0-10]$", va="top", ha="center")
+
+        start = position - np.array([box_width / 2, box_width / 2])
+        end = position + np.array([box_width / 2, box_width / 2])
+        arrow = FancyArrowPatch(start, end, **arrow_kwargs)
+        ax.add_patch(arrow)
+        ax.text(start[0], start[1] - distance_txt, r"$\hkl[-1-10]$", va="top", ha="center")
+        ax.text(end[0], end[1] + distance_txt, r"$\hkl[110]$", va="bottom", ha="center")
+
+        start = position + np.array([- box_width / 2, box_width / 2])
+        end = position + np.array([box_width / 2, - box_width / 2])
+        arrow = FancyArrowPatch(start, end, **arrow_kwargs)
+        ax.add_patch(arrow)
+        ax.text(start[0], start[1] + distance_txt, r"$\hkl[-110]$", va="bottom", ha="center")
+        ax.text(end[0], end[1] - distance_txt, r"$\hkl[1-10]$", va="top", ha="center")
+
+        mpl.rcParams["font.size"] = previous_font_size
+
+    def draw_lattice_constant(distance=0.2):
+        arrow_kwargs = dict(shrinkA=0, shrinkB=0, mutation_scale=3, lw=1, arrowstyle="|-|", color="k")
+
+        bar = FancyArrowPatch((0 - distance, -4), (0 - distance, -5), **arrow_kwargs)
+        ax.add_patch(bar)
+        bar = FancyArrowPatch((0, -5 - distance), (1, -5 - distance), **arrow_kwargs)
+        ax.add_patch(bar)
+
+        ax.text(0 - distance - 0.1, -4.5, r"$a$", size=font_size, va="center", ha="right")
+        ax.text(0.5, -5 - distance - 0.1, r"$a$", size=font_size, va="top", ha="center")
+
+    def draw_wigner_seitz(color="grey"):
+        ds = 0.3
+        ax.plot([0, 1, 2, 1, 0], [-4, -3, -4, -5, -4], marker="", linestyle="-", linewidth=0.5, color=color)
+        ax.plot([1, 2, 3, 2], [-3, -2, -3, -4], marker="", linestyle="--", linewidth=0.5, color=color)
+        ax.plot([2, 3, 3 - ds], [-4, -5, -5 - ds], marker="", linestyle="--", linewidth=0.5, color=color)
+        ax.plot([1, 1 + ds], [-5, -5 - ds], marker="", linestyle="--", linewidth=0.5, color=color)
+
+        ax.text(-0.2, -3.2, "Wigner-Seitz\ncell", va="top", ha="center", color=color)
+
+        ax.fill([0, 1, 2, 1, 0], [-4, -3, -4, -5, -4], color=color, alpha=0.3)
+
+    def draw_lattice_vectors(color1="black", color2="darkgoldenrod"):
+        arrow_kwargs = dict(shrinkA=0, shrinkB=0, mutation_scale=15, lw=1, arrowstyle="-|>")
+
+        start = np.array([1, -4])
+        end = np.array([2, -3])
+        arrow = FancyArrowPatch(start, end, **arrow_kwargs, color=color1, zorder=5)
+        ax.add_patch(arrow)
+        position_text = start + 0.7 * (end - start)
+        ax.text(position_text[0], position_text[1], r"$\vec{a}_1$", color=color1, va="bottom", ha="right")
+
+        end = [2, -5]
+        arrow = FancyArrowPatch(start, end, **arrow_kwargs, color=color1, zorder=5)
+        ax.add_patch(arrow)
+        position_text = start + 0.7 * (end - start)
+        ax.text(position_text[0], position_text[1], r"$\vec{a}_2$", color=color1, va="top", ha="right")
+
+        end = [2, -4]
+        arrow = FancyArrowPatch(start, end, **arrow_kwargs, color=color2, zorder=5)
+        ax.add_patch(arrow)
+        position_text = start + 0.65 * (end - start)
+        ax.text(position_text[0], position_text[1], r"$\vec{r}_{\mathrm{B}}$", color=color2, va="bottom", ha="center")
+
+        ax.plot(start[0], start[1], color=color2, marker='o', ms=2, zorder=5)
+        ax.text(start[0] - 0.055, start[1] + 0.055, r"$\vec{r}_{\mathrm{A}}$", color=color2, va="bottom", ha="right")
+
+    def draw_exchange_interactions(color_J1="green", color_J2_1="magenta", color_J2_2="purple", text_size=10):
+        shared_kwargs = dict(marker="", linestyle="-")
+        paths_x = dict(
+            J1=[[4, 4], [3, 5],
+                [3, 3], [2, 3]],
+            J2_1=[[3, 5], [2, 4]],
+            J2_2=[[3, 5], [3, 5]]
+        )
+        paths_y = dict(
+            J1=[[0, -2], [-1, -1],
+                [0, -2], [-1, -1]],
+            J2_1=[[0, -2], [-2, 0]],
+            J2_2=[[-2, 0], [-1, -3]]
+        )
+        paths_kwargs = dict(
+            J1=[dict(color=color_J1, lw=2), dict(color=color_J1, lw=2),
+                dict(color=color_J1, lw=1), dict(color=color_J1, lw=1)],
+            J2_1=[dict(color=color_J2_1, lw=1.8), dict(color=color_J2_1, lw=1)],
+            J2_2=[dict(color=color_J2_2, lw=1.8), dict(color=color_J2_2, lw=1)]
+        )
+
+        for J in paths_x:
+            for path_x, path_y, path_kwargs in zip(paths_x[J], paths_y[J], paths_kwargs[J]):
+                ax.plot(path_x, path_y, **path_kwargs, **shared_kwargs)
+
+        # Text
+        previous_font_size = mpl.rcParams["font.size"]
+        mpl.rcParams["font.size"] = text_size
+
+        d = 0.06
+        d_ = 0.5 * np.sqrt(2) * d
+
+        ax.text(4.5, -1 - d, r"$J_1$", va="top", ha="center", color=color_J1)
+        ax.text(4 + d, -0.5, r"$J_1$", va="center", ha="left", color=color_J1)
+        ax.text(3.5, -1 + d, r"$J_1$", va="bottom", ha="center", color=color_J1)
+        ax.text(4 - d, -1.5, r"$J_1$", va="center", ha="right", color=color_J1)
+
+        ax.text(4.75 + d_, -0.25 - d_, r"$J_2'$", va="top", ha="left", color=color_J2_2)
+        ax.text(3.25 + d_, -1.75 - d_, r"$J_2'$", va="top", ha="left", color=color_J2_2)
+
+        ax.text(4.75 - d_, -1.75 - d_, r"$J_2$", va="top", ha="right", color=color_J2_1)
+        ax.text(3.25 + d_, -0.25 + d_, r"$J_2$", va="bottom", ha="left", color=color_J2_1)
+
+        mpl.rcParams["font.size"] = previous_font_size
+
+    def add_circular_arrow(center, radius, theta1, theta2,
+                           color='black', lw=0.7, delta_angle=6, mutation_scale=7, zorder=5):
+        """
+        Draw a circular arc (part of a circle) and add an arrowhead at the end.
+        - center: (cx, cy)
+        - radius: circle radius
+        - theta1, theta2: start and end angles in degrees (measured ccw from +x)
+        - delta_angle: degrees back from theta2 to compute arrow tail (controls arrow direction)
+        """
+        cx, cy = center
+        # draw arc (circle -> width == height == 2*radius)
+        arc = patches.Arc(center, 2 * radius, 2 * radius, angle=0, theta1=theta1, theta2=theta2,
+                          lw=lw, color=color)
+        ax.add_patch(arc)
+
+        # helper to get point on circle at angle t (degrees)
+        def pt(tdeg):
+            t = np.radians(tdeg)
+            return cx + radius * np.cos(t), cy + radius * np.sin(t)
+
+        x_end, y_end = pt(theta2)
+        x_back, y_back = pt(theta2 - delta_angle)
+
+        # arrowhead from a point slightly before the end -> the end
+        ax.annotate("",
+                    xy=(x_end, y_end),
+                    xytext=(x_back, y_back),
+                    arrowprops=dict(arrowstyle="-|>", color=color, lw=lw, mutation_scale=mutation_scale))
+    def draw_symmetry(color="darkturquoise"):
+        ax.text(1.8, -0.5, r"$[C_2||C_{4z}t]$", ha="center", va="center", color=color)
+
+        add_circular_arrow(center=(3, -1), radius=0.25, theta1=90, theta2=180, color=color)
+        add_circular_arrow(center=(3.5, -0.5), radius=0.25, theta1=135, theta2=225, color=color)
+        add_circular_arrow(center=(3.5, -1.5), radius=0.25, theta1=135, theta2=225, color=color)
+
+    def draw_sublattice_labels():
+        ax.text(0, -1.15, "SL A", ha="center", va="top", color="blue")
+        ax.text(0, -2.15, "SL B", ha="center", va="top", color="red")
+
+        ax.text(0, -1.45, r"spin up $\uparrow$", size=10, ha="center", va="top", color="blue")
+        ax.text(0, -2.45, r"spin down $\downarrow$", size=10, ha="center", va="top", color="red")
+
+
+    draw_symmetry()
+    draw_exchange_interactions(text_size=12)
+    draw_wigner_seitz()
+    draw_points()
+    draw_lattice_vectors()
+    draw_lattice_constant(0.4)
+    draw_axes(np.array([4.6, -4.6]), 1.9)
+    draw_sublattice_labels()
+
+    ax.set_xlim(-0.8, 5.8)
+    ax.set_ylim(-5.673, 0.2701)
+
+    # print(ax.get_xlim())
+    # print(ax.get_ylim())
+
+    ax.set_aspect("equal")
+    ax.set_axis_off()
+
+    if save_name:
+        fig.savefig(save_name, bbox_inches='tight', pad_inches=0)
+
+    plt.show()
+
+
 # %% Main
 
-
-save_name = "out/theoretical_figures/afm_modes.pdf"
 
 if __name__ == '__main__':
     # llg_equation("out/theoretical_figures/llg_equation.pdf")
@@ -623,14 +839,17 @@ if __name__ == '__main__':
 
     # spin_waves("out/theoretical_figures/spin_wave.pdf")
 
-    afm_modes("out/theoretical_figures/afm_modes.pdf")
+    # afm_modes("out/theoretical_figures/afm_modes.pdf")
 
-
+    toy_model("out/theoretical_figures/toy_model.pdf")
 
 # %% cropping testing
 
-crop_pdf_to_content(save_name,
-                    f"{save_name[:-4]}_cropped.pdf",
-                    margin_y0=250, margin_y1=0, margin_x0=100, margin_x1=150)
+save_name = "out/theoretical_figures/toy_model.pdf"
 
+test = False
 
+if test:
+    crop_pdf_to_content(save_name,
+                        f"{save_name[:-4]}_cropped.pdf",
+                        margin_y0=250, margin_y1=0, margin_x0=100, margin_x1=150)
