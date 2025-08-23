@@ -1,6 +1,7 @@
 import numpy as np
 
 import matplotlib as mpl
+
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 
@@ -16,11 +17,15 @@ import src.physics as physics
 import src.spinconf_util as spinconf_util
 import src.helper as helper
 
+import os
+os.environ["DISPLAY"] = ":100"  # <-- Python way, not `export`
+
 seperator = "-------------------------------------------------------------\n"
 
 plot_paths = True
 
 # %% configure matplotlib
+mpl.use('Agg')
 # mpl.use('Qt5Agg')   # for interactive plots https://stackoverflow.com/questions/49844189/how-to-get-interactive-plot-of-pyplot-when-using-pycharm
 # See here: https://matplotlib.org/stable/users/explain/figure/backends.html
 
@@ -1843,10 +1848,24 @@ def spin_current_nernst(config_path, step_direction='x', is_tilted=True, distanc
 
 def presenting_data_07():
     # spin_current_nernst("/data/scc/marian.gunsch/07_AM_tilted_xTstep_y/spin-configs-99-999/spin-config-99-999-005000.dat")
-    spin_current_nernst("/data/scc/marian.gunsch/07_AM_tilted_xTstep_yABC_/spin-configs-99-999/spin-config-99-999-005000.dat",
-                        save_suffix="110_", title_suffix="110_")
-    spin_current_nernst("/data/scc/marian.gunsch/07_AM_tilted_xTstep_yABC_/spin-configs-99-999/spin-config-99-999-005000.dat",
-                        distance_from_step=30, save_suffix="110_", title_suffix="110_")
+    # spin_current_nernst("/data/scc/marian.gunsch/07_AM_tilted_xTstep_yABC_/spin-configs-99-999/spin-config-99-999-005000.dat",
+    #                     save_suffix="110_", title_suffix="110_")
+    # spin_current_nernst("/data/scc/marian.gunsch/07_AM_tilted_xTstep_yABC_/spin-configs-99-999/spin-config-99-999-005000.dat",
+    #                     distance_from_step=30, save_suffix="110_", title_suffix="110_")
+    #
+    # spin_current_nernst(
+    #     "/data/scc/marian.gunsch/07_AM_tilted_xTstep_yABC/spin-configs-99-999/spin-config-99-999-005000.dat",
+    #     save_suffix="110", title_suffix="110")
+    # spin_current_nernst(
+    #     "/data/scc/marian.gunsch/07_AM_tilted_xTstep_yABC/spin-configs-99-999/spin-config-99-999-005000.dat",
+    #     distance_from_step=30, save_suffix="110", title_suffix="110")
+
+    spin_current_nernst(
+        "/data/scc/marian.gunsch/09/09_AM_tilted_xTstep_ynyABC_/spin-configs-99-999/spin-config-99-999-005000.dat",
+        save_suffix="110", title_suffix="110")
+    spin_current_nernst(
+        "/data/scc/marian.gunsch/09/09_AM_tilted_xTstep_ynyABC_/spin-configs-99-999/spin-config-99-999-005000.dat",
+        distance_from_step=30, save_suffix="110", title_suffix="110")
 
 # %% 08 Magnetization Nernst / Verifying Spin Nernst (2/?)
 
@@ -2052,13 +2071,13 @@ def presenting_data_08():
     #     save_suffix="tilt_yTstep_T4"
     # )
     nernst_manual_layer_averaging(
-        "/data/scc/marian.gunsch/08_xTstep/T4/spin-configs-99-999/spin-config-99-999-005000.dat",
+        "/data/scc/marian.gunsch/08/08_xTstep/T4/spin-configs-99-999/spin-config-99-999-005000.dat",
         is_tilted=False,
         title_suffix="Tstep in [100], T=4",
         save_suffix="xTstep_T4"
     )
     nernst_manual_layer_averaging(
-        "/data/scc/marian.gunsch/08_yTstep/T4/spin-configs-99-999/spin-config-99-999-005000.dat",
+        "/data/scc/marian.gunsch/08/08_yTstep/T4/spin-configs-99-999/spin-config-99-999-005000.dat",
         'y',
         is_tilted=False,
         title_suffix="Tstep in [010], T=4",
@@ -2069,7 +2088,7 @@ def presenting_data_08():
 
 # %% Main
 
-if __name__ == '__main__':
+def main():
     # presenting_data_01()
 
     # presenting_data_02()
@@ -2090,4 +2109,7 @@ if __name__ == '__main__':
 
     pass
 
+
+if __name__ == '__main__':
+    main()
 

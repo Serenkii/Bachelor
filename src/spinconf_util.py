@@ -50,6 +50,34 @@ def select_SL_and_component(value_arr, sublattice, spin_component):
     return value_arr[:, :, :, sl_dict[sublattice], spin_dict[spin_component]]
 
 
+def read_spin_config_dat_raw(path, empty_filler=np.nan, fixed_version=True):
+    if not fixed_version:
+        raise NotImplementedError("Only the 'fixed' version is implemented. By that, I mean with different order of "
+                                  "x, y, z")
+    number_sublattices = 2
+
+    data = np.loadtxt(path)
+
+    # data[1, -1] = 5
+
+    i, j, k, sl = (
+        data[:, 0].astype(int),
+        data[:, 1].astype(int),
+        data[:, 2].astype(int),
+        data[:, 3].astype(int) - 1  # sublattice 1 or 2 (now called SL 0 and 1)
+    )
+
+    shape = (np.max(i) + 1, np.max(j) + 1, np.max(k) + 1, number_sublattices, 3)
+
+    value_grid = np.zeros(shape)
+    value_grid[:] = empty_filler
+    value_grid[i, j, k, sl, 0] = data[:, 4]  # 4=x, 5=y, 6=z
+    value_grid[i, j, k, sl, 1] = data[:, 5]  # (components of spin)
+    value_grid[i, j, k, sl, 2] = data[:, 6]  # j i k instead of i j k because indices are weird... TODO: idk about that
+
+    return value_grid
+
+
 def read_spin_config_dat(path, is_tilted=True, shift=None, fixed_version=False):
     """
     Reads the data in a spin configuration file and formats it into a multidimensional array. The first two components
@@ -330,7 +358,7 @@ def average_z_layers(data, *args, force_return_tuple=False):
     return return_tuple
 
 
-#%%
+# %% Testing and stuff
 
 """
 TODO:
