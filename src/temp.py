@@ -145,3 +145,56 @@ SL_B_mins = np.nanmin(SL_B, axis=0)
 #     print(f"sse_avg_spin_A = {sse_avg_spin_A:.5f} \t sse_avg_spin_B = {sse_avg_spin_B:.5f}")
 #     print(f"sne_avg_spin_A = {sne_avg_spin_A:.5f} \t sne_avg_spin_B = {sne_avg_spin_B:.5f}")
 
+
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.collections import PolyCollection
+
+nx, ny = 512, 512
+
+# Example data: define values on the full checkerboard lattice
+x = np.arange(nx)
+y = np.arange(ny)
+X, Y = np.meshgrid(x, y)
+
+# Data on integer lattice
+Z1 = np.sin(X) + np.cos(Y)
+
+# Data on half-integer lattice (offset grid)
+xh = np.arange(nx-1) + 0.5
+yh = np.arange(ny-1) + 0.5
+Xh, Yh = np.meshgrid(xh, yh)
+Z2 = np.sin(Xh) + np.cos(Yh)
+
+# Function to build diamonds
+def make_diamonds(X, Y, Z):
+    polys, colors = [], []
+    for (cx, cy, val) in zip(X.ravel(), Y.ravel(), Z.ravel()):
+        colors.append(val)
+        poly = [(cx, cy+0.5),
+                (cx+0.5, cy),
+                (cx, cy-0.5),
+                (cx-0.5, cy)]
+        polys.append(poly)
+    return polys, colors
+
+# Build both sets
+polys1, colors1 = make_diamonds(X, Y, Z1)
+polys2, colors2 = make_diamonds(Xh, Yh, Z2)
+
+# Combine
+polys = polys1 + polys2
+colors = colors1 + colors2
+
+# Plot
+fig, ax = plt.subplots()
+collection = PolyCollection(polys, array=np.array(colors),
+                            cmap="coolwarm"#, edgecolors="k", linewidth=0.3
+                            )
+ax.add_collection(collection)
+ax.autoscale_view()
+ax.set_aspect("equal")
+
+plt.colorbar(collection, ax=ax, label="Value")
+plt.show()
+

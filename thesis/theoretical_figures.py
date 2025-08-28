@@ -3,6 +3,7 @@ import thesis.mpl_configuration
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from mpl_toolkits.axes_grid1 import ImageGrid
 
 # %%
 
@@ -62,6 +63,7 @@ from matplotlib.patches import ArrowStyle
 from mpl_toolkits.mplot3d import proj3d
 import matplotlib.patches as patches
 from matplotlib.path import Path
+
 
 class Arrow3D(FancyArrowPatch):
 
@@ -640,8 +642,8 @@ def toy_model(save_name=None):
         arrow = FancyArrowPatch(start, end, **arrow_kwargs)
         ax.add_patch(arrow)
         ax.text(end[0], end[1] - distance_txt, r"$x$", va="top", ha="right")
-        ax.text(end[0], end[1] + distance_txt, r"$\hkl[100]$",  va="bottom", ha="center")
-        ax.text(start[0], start[1] + distance_txt, r"$\hkl[-100]$",  va="bottom", ha="center")
+        ax.text(end[0], end[1] + distance_txt, r"$\hkl[100]$", va="bottom", ha="center")
+        ax.text(start[0], start[1] + distance_txt, r"$\hkl[-100]$", va="bottom", ha="center")
 
         start = position - np.array([0, box_width / 2])
         end = position + np.array([0, box_width / 2])
@@ -787,6 +789,7 @@ def toy_model(save_name=None):
                     xy=(x_end, y_end),
                     xytext=(x_back, y_back),
                     arrowprops=dict(arrowstyle="-|>", color=color, lw=lw, mutation_scale=mutation_scale))
+
     def draw_symmetry(color="darkturquoise"):
         ax.text(1.8, -0.5, r"$[C_2||C_{4z}t]$", ha="center", va="center", color=color)
 
@@ -800,7 +803,6 @@ def toy_model(save_name=None):
 
         ax.text(0, -1.45, r"spin up $\uparrow$", size=10, ha="center", va="top", color="blue")
         ax.text(0, -2.45, r"spin down $\downarrow$", size=10, ha="center", va="top", color="red")
-
 
     draw_symmetry()
     draw_exchange_interactions(text_size=12)
@@ -826,6 +828,289 @@ def toy_model(save_name=None):
     plt.show()
 
 
+# %% Spin Configuration tilted/nontilted
+
+def generate_tilted_config(ax, kwargs_empty, kwargs_A, kwargs_B, point_kwargs, size_i, size_j):
+    for i in range(size_i):
+        for j in range(size_j):
+            if (i + j) % 2 == 1:
+                kwargs = kwargs_empty
+            elif i % 2 == 0:
+                kwargs = kwargs_A
+            else:
+                kwargs = kwargs_B
+
+            ax.plot(i, j, **point_kwargs, **kwargs)
+
+
+def generate_nontilted_config(ax, kwargs_empty, kwargs_A, kwargs_B, point_kwargs, size_i, size_j):
+    for i in range(size_i):
+        for j in range(size_j):
+            if (i + j) % 2 == 1:
+                kwargs = kwargs_A
+            else:
+                kwargs = kwargs_B
+
+            ax.plot(i, j, **point_kwargs, **kwargs)
+
+
+def create_imagegrid_config(tilted, kwargs_empty, kwargs_A, kwargs_B, point_kwargs):
+    generator_func = generate_tilted_config if tilted else generate_nontilted_config
+    kwargs_empty = kwargs_empty or dict()
+
+    fig = plt.figure(figsize=[6.5, 6])
+    grid = ImageGrid(
+        fig, 111, nrows_ncols=(2, 2),
+        axes_pad=(0.2, 0.2),  # (horizontal, vertical) pad in inches → equal visually
+        share_all=False,
+        label_mode='L'  # show labels only on left & bottom
+    )
+    axs = np.array([ax for ax in grid]).reshape(2, 2)
+
+    for ax in axs.flat:
+        ax.set_aspect('equal', 'box')
+        generator_func(ax, kwargs_empty, kwargs_A, kwargs_B, point_kwargs, 4, 4)
+        ax.set_xlim(-0.8, 3.8)
+        ax.set_ylim(-0.8, 3.8)
+
+    for ax in [axs[0, 1], axs[1, 1]]:
+        ax.tick_params(left=False)
+        ax.spines.left.set_visible(False)
+    for ax in [axs[0, 0], axs[0, 1]]:
+        ax.tick_params(bottom=False)
+        ax.spines.bottom.set_visible(False)
+    # for ax in axs.flat:
+    #     ax.spines.top.set_visible(False)
+    #     ax.spines.right.set_visible(False)
+    axs[1, 0].spines.top.set_visible(False)
+    axs[1, 1].spines.top.set_visible(False)
+    axs[0, 0].spines.right.set_visible(False)
+    axs[1, 0].spines.right.set_visible(False)
+    axs[0, 0].set_yticks([0, 1, 2, 3], labels=["$N_j - 4$", "$N_j - 3$", "$N_j - 2$", "$N_j - 1$"], rotation=45)
+    axs[1, 0].set_xticks([0, 1, 2, 3])
+    axs[1, 1].set_xticks([0, 1, 2, 3], labels=["$N_i - 4$", "$N_i - 3$", "$N_i - 2$", "$N_i - 1$"], rotation=-45)
+
+    d = .5  # size of break diagonal
+    kwargs = dict(marker=[(-1., -d), (1., d)], markersize=12,
+                  linestyle="none", color='k', mec='k', mew=1, clip_on=False)
+
+    # axis breaks
+    for i in [0, 1]:
+        axs[0, i].plot([i, ], [0, ], transform=axs[0, i].transAxes, **kwargs)
+        axs[1, i].plot([i, ], [1, ], transform=axs[1, i].transAxes, **kwargs)
+    kwargs['marker'] = [(d, 1.), (-d, -1.)]
+    for i in [1, 0]:
+        axs[i, 0].plot([1, ], [1 - i, ], transform=axs[i, 0].transAxes, **kwargs)
+        axs[i, 1].plot([0, ], [1 - i, ], transform=axs[i, 1].transAxes, **kwargs)
+
+    # axis labels
+    x_dir = "110" if tilted else "100"
+    y_dir = "-110" if tilted else "010"
+    fig.text(0.5, 0.01, rf"$i \parallel \hkl[{x_dir}]$", ha="center", va="bottom", size='large')
+    fig.text(0.01, 0.5, rf"$j \parallel \hkl[{y_dir}]$", ha="left", va="center", size='large', rotation=90)
+
+    return fig, axs, grid
+
+
+def average_area_bracket(ax, pos0, pos1, horizontal, kwargs=dict(color="green", marker="", linewidth=2),
+                         dist=0.4, reach_solid=0, reach_dotted=0.8, reach_looselydotted=1.6):
+    solid_bracket = ([reach_solid, -dist, -dist, reach_solid], [pos1 + dist, pos1 + dist, pos0 - dist, pos0 - dist])
+    dotted_line1 = ([reach_solid, reach_dotted], [pos1 + dist, pos1 + dist])
+    dotted_line0 = ([reach_solid, reach_dotted], [pos0 - dist, pos0 - dist])
+    ldotted_line1 = ([reach_dotted, reach_looselydotted], [pos1 + dist, pos1 + dist])
+    ldotted_line0 = ([reach_dotted, reach_looselydotted], [pos0 - dist, pos0 - dist])
+
+    if not horizontal:
+        solid_bracket = solid_bracket[::-1]
+        dotted_line1 = dotted_line1[::-1]
+        dotted_line0 = dotted_line0[::-1]
+        ldotted_line1 = ldotted_line1[::-1]
+        ldotted_line0 = ldotted_line0[::-1]
+
+    ax.plot(*solid_bracket, **kwargs, linestyle="-")
+    ax.plot(*dotted_line0, **kwargs, linestyle="dotted")
+    ax.plot(*dotted_line1, **kwargs, linestyle="dotted")
+    ax.plot(*ldotted_line1, **kwargs, linestyle=(0, (1, 5)))
+    ax.plot(*ldotted_line0, **kwargs, linestyle=(0, (1, 5)))
+
+
+def spin_config_tilted(save_path=None):
+    kwargs_empty = dict(color="grey", alpha=0.5, markeredgecolor="k", markersize=5)
+    kwargs_A = dict(color="blue", markeredgecolor="k", markersize=8)
+    kwargs_B = dict(color="red", markeredgecolor="k", markersize=8)
+
+    point_kwargs = dict(linestyle="", marker="o")
+
+    fig, axs, grid = create_imagegrid_config(True, kwargs_empty, kwargs_A, kwargs_B, point_kwargs)
+    fig.suptitle("Tilted configuration")
+
+    # Interaction energies
+    def draw_exchange_interactions(ax, color_J1="green", color_J2_1="magenta", color_J2_2="purple", text_size=12):
+        shared_kwargs = dict(marker="", linestyle="-", zorder=1)
+        paths_x = dict(
+            J1=[[0, 2], [0, 2]],
+            J2_1=[[-1, 3], [2, 2]],
+            J2_2=[[-1, 2], [1, 1]]
+        )
+        paths_y = dict(
+            J1=[[2, 0], [0, 2]],
+            J2_1=[[1, 1], [2, -1]],
+            J2_2=[[2, 2], [3, -1]]
+        )
+        paths_kwargs = dict(
+            J1=[dict(color=color_J1, lw=2), dict(color=color_J1, lw=2)],
+            J2_1=[dict(color=color_J2_1, lw=1.8), dict(color=color_J2_1, lw=1.8)],
+            J2_2=[dict(color=color_J2_2, lw=1.8), dict(color=color_J2_2, lw=1.8)]
+        )
+
+        for J in paths_x:
+            for path_x, path_y, path_kwargs in zip(paths_x[J], paths_y[J], paths_kwargs[J]):
+                ax.plot(path_x, path_y, **path_kwargs, **shared_kwargs)
+
+        # Text
+        previous_font_size = mpl.rcParams["font.size"]
+        mpl.rcParams["font.size"] = text_size
+
+        box = dict(
+            boxstyle="circle",
+            facecolor="white",  # background color
+            alpha=0.7,  # transparency (0 = transparent, 1 = opaque)
+            edgecolor="none",  # no border
+            pad=0.2  # small padding around text
+        )
+        ax.text(0.5, 0.5, "$J_1$", va="center", ha="center", color=color_J1, bbox=box)
+        ax.text(2, 1, "$J_2$", va="center", ha="center", color=color_J2_1, bbox=box)
+        ax.text(1, 2, "$J_2'$", va="center", ha="center", color=color_J2_2, bbox=box)
+
+        mpl.rcParams["font.size"] = previous_font_size
+
+    draw_exchange_interactions(axs[0, 1])
+
+    # Unit cell
+    color = "darkturquoise"
+    pos_x = 0
+    pos_y = 2
+    axs[1, 0].plot([pos_x - 0.5, pos_x - 0.5, pos_x + 1.5, pos_x + 1.5, pos_x - 0.5],
+                   [pos_y - 0.5, pos_y + 1.5, pos_y + 1.5, pos_y - 0.5, pos_y - 0.5], color=color, marker="",
+                   linestyle="-", linewidth=3, solid_capstyle='round')
+    axs[1, 0].plot(pos_x + 0.5, pos_y + 0.5, marker="o", markersize=4, color=color)
+    fig.text(0.5, 1, "unit cell", color=color, transform=axs[1, 0].transAxes,
+             ha="center", va="center", clip_on=False)
+
+    average_area_bracket(axs[0, 0], 2, 3, True)
+    axs[0, 0].text(0.5, 2.5, "profile averaging", color="green", va="center", ha="left")
+    average_area_bracket(axs[1, 1], 0, 1, False)
+    average_area_bracket(axs[1, 1], 2, 3, False)
+
+    # Lattice constant
+    def draw_lattice_constant(ax, distance=0.2):
+        arrow_kwargs = dict(shrinkA=0, shrinkB=0, mutation_scale=3, lw=1, arrowstyle="|-|", color="k")
+
+        bar = FancyArrowPatch((2 + distance, 0 - distance), (3 + distance, 1 - distance), **arrow_kwargs)
+        ax.add_patch(bar)
+        bar = FancyArrowPatch((0, 0 - distance * 1.4), (1, 0 - distance * 1.4), **arrow_kwargs)
+        ax.add_patch(bar)
+
+        ax.text(2.5 + distance - 0.06, 0.5 - distance + 0.06, r"$a$", va="bottom", ha="right")
+        ax.text(0.5, 0 - distance * 1.4 - 0.1, r"$\tilde{a}$", va="top", ha="center")
+
+    draw_lattice_constant(axs[1, 0])
+
+    if save_path:
+        fig.savefig(save_path)
+
+    plt.show()
+
+
+def spin_config_nontilted(save_path=None):
+    kwargs_A = dict(color="blue", markeredgecolor="k", markersize=8)
+    kwargs_B = dict(color="red", markeredgecolor="k", markersize=8)
+
+    point_kwargs = dict(linestyle="", marker="o")
+
+    fig, axs, grid = create_imagegrid_config(False, None, kwargs_A, kwargs_B, point_kwargs)
+    fig.suptitle("Aligned configuration")
+
+    def draw_exchange_interactions(ax, color_J1="green", color_J2_1="magenta", color_J2_2="purple", text_size=12):
+        shared_kwargs = dict(marker="", linestyle="-", zorder=1)
+        paths_x = dict(
+            J1=[[1, 3], [2, 2]],
+            J2_1=[[1, 3], [0, 2]],
+            J2_2=[[1, 3], [1, 3]]
+        )
+        paths_y = dict(
+            J1=[[2, 2], [1, 3]],
+            J2_1=[[3, 1], [1, 3]],
+            J2_2=[[1, 3], [2, 0]]
+        )
+        paths_kwargs = dict(
+            J1=[dict(color=color_J1, lw=2), dict(color=color_J1, lw=2)],
+            J2_1=[dict(color=color_J2_1, lw=1.8), dict(color=color_J2_1, lw=1)],
+            J2_2=[dict(color=color_J2_2, lw=1.8), dict(color=color_J2_2, lw=1)]
+        )
+
+        for J in paths_x:
+            for path_x, path_y, path_kwargs in zip(paths_x[J], paths_y[J], paths_kwargs[J]):
+                ax.plot(path_x, path_y, **path_kwargs, **shared_kwargs)
+
+        # Text
+        previous_font_size = mpl.rcParams["font.size"]
+        mpl.rcParams["font.size"] = text_size
+
+        box = dict(
+            boxstyle="circle",
+            facecolor="white",  # background color
+            alpha=0.7,  # transparency (0 = transparent, 1 = opaque)
+            edgecolor="none",  # no border
+            pad=0.2  # small padding around text
+        )
+        ax.text(2.5, 2, "$J_1$", va="center", ha="center", color=color_J1, bbox=box)
+        ax.text(1.5, 2.5, "$J_2$", va="center", ha="center", color=color_J2_1, bbox=box)
+        ax.text(1.5, 1.5, "$J_2'$", va="center", ha="center", color=color_J2_2, bbox=box)
+
+        mpl.rcParams["font.size"] = previous_font_size
+
+    draw_exchange_interactions(axs[0, 1])
+
+    def draw_lattice_constant(ax, distance=0.2):
+        arrow_kwargs = dict(shrinkA=0, shrinkB=0, mutation_scale=3, lw=1, arrowstyle="|-|", color="k")
+
+        bar = FancyArrowPatch((2, 0 - distance * 1.4), (3, 0 - distance * 1.4), **arrow_kwargs)
+        ax.add_patch(bar)
+
+        ax.text(2.5, 0 - distance - 0.1, r"$a$", va="top", ha="center")
+
+    draw_lattice_constant(axs[1, 0])
+
+    def draw_unit_cell(ax, pos_x, pos_y, color="darkturquoise", **kwargs):
+        ax.plot([pos_x - 0.5, pos_x + 0.5, pos_x + 1.5, pos_x + 0.5, pos_x - 0.5],
+                [pos_y + 0.5, pos_y + 1.5, pos_y + 0.5, pos_y - 0.5, pos_y + 0.5], marker="",
+                solid_capstyle='round', color=color, **kwargs)
+        ax.plot(pos_x + 0.5, pos_y + 0.5, marker="o", markersize=2, color=color)
+
+    # Unit cell
+    color = "darkturquoise"
+    draw_unit_cell(axs[1, 0], 0, 2, color=color, linestyle="-", linewidth=3)
+    draw_unit_cell(axs[1, 0], 0, 0, color=color, linestyle="-", linewidth=2)
+    draw_unit_cell(axs[1, 0], 1, 1, color=color, linestyle="-", linewidth=1)
+    draw_unit_cell(axs[1, 0], 1, 3, color=color, linestyle="-", linewidth=1)
+    draw_unit_cell(axs[1, 0], -1, 1, color=color, linestyle=":", linewidth=2)
+    # draw_unit_cell(axs[1, 0], 1, -1, color=color, linestyle=":", linewidth=2)
+
+    fig.text(0.5, 0.0, "unit cells", color=color, transform=axs[0, 0].transAxes,
+             ha="center", va="center", clip_on=False)
+
+    average_area_bracket(axs[0, 0], 3, 3, True)
+    axs[0, 0].text(1.6, 2.5, "profile averaging", color="green", va="center", ha="left", clip_on=False)
+    average_area_bracket(axs[1, 1], 2, 2, False)
+    average_area_bracket(axs[1, 1], 3, 3, False)
+
+    if save_path:
+        fig.savefig(save_path)
+
+    plt.show()
+
+
 # %% Main
 
 
@@ -841,7 +1126,10 @@ if __name__ == '__main__':
 
     # afm_modes("out/theoretical_figures/afm_modes.pdf")
 
-    toy_model("out/theoretical_figures/toy_model.pdf")
+    # toy_model("out/theoretical_figures/toy_model.pdf")
+
+    spin_config_tilted("out/theoretical_figures/config_tilted.pdf")
+    spin_config_nontilted("out/theoretical_figures/config_nontilted.pdf")
 
 # %% cropping testing
 
