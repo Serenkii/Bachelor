@@ -10,10 +10,10 @@ import thesis.subsections.sne as sne
 
 
 def main():
-    miscellaneous.main()
+    # miscellaneous.main()
     equilibrium.main()
-    sse.main()
-    sne.main()
+    # sse.main()
+    # sne.main()
 
 
 if __name__ == '__main__':

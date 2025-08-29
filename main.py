@@ -18,7 +18,7 @@ import src.spinconf_util as spinconf_util
 import src.helper as helper
 
 import os
-os.environ["DISPLAY"] = ":100"  # <-- Python way, not `export`
+# os.environ["DISPLAY"] = ":100"  # <-- Python way, not `export`
 
 seperator = "-------------------------------------------------------------\n"
 
@@ -866,8 +866,8 @@ def spin_conservation(
                 norm[info + " B"] = np.mean(np.sqrt(sel(conf_data, "B", "x") ** 2 +
                                                sel(conf_data, "B", "y") ** 2 +
                                                sel(conf_data, "B", "z") ** 2))
-                print(f"{info}, SL A: \t{norm[info + " A"]:.4f}\n"
-                      f"{info}, SL B: \t{norm[info + " B"]:.4f}")
+                # print(f"{info}, SL A: \t{norm[info + " A"]:.4f}\n"
+                #       f"{info}, SL B: \t{norm[info + " B"]:.4f}")
         print()
     else:
         print(f"Files {path_config_nodmi} and {path_config_dmi} were not created yet!\n")

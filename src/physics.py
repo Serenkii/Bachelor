@@ -11,6 +11,12 @@ import src.bulk_util as bulk_util
 
 import src.helper as helper
 
+lattice_constant = 1
+grid_constant = lattice_constant
+grid_constant_tilted = grid_constant / np.sqrt(2)
+lattice_constant_tilted = 2 * grid_constant_tilted
+
+
 def neel_vector(Sz_A, Sz_B, do_time_avg=False):
     """
     Returns the neel vector (value) as an array, where each entry is the value for a specific layer index.
@@ -33,6 +39,14 @@ def magnetization(Sz_A, Sz_B, do_time_avg=False):
     if do_time_avg:
         return 0.5 * (util.time_avg(Sz_A) + util.time_avg(Sz_B))
     return 0.5 * (Sz_A + Sz_B)
+
+
+def index_to_position(array, tilted):
+    if tilted:
+        return array * lattice_constant_tilted
+    return array * lattice_constant
+
+
 
 
 # Seems to be working
