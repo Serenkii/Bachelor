@@ -38,5 +38,5 @@ def alt_configure():
 
 
 # Optionally, apply at import time:
-configure_backends(None, ssh=False)     # "Qt5Agg"
+configure_backends("module://backend_interagg", ssh=False)     # "Qt5Agg"
 configure()
