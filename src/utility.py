@@ -75,3 +75,36 @@ def linear_fit_func(x, m, c):
 def perform_exp_fit():
     pass
 
+
+
+def add_axis_break_marking(ax, position, orientation, size=12, **kwargs):
+    d = .5    # size of break diagonal
+
+    plot_kwargs = dict(marker=[(-1., -d), (1., d)], markersize=size,
+                       linestyle="none", color='k', mec='k', mew=1, clip_on=False)
+
+    orientation = str(orientation).lower()
+    if orientation in ["horizontal", "h", 1]:
+        kwargs['marker'] = [(d, 1.), (-d, -1.)]
+    elif orientation in ["vertical", "v", 0]:
+        pass
+    else:
+        raise ValueError(f"Unknown orientation: {orientation}")
+
+    for key in kwargs:
+        plot_kwargs[key] = kwargs[key]
+
+    position = str(position).lower()
+    if position in ["top left", "tl", "0", "left top", "lt"]:
+        x, y = 0, 1
+    elif position in ["top right", "tr", "1", "right top", "rt"]:
+        x, y = 1, 1
+    elif position in ["bottom left", "bot left", "bl", "2", "left bottom", "left bot", "lb"]:
+        x, y = 0, 0
+    elif position in ["bottom right", "bot right", "br", "3", "right bottom", "right bot", "rb"]:
+        x, y = 1, 0
+    else:
+        raise ValueError(f"Unknown position: {position}")
+    ax.plot([x, ], [y, ], transform=ax.transAxes, **plot_kwargs)
+    return ax
+

@@ -141,6 +141,25 @@ def broken_axes_boundary_plot(bottom_x, bottom_y, left_x, left_y, x_min=0, x_max
         x2_bottom = profile_axs[3].get_position().get_points()[0][0]
         fig.text((x1_bottom + x2_bottom) * 0.5, y_bottom - pad_bottom, x1_label, va="top", ha="center")
 
+    def broken_axis_markings():
+        size = 7
+        util.add_axis_break_marking(ax_left_top, "bottom left", "vertical", size)
+        util.add_axis_break_marking(ax_left_top, "bottom right", "vertical", size)
+        util.add_axis_break_marking(ax_left_bottom, "top left", "vertical", size)
+        util.add_axis_break_marking(ax_left_bottom, "top right", "vertical", size)
+        util.add_axis_break_marking(ax_bottom_left, "top right", "horizontal", size)
+        util.add_axis_break_marking(ax_bottom_left, "bottom right", "horizontal", size)
+        util.add_axis_break_marking(ax_bottom_right, "top left", "horizontal", size)
+        util.add_axis_break_marking(ax_bottom_right, "bottom left", "horizontal", size)
+        util.add_axis_break_marking(ax00, "top right", "horizontal", size)
+        util.add_axis_break_marking(ax00, "bottom left", "vertical", size)
+        util.add_axis_break_marking(ax01, "top left", "horizontal", size)
+        util.add_axis_break_marking(ax01, "bottom right", "vertical", size)
+        util.add_axis_break_marking(ax10, "bottom right", "horizontal", size)
+        util.add_axis_break_marking(ax10, "top left", "vertical", size)
+        util.add_axis_break_marking(ax11, "bottom left", "horizontal", size)
+        util.add_axis_break_marking(ax11, "top right", "vertical", size)
+
 
     place_labels((ax_left_top, ax_left_bottom, ax_bottom_left, ax_bottom_right))
 
@@ -149,6 +168,7 @@ def broken_axes_boundary_plot(bottom_x, bottom_y, left_x, left_y, x_min=0, x_max
     enforce_xlims()
     enforce_ylims()
 
+    broken_axis_markings()
 
     # Left broken 1D plots
     ax_left_top.plot(left_y, left_x, **shared_kwargs)
