@@ -1,7 +1,10 @@
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
 import matplotlib.colors as colors
+from matplotlib.collections import PolyCollection
+
 
 import src.utility as util
 import src.mag_util as mag_util
@@ -194,6 +197,22 @@ def handle_config_data_tilted(config_data1, config_data2):
     return average_magn
 
 
+def handle_config_data_aligned(config_data1, config_data2):
+    data1 = spinconf_util.average_z_layers(
+        spinconf_util.select_SL_and_component(config_data1, "A", "z") +
+        spinconf_util.select_SL_and_component(config_data1, "B", "z")
+    )
+    # This works because no points with different SL occupy the same position and the positions with no atom have been
+    # set to zero
+    data2 = spinconf_util.average_z_layers(
+        spinconf_util.select_SL_and_component(config_data2, "A", "z") +
+        spinconf_util.select_SL_and_component(config_data2, "B", "z")
+    )
+    average_config = np.mean(np.concatenate((data1, data2), axis=2), axis=2)    # avg over z
+
+    return spinconf_util.average_aligned_data(average_config, "default", True, True)
+
+
 def place_colorbar(fig, axs, pcolormesh, pad=0.02, width=0.02, label=""):
     # compute bounding box of the 2x2 main grid
     x1 = max(ax.get_position().x1 for ax in axs)
@@ -225,8 +244,38 @@ def plot_colormap_tilted(fig, axs, x, y, magnetization, y_label=""):
     # fig.subplots_adjust(left=0.1)
 
 
-def plot_colormap_aligned():
-    pass
+def plot_colormap_aligned(fig, axs, x_centered, y_centered, magn_centered, x_shifted, y_shifted, magn_shifted,
+                          y_label="", vmin=-0.012, vmax=0.012):
+    X1, Y1 = np.meshgrid(x_centered, y_centered)
+    Z1 = magn_centered
+    X2, Y2 = np.meshgrid(x_shifted, y_shifted)
+    Z2 = magn_shifted
+
+    def make_diamonds(X, Y, Z, size=2.0):
+        polys, values = [], []
+        for (cx, cy, val) in zip(X.ravel(), Y.ravel(), Z.ravel()):
+            values.append(val)
+            poly = [(cx, cy + 0.5 * size),
+                    (cx + 0.5 * size, cy),
+                    (cx, cy - 0.5 * size),
+                    (cx - 0.5 * size, cy)]
+            polys.append(poly)
+        return polys, values
+
+    polys1, values1 = make_diamonds(X1, Y1, Z1, size=x_centered[1]-x_centered[0])
+    polys2, values2 = make_diamonds(X2, Y2, Z2, size=x_shifted[1]-x_shifted[0])
+
+    polys = polys1 + polys2
+    values = values1 + values2
+
+    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax, clip=True)
+
+    for ax in axs:
+        collection = PolyCollection(polys, array=np.array(values),
+                                    cmap="RdBu_r", norm=norm)  # , edgecolors="k", linewidth=0.3
+        ax.add_collection(collection)
+    place_colorbar(fig, axs, collection, 0.02, 0.02, y_label)
+
 
 
 def boundary_effects():
@@ -258,17 +307,19 @@ def boundary_effects():
         magnetization_profile[direction] = physics.magnetization(profile_data[direction][0], profile_data[direction][1],
                                                                  True)
 
-        real_space[direction] = np.arange(0.5, magnetization_profile[direction].shape[0], 1.0)
+        real_space[direction] = np.arange(0.5, magnetization_profile[direction].shape[0], 1.0) if tilted_dict[direction] \
+            else np.arange(0.0, magnetization_profile[direction].shape[0], 1.0)
         real_space[direction] = physics.index_to_position(real_space[direction], tilted_dict[direction])
 
     # Configuration data
     config_data = dict()
-    for direction in ["110", "-110"]:
+    for direction in paths:
         config_data[direction] = spinconf_util.read_spin_config_dat(f"{paths[direction]}{config_suffix}",
-                                                                    is_tilted=True,
-                                                                    fixed_version=True)
+                                                                    is_tilted=tilted_dict[direction],
+                                                                    fixed_version=True, empty_value=0.0)
 
     # TILTED
+    print("Plotting tilted...")
     magn_config = handle_config_data_tilted(config_data["110"], config_data["-110"])
 
     fig_tilted, *axs_tilted = broken_axes_boundary_plot(
@@ -290,10 +341,25 @@ def boundary_effects():
 
 
     # ALIGNED
-    axs_aligned = broken_axes_boundary_plot(real_space["100"], magnetization_profile["100"],
+    print("Plotting aligned...")
+    x_centered, y_centered, magn_centered, x_shifted, y_shifted, magn_shifted = handle_config_data_aligned(config_data["100"], config_data["010"])
+
+    fig_aligned, *axs_aligned = broken_axes_boundary_plot(real_space["100"], magnetization_profile["100"],
                                             real_space["010"], magnetization_profile["010"],
-                                            real_space["100"][0], real_space["100"][-1],
-                                            physics.index_to_position(10, False))
+                                            physics.index_to_position(-0.5, False),
+                                            real_space["100"][-1] + physics.index_to_position(0.5, False),
+                                            physics.index_to_position(8.2, True),
+                                        r"position $x/a$ in direction \hkl[100]",
+                                        r"position $y/a$ in direction \hkl[010]",
+                                         r"$\langle S^z \rangle$")
+
+    plot_colormap_aligned(fig_aligned, axs_aligned,
+                          x_centered, y_centered, magn_centered, x_shifted, y_shifted, magn_shifted,
+                         r"$\langle S^z \rangle$")
+
+    fig_aligned.savefig("out/thesis/boundary_aligned_T2.pdf")
+
+    plt.show()
 
 
 def main():

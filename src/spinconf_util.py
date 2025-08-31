@@ -78,13 +78,14 @@ def read_spin_config_dat_raw(path, empty_filler=np.nan, fixed_version=True):
     return value_grid
 
 
-def read_spin_config_dat(path, is_tilted=True, shift=None, fixed_version=False):
+def read_spin_config_dat(path, is_tilted=True, shift=None, fixed_version=False, empty_value=np.nan):
     """
     Reads the data in a spin configuration file and formats it into a multidimensional array. The first two components
     correspond to the x and y position of each spin. The average over all z components is already taken, as the z layers
     are independent of each other anyway. IS THE AVERAGE TAKEN THO???? I DONT THINK SO!!!!!
     When handling the returned array, one can select a sublattice and a spin
     component via the select_SL_and_component function.
+    :param empty_value:
     :param shift:
     :param path: The path of the spin configuration file.
     :param is_tilted: If the tilted configuration is used. This method has not been tested for the non-tilted setup.
@@ -118,7 +119,7 @@ def read_spin_config_dat(path, is_tilted=True, shift=None, fixed_version=False):
         i, j = j, i     # TODO: I don't know about my past decisions...
 
     value_grid = np.zeros(shape)
-    value_grid[:] = np.nan
+    value_grid[:] = empty_value
     value_grid[i, j, k, sl, 0] = data[:, 4]  # 4=x, 5=y, 6=z
     value_grid[i, j, k, sl, 1] = data[:, 5]  # (components of spin)
     value_grid[i, j, k, sl, 2] = data[:, 6]  # j i k instead of i j k because indices are weird... TODO: idk about that
@@ -142,6 +143,41 @@ def read_spin_config_dat(path, is_tilted=True, shift=None, fixed_version=False):
         print("Warning! The returned value_grid contains nan-data because of the specific lattice structure.")
 
     return value_grid
+
+
+def average_aligned_data(data, method="default", include_edges=False, return_space_arr=False):
+    if method != "default":
+        raise NotImplementedError()
+
+    from scipy.signal import convolve2d
+
+    kernel = np.ones((2, 2))
+    # sum of values in each window
+    sums = convolve2d(data, kernel, mode='full')
+    # how many elements contributed (important at edges)
+    counts = convolve2d(np.ones_like(data), kernel, mode='full')
+    averages = sums / counts
+
+    if method == "default":
+        start_centered = 1
+        max_x = averages.shape[0] - start_centered
+        max_y = averages.shape[1] - start_centered
+        data_centered = averages[start_centered:max_x:2, start_centered:max_y:2]
+        start_shifted = 0 if include_edges else 2
+        max_x = averages.shape[0] - start_shifted
+        max_y = averages.shape[1] - start_shifted
+        data_shifted = averages[start_shifted:max_x:2, start_shifted:max_y:2]
+        if return_space_arr:
+            x_centered = np.linspace(start_centered - 0.5, start_centered + 2 * (data_centered.shape[0] - 1) - 0.5, data_centered.shape[0])
+            y_centered = np.linspace(start_centered - 0.5, start_centered + 2 * (data_centered.shape[1] - 1) - 0.5, data_centered.shape[1])
+            # x_centered = np.arange(start_centered - 0.5, 2 * data_centered.shape[0], step=2)
+            # y_centered = np.arange(start_centered - 0.5, 2 * data_centered.shape[1], step=2)
+            x_shifted = np.linspace(start_shifted - 0.5, start_shifted + 2 * (data_shifted.shape[0] - 1) - 0.5, data_shifted.shape[0])
+            y_shifted = np.linspace(start_shifted - 0.5, start_shifted + 2 * (data_shifted.shape[1] - 1) - 0.5, data_shifted.shape[1])
+            # x_shifted = np.arange(start_shifted - 0.5, 2 * (data_shifted.shape[0] - start_shifted), step=2)
+            # y_shifted = np.arange(start_shifted - 0.5, 2 * (data_shifted.shape[1] - start_shifted), step=2)
+            return x_centered, y_centered, data_centered, x_shifted, y_shifted, data_shifted
+        return data_centered, data_shifted
 
 
 def save_spin_config_as_npy(dat_path, save_path, is_tilted=True):
@@ -180,9 +216,12 @@ def read_spin_config_arrjob(path_prefix, path_suffix, start, stop=None, step=1, 
     return data_arr
 
 
-def plot_colormap(data_grid, title="", rel_step_pos=0.49, show_step=False, zoom=False, save_path=None, fig_comment=None, fixed_version=False):
+def plot_colormap(data_grid, title="", rel_step_pos=0.49, show_step=False, zoom=False, save_path=None, fig_comment=None,
+                  fixed_version=False, colorbar_min=None, colorbar_max=None):
     """
     Creates a 2d color-plot for a given data grid.
+    :param colorbar_max:
+    :param colorbar_min:
     :param data_grid: The data which will be plotted in a 2d color-plot.
     :param title: The title of the figure.
     :param rel_step_pos: The relative position of the temperature step. Is only used if show_step or zoom is True.
@@ -211,8 +250,14 @@ def plot_colormap(data_grid, title="", rel_step_pos=0.49, show_step=False, zoom=
     ax.set_title(title)
     if not fixed_version:
         im = ax.pcolormesh(X, Y, data_grid, norm=colors.CenteredNorm(), cmap='RdBu_r')
+        if colorbar_min and colorbar_max:
+            im = ax.pcolormesh(X, Y, data_grid, cmap='RdBu_r',
+                               vmin=colorbar_min, vmax=colorbar_max)
     else:
         im = ax.pcolormesh(X, Y, data_grid.T, norm=colors.CenteredNorm(), cmap='RdBu_r')
+        if colorbar_min and colorbar_max:
+            im = ax.pcolormesh(X, Y, data_grid.T, cmap='RdBu_r',
+                               vmin=colorbar_min, vmax=colorbar_max)
         # Note that the column index corresponds to the x-coordinate, and the row index corresponds to y.
         # https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.pcolormesh.html#axes-pcolormesh-grid-orientation
         # ahhh fuck numpy, why is this so confusing, why array[z,y,x] :( :( :(
@@ -370,7 +415,7 @@ for neel)
 - Implement possibility to convolute data or to e.g. average data e.g. in blocks of 2x2 or 4x4 or 8x8
 """
 
-_run =  [1,]
+_run =  [2,]
 
 if __name__ == "__main__" and 0 in _run:
 
@@ -468,3 +513,13 @@ if __name__ == "__main__" and 1 in _run:
     # tilted_path = "/data/scc/marian.gunsch/08_tilted_yTstep/T4/spin-configs-99-999/spin-config-99-999-000000.dat"
     #
     # data = read_spin_config_dat(tilted_path, True)
+
+
+if __name__ == "__main__" and 2 in _run:
+    np.random.default_rng(462)
+    data = 20 * (np.random.rand(8, 8) - 0.5)
+
+    # print(average_aligned_data(data, "default", False, False))
+    print(average_aligned_data(data, "default", False, True))
+    # print(average_aligned_data(data, "default", True, False))
+    print(average_aligned_data(data, "default", True, True))
