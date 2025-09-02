@@ -16,10 +16,52 @@ import src.spinconf_util as spinconf_util
 import src.helper as helper
 
 
-# %% Introduction of a static magnetic field
+# %% INTRODUCTION OF A STATIC MAGNETIC FIELD
+# %% Equilibrium averages
+
+def equilibrium_comparison_Bfield():
+
+    paths = {
+        -100: "",
+        -50: "",
+        0: "",
+        50: "",
+        100: ""
+    }
 
 
-# %% boundary effects
+# %% Dispersion relation comparison for B=100T
+
+
+def dispersion_comparison_Bfield_table():
+    alt = "-2"      # or ""
+    paths_noB = {
+        "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x{alt}/",
+        "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y{alt}/",
+        "110": "",
+        "-110": ""
+    }
+    paths_B = {
+        "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100{alt}/",
+        "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y_B100{alt}/",
+        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_B100{alt}/",
+        "-110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_y_B100{alt}/"
+    }
+
+
+# %% Comparison of dispersion relation for any direction with positive and negative field
+
+def dispersion_comparison_negB():
+
+    paths = {
+        -100: "/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_Bn100-2/",
+        100: "/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_B100-2/"
+    }
+
+
+
+
+# %% BOUNDARY EFFECTS
 
 def create_figure(figsize=(6.3, 5), max_fig_frac=0.77):
     # ---- replace your fig.add_gridspec(...) with this ----
@@ -362,5 +404,14 @@ def boundary_effects():
     plt.show()
 
 
+
+
+
+# %% Main
+
 def main():
-    boundary_effects()
+    pass
+    # boundary_effects()
+    equilibrium_comparison_Bfield()
+    dispersion_comparison_Bfield_table()
+    dispersion_comparison_negB()

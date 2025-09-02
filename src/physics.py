@@ -47,6 +47,43 @@ def index_to_position(array, tilted):
     return array * lattice_constant
 
 
+def dispersion(Sx, Sy, dx=lattice_constant, dt=50e-16, factor=2*np.pi):
+    Sp = Sx + 1j * Sy
+
+    k_vectors_ = np.fft.fftfreq(Sp.shape[1], d=dx) * factor
+    freqs_ = np.fft.fftfreq(Sp.shape[0], d=dt) * factor
+
+    Sp_F_ = np.fft.fft2(Sp)
+
+    Sp_F = np.fft.fftshift(Sp_F_)
+    k_vectors = np.fft.fftshift(k_vectors_)
+    freqs = np.fft.fftshift(freqs_)
+
+    magnon_density = np.abs(Sp_F) ** 2
+
+    return k_vectors, freqs, magnon_density
+
+
+def dispersion_from_path(pathA, pathargv, tilted: bool, time_steps=100000, factor=2*np.pi):
+    dx = lattice_constant_tilted if tilted else lattice_constant
+
+    dt = util.get_time_step(pathargv)
+
+    pathA, pathB = mag_util.infer_path_B(pathA, True)
+    dataA = np.loadtxt(pathA)[time_steps:]
+    dataB = np.loadtxt(pathB)[time_steps:]
+
+    if dataA.shape != dataB.shape:
+        raise ValueError(f"Shape mismatch: {dataA.shape=} \t {dataB.shape=}")
+
+    Sx = magnetization(mag_util.get_component(dataA, "x", 0),
+                       mag_util.get_component(dataB, "x", 0))
+    Sy = magnetization(mag_util.get_component(dataA, "y", 0),
+                       mag_util.get_component(dataB, "y", 0))
+
+    return dispersion(Sx, Sy, dx, dt, factor)
+
+
 
 
 # Seems to be working

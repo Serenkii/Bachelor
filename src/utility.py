@@ -11,6 +11,7 @@ import src.mag_util as mag_util
 from src.bulk_util import plot_spin_xyz_over_t
 
 import os.path
+import os
 
 # TODO: Test
 def save_file_as_npy(old: str, new: str, force=False):
@@ -107,4 +108,37 @@ def add_axis_break_marking(ax, position, orientation, size=12, **kwargs):
         raise ValueError(f"Unknown position: {position}")
     ax.plot([x, ], [y, ], transform=ax.transAxes, **plot_kwargs)
     return ax
+
+
+def get_time_step(path):
+    file_path = None
+    if not path.endswith(".argv.txt"):
+        files = os.listdir(path)
+        for file in files:
+            if file.endswith(".argv.txt"):
+                file_path = os.path.join(path, file)
+        if file_path is None:
+            raise ValueError(f"Could not find argument file: {path}")
+    else:
+        file_path = path
+
+    sim_step = None
+    iter_inner = None
+    with open(file_path, 'r') as f:
+        for line in f:
+            parts = line.strip().split()
+            for i, arg in enumerate(parts):
+                if i >= len(parts) - 1:
+                    break
+                if arg == "-time-step":
+                    sim_step = float(parts[i + 1])
+                if arg == "-iter-inner-loop":
+                    iter_inner = int(parts[i + 1])
+
+    if sim_step is None:
+        raise ValueError(f"Could not find '-time-step': {file_path}")
+    if iter_inner is None:
+        raise ValueError(f"Could not find '-iter-inner-loop': {file_path}")
+
+    return sim_step * iter_inner
 
