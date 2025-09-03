@@ -29,6 +29,9 @@ def equilibrium_comparison_Bfield():
         100: "/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100-2/"
     }
 
+    dataA, dataB = mag_util.npy_files_from_dict(paths)
+
+
 
 # %% Dispersion relation comparison for B=100T
 
