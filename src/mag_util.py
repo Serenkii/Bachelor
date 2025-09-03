@@ -241,8 +241,8 @@ def load_from_path_list(load_paths, skip_rows=None, which="xyz", return_raw_list
     return spins_A_list, spins_B_list
 
 
-
-def plot_magnetic_profile(spins_A_list, spins_B_list, save_path, equi_values_warm, equi_values_cold, rel_T_step_positions,
+def plot_magnetic_profile(spins_A_list, spins_B_list, save_path, equi_values_warm, equi_values_cold,
+                          rel_T_step_positions,
                           plot_kwargs_list, title_suffix="", dont_calculate_margins=False):
     """
 
@@ -370,7 +370,6 @@ def plot_magnetic_profile(spins_A_list, spins_B_list, save_path, equi_values_war
     return magnon_accum_list, delta_neel_list
 
 
-
 def plot_magnetic_profile_from_paths(load_paths, skip_rows, save_path, equi_values_warm, equi_values_cold,
                                      rel_T_step_positions, plot_kwargs_list, title_suffix="",
                                      dont_calculate_margins=False, which="xyz"):
@@ -400,9 +399,8 @@ def plot_magnetic_profile_from_paths(load_paths, skip_rows, save_path, equi_valu
     return spins_A_list, spins_B_list, magnon_acc_list, delta_neel_list
 
 
-
-
-def save_mag_files(file_path_A, save_path_prefix, file_path_B=None, saving_after_index=0, force=default_force_overwrite):
+def save_mag_files(file_path_A, save_path_prefix, file_path_B=None, saving_after_index=0,
+                   force=default_force_overwrite):
     """
     Loads the text files in the specified (paths) and saves them in the save_path. Only saves from line/timestep
     saving_after_index. If force is False (default) no files will be loaded or saved, if the save files exist already.
@@ -459,3 +457,33 @@ def infer_path_B(path, also_return_path_A=False):
         return f"{path}A.dat", path_B
 
     return path_B
+
+
+def get_dummy_data(size=512, time_steps=100000, sublatticeA=True, components="z", as_dict=False, do_time_avg=False,
+                   seed=None):
+    print("WARNING!\n"
+          "using dummy data...\n\n")
+
+    sign = +1 if sublatticeA else -1
+
+    rng = np.random.default_rng(seed)
+
+    def generate_data(component):
+        if component == "x" or component == "y":
+            return rng.uniform(-0.05, 0.05, (time_steps, size))
+        if component == "z":
+            return sign * rng.uniform(0.8, 1.0, (time_steps, size))
+
+    func = time_avg if do_time_avg else lambda arr: arr
+
+    if as_dict:
+        return_dict = dict()
+        for component in components:
+            return_dict[component] = func(generate_data(component))
+        return return_dict
+
+    if len(components) == 1:
+        return func(generate_data(components))
+
+    for component in components:
+        yield func(generate_data(component))

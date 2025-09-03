@@ -13,6 +13,13 @@ from src.bulk_util import plot_spin_xyz_over_t
 import os.path
 import os
 
+# %% Path suffixes
+profile_suffix = "spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+config_suffix = "spin-configs-99-999/spin-config-99-999-005000.dat"
+
+
+# %%
+
 # TODO: Test
 def save_file_as_npy(old: str, new: str, force=False):
     """

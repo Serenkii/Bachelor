@@ -22,11 +22,11 @@ import src.helper as helper
 def equilibrium_comparison_Bfield():
 
     paths = {
-        -100: "",
-        -50: "",
-        0: "",
-        50: "",
-        100: ""
+        -100: "/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_Bn100-2/",
+        -50: "/data/scc/marian.gunsch/10/AM_Tstairs_T2_Bn50",
+        0: "/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
+        50: "/data/scc/marian.gunsch/10/AM_Tstairs_T2_B50",
+        100: "/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100-2/"
     }
 
 
@@ -34,18 +34,18 @@ def equilibrium_comparison_Bfield():
 
 
 def dispersion_comparison_Bfield_table():
-    alt = "-2"      # or ""
+
     paths_noB = {
-        "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x{alt}/",
-        "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y{alt}/",
-        "110": "",
-        "-110": ""
+        "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x-2/",
+        "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y-2/",
+        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
+        "-110": f"/data/scc/marian.gunsch/10/AM__tilt_Tstairs_T2_y-2/"  # oups
     }
     paths_B = {
-        "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100{alt}/",
-        "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y_B100{alt}/",
-        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_B100{alt}/",
-        "-110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_y_B100{alt}/"
+        "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100-2/",
+        "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y_B100-2/",
+        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_B100-2/",
+        "-110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_y_B100-2/"
     }
 
 
@@ -320,16 +320,29 @@ def plot_colormap_aligned(fig, axs, x_centered, y_centered, magn_centered, x_shi
 
 
 
-def boundary_effects():
+def boundary_effects(temperature=2):
     profile_suffix = "spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
     config_suffix = "spin-configs-99-999/spin-config-99-999-005000.dat"
 
-    paths = {
+    paths_T2 = {
         "100": "/data/scc/marian.gunsch/12/AM_Tstairs_x_T2_openbou/",
         "010": "/data/scc/marian.gunsch/12/AM_Tstairs_y_T2_openbou/",
         "110": "/data/scc/marian.gunsch/04/04_AM_tilted_Tstairs_T2_openbou/",
         "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstairs_T2_openbou/"
     }
+    paths_T0 = {
+        "100": "/data/scc/marian.gunsch/12/AM_Tstairs_x_T0_openbou/",
+        "010": "/data/scc/marian.gunsch/12/AM_Tstairs_y_T0_openbou/",
+        "110": "/data/scc/marian.gunsch/12/AM_tilt_Tstairs_x_T0_openbou/",
+        "-110": "/data/scc/marian.gunsch/12/AM_tilt_Tstairs_y_T0_openbou/"
+    }
+    if temperature == 2:
+        paths = paths_T2
+    elif temperature == 0:
+        paths = paths_T0
+    else:
+        raise ValueError(f"No paths available for a temperature of {temperature} meV.")
+
     tilted_dict = {
         "100": False,
         "010": False,
@@ -377,7 +390,7 @@ def boundary_effects():
     plot_colormap_tilted(fig_tilted, axs_tilted, real_space["110"], real_space["-110"], magn_config,
                          r"$\langle S^z \rangle$")
 
-    fig_tilted.savefig("out/thesis/boundary_tilted_T2.pdf")
+    fig_tilted.savefig(f"out/thesis/boundary_tilted_T{temperature}.pdf")
 
     plt.show()
 
@@ -399,7 +412,7 @@ def boundary_effects():
                           x_centered, y_centered, magn_centered, x_shifted, y_shifted, magn_shifted,
                          r"$\langle S^z \rangle$")
 
-    fig_aligned.savefig("out/thesis/boundary_aligned_T2.pdf")
+    fig_aligned.savefig(f"out/thesis/boundary_aligned_T{temperature}.pdf")
 
     plt.show()
 
@@ -411,7 +424,8 @@ def boundary_effects():
 
 def main():
     pass
-    # boundary_effects()
+    boundary_effects(2)
+    boundary_effects(0)
     equilibrium_comparison_Bfield()
     dispersion_comparison_Bfield_table()
     dispersion_comparison_negB()
