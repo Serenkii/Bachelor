@@ -19,7 +19,7 @@ def time_avg(spin_data):
     return np.average(spin_data, axis=0)
 
 
-def get_component(data, which='z', skip_time_steps=150):
+def get_component(data, which='z', skip_time_steps=0):
     """
     Returns the selected component of the magnetic profile as a two-dimensional array, containing all spins of the
     chosen component for every time step. The first axis defines the time step. That means, when wanting to average

@@ -5,7 +5,6 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 import matplotlib.colors as colors
 from matplotlib.collections import PolyCollection
 
-
 import src.utility as util
 import src.mag_util as mag_util
 import src.bulk_util as bulk_util
@@ -17,9 +16,13 @@ import src.helper as helper
 
 
 # %% INTRODUCTION OF A STATIC MAGNETIC FIELD
+pass
+pass
+
 # %% Equilibrium averages
 
 def equilibrium_comparison_Bfield():
+    print("\n\nEQUILIBRIUM COMPARISON: MAGNETIC FIELD")
 
     paths = {
         -100: "/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_Bn100-2/",
@@ -29,38 +32,139 @@ def equilibrium_comparison_Bfield():
         100: "/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100-2/"
     }
 
-    dataA, dataB = mag_util.npy_files_from_dict(paths)
+    field_strengths = paths.keys()
 
+    dataA, dataB = mag_util.npy_files_from_dict(paths)
+    data = dict(A=dataA, B=dataB)
+
+    Sx = dict(A=dict(), B=dict())
+    Sy = dict(A=dict(), B=dict())
+    Sz = dict(A=dict(), B=dict())
+    magn = dict()
+
+    for B_field in field_strengths:
+        for sl in ["A", "B"]:
+            Sx[sl][B_field] = np.mean(mag_util.get_component(data[sl], "x"))
+            Sy[sl][B_field] = np.mean(mag_util.get_component(data[sl], "y"))
+            Sz[sl][B_field] = np.mean(mag_util.get_component(data[sl], "z"))
+        magn[B_field] = physics.magnetization(Sz["A"], Sz["B"])
+
+    # TODO: Actual plot
 
 
 # %% Dispersion relation comparison for B=100T
 
+def dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_dict):
+    # TODO: Actual plot
+    pass
 
-def dispersion_comparison_Bfield_table():
 
+def dispersion_comparison_Bfield_table_data():
     paths_noB = {
-        "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x-2/",
-        "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y-2/",
-        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
-        "-110": f"/data/scc/marian.gunsch/10/AM__tilt_Tstairs_T2_y-2/"  # oups
+        "100": f"/data_dict/scc/marian.gunsch/10/AM_Tstairs_T2_x-2/",
+        "010": f"/data_dict/scc/marian.gunsch/10/AM_Tstairs_T2_y-2/",
+        "110": f"/data_dict/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
+        "-110": f"/data_dict/scc/marian.gunsch/10/AM__tilt_Tstairs_T2_y-2/"  # oups
     }
     paths_B = {
-        "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100-2/",
-        "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y_B100-2/",
-        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_B100-2/",
-        "-110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_y_B100-2/"
+        "100": f"/data_dict/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100-2/",
+        "010": f"/data_dict/scc/marian.gunsch/10/AM_Tstairs_T2_y_B100-2/",
+        "110": f"/data_dict/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_B100-2/",
+        "-110": f"/data_dict/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_y_B100-2/"
     }
+
+    delta_x = {
+        "100": physics.lattice_constant,
+        "010": physics.lattice_constant,
+        "110": physics.lattice_constant_tilted,
+        "-110": physics.lattice_constant_tilted
+    }
+
+    directions = paths_B.keys()
+
+    dataA_noB, dataB_noB = mag_util.npy_files_from_dict(paths_noB)
+    dataA_B, dataB_B = mag_util.npy_files_from_dict(paths_B)
+
+    data_dict = {
+        False: dict(A=dataA_noB, B=dataB_noB),  # No magnetic field
+        True: dict(A=dataA_B, B=dataB_B)  # Yes magnetic field
+    }
+
+    paths = {
+        False: paths_noB,
+        True: paths_B
+    }
+
+    k_dict = {
+        False: dict(),
+        True: dict()
+    }
+    freq_dict = {
+        False: dict(),
+        True: dict()
+    }
+    magnon_density_dict = {
+        False: dict(),
+        True: dict()
+    }
+
+    for magnetic_field in data_dict.keys():
+        for direction in directions:
+            data_A = data_dict[magnetic_field]["A"][direction]
+            data_B = data_dict[magnetic_field]["B"][direction]
+            Sx = physics.magnetization(mag_util.get_component(data_A, "x", 0),
+                                       mag_util.get_component(data_B, "x", 0))
+            Sy = physics.magnetization(mag_util.get_component(data_A, "y", 0),
+                                       mag_util.get_component(data_B, "y", 0))
+            dx = delta_x[direction]
+            dt = util.get_time_step(paths[magnetic_field][direction])
+            k, f, m = physics.dispersion(Sx, Sy, dx, dt)
+            k_dict[magnetic_field][direction] = k
+            freq_dict[magnetic_field][direction] = f
+            magnon_density_dict[magnetic_field][direction] = m
+
+    return k_dict, freq_dict, magnon_density_dict
+
+
+def dispersion_comparison_Bfield_table():
+    print("\n\nDISPERSION RELATION COMPARISON: MAGNETIC FIELD")
+
+    k_dict, freq_dict, magnon_density_dict = dispersion_comparison_Bfield_table_data()
+    dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_dict)
+
+
 
 
 # %% Comparison of dispersion relation for any direction with positive and negative field
 
 def dispersion_comparison_negB():
+    print("\n\nDISPERSION RELATION COMPARISON: POSITIVE AND NEGATIVE MAGNETIC FIELD FIELD")
 
     paths = {
         -100: "/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_Bn100-2/",
         100: "/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_B100-2/"
     }
 
+    dx = physics.lattice_constant_tilted
+
+    data_A, data_B = mag_util.npy_files_from_dict(paths)
+
+    k_dict = dict()
+    freq_dict = dict()
+    magnon_density_dict = dict()
+
+    for Bstrength in paths.keys():
+        Sx = physics.magnetization(mag_util.get_component(data_A[Bstrength], "x", 0),
+                                   mag_util.get_component(data_B[Bstrength], "x", 0))
+        Sy = physics.magnetization(mag_util.get_component(data_A[Bstrength], "y", 0),
+                                   mag_util.get_component(data_B[Bstrength], "y", 0))
+        dt = util.get_time_step(paths[Bstrength])
+        k, f, m = physics.dispersion(Sx, Sy, dx, dt)
+        k_dict[Bstrength] = k
+        freq_dict[Bstrength] = f
+        magnon_density_dict[Bstrength] = m
+
+    # TODO: Actual plot
 
 
 
@@ -105,7 +209,6 @@ def create_figure(figsize=(6.3, 5), max_fig_frac=0.77):
     )
     # ------------------------------------------------------
     return fig, gs
-
 
 
 def broken_axes_boundary_plot(bottom_x, bottom_y, left_x, left_y, x_min=0, x_max=256, distance=10,
@@ -171,7 +274,6 @@ def broken_axes_boundary_plot(bottom_x, bottom_y, left_x, left_y, x_min=0, x_max
         profile_axs[0].set_yticks(profile_axs[3].get_xticks())
         profile_axs[1].set_yticks(profile_axs[2].get_xticks())
 
-
     def place_labels(profile_axs, pad=0.055):
         profile_axs[1].set_xlabel(y_label)
         profile_axs[3].yaxis.set_label_position("right")
@@ -207,7 +309,6 @@ def broken_axes_boundary_plot(bottom_x, bottom_y, left_x, left_y, x_min=0, x_max
         util.add_axis_break_marking(ax10, "top left", "vertical", size)
         util.add_axis_break_marking(ax11, "bottom left", "horizontal", size)
         util.add_axis_break_marking(ax11, "top right", "vertical", size)
-
 
     place_labels((ax_left_top, ax_left_bottom, ax_bottom_left, ax_bottom_right))
 
@@ -253,7 +354,7 @@ def handle_config_data_aligned(config_data1, config_data2):
         spinconf_util.select_SL_and_component(config_data2, "A", "z") +
         spinconf_util.select_SL_and_component(config_data2, "B", "z")
     )
-    average_config = np.mean(np.concatenate((data1, data2), axis=2), axis=2)    # avg over z
+    average_config = np.mean(np.concatenate((data1, data2), axis=2), axis=2)  # avg over z
 
     return spinconf_util.average_aligned_data(average_config, "default", True, True)
 
@@ -307,8 +408,8 @@ def plot_colormap_aligned(fig, axs, x_centered, y_centered, magn_centered, x_shi
             polys.append(poly)
         return polys, values
 
-    polys1, values1 = make_diamonds(X1, Y1, Z1, size=x_centered[1]-x_centered[0])
-    polys2, values2 = make_diamonds(X2, Y2, Z2, size=x_shifted[1]-x_shifted[0])
+    polys1, values1 = make_diamonds(X1, Y1, Z1, size=x_centered[1] - x_centered[0])
+    polys2, values2 = make_diamonds(X2, Y2, Z2, size=x_shifted[1] - x_shifted[0])
 
     polys = polys1 + polys2
     values = values1 + values2
@@ -322,8 +423,9 @@ def plot_colormap_aligned(fig, axs, x_centered, y_centered, magn_centered, x_shi
     place_colorbar(fig, axs, collection, 0.02, 0.02, y_label)
 
 
-
 def boundary_effects(temperature=2):
+    print("\n\nBOUNDARY EFFECTS")
+
     profile_suffix = "spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
     config_suffix = "spin-configs-99-999/spin-config-99-999-005000.dat"
 
@@ -352,7 +454,6 @@ def boundary_effects(temperature=2):
         "110": True,
         "-110": True
     }
-
 
     # Profile data
     profile_data = dict()
@@ -397,30 +498,27 @@ def boundary_effects(temperature=2):
 
     plt.show()
 
-
     # ALIGNED
     print("Plotting aligned...")
-    x_centered, y_centered, magn_centered, x_shifted, y_shifted, magn_shifted = handle_config_data_aligned(config_data["100"], config_data["010"])
+    x_centered, y_centered, magn_centered, x_shifted, y_shifted, magn_shifted = handle_config_data_aligned(
+        config_data["100"], config_data["010"])
 
     fig_aligned, *axs_aligned = broken_axes_boundary_plot(real_space["100"], magnetization_profile["100"],
-                                            real_space["010"], magnetization_profile["010"],
-                                            physics.index_to_position(-0.5, False),
-                                            real_space["100"][-1] + physics.index_to_position(0.5, False),
-                                            physics.index_to_position(8.2, True),
-                                        r"position $x/a$ in direction \hkl[100]",
-                                        r"position $y/a$ in direction \hkl[010]",
-                                         r"$\langle S^z \rangle$")
+                                                          real_space["010"], magnetization_profile["010"],
+                                                          physics.index_to_position(-0.5, False),
+                                                          real_space["100"][-1] + physics.index_to_position(0.5, False),
+                                                          physics.index_to_position(8.2, True),
+                                                          r"position $x/a$ in direction \hkl[100]",
+                                                          r"position $y/a$ in direction \hkl[010]",
+                                                          r"$\langle S^z \rangle$")
 
     plot_colormap_aligned(fig_aligned, axs_aligned,
                           x_centered, y_centered, magn_centered, x_shifted, y_shifted, magn_shifted,
-                         r"$\langle S^z \rangle$")
+                          r"$\langle S^z \rangle$")
 
     fig_aligned.savefig(f"out/thesis/boundary_aligned_T{temperature}.pdf")
 
     plt.show()
-
-
-
 
 
 # %% Main
