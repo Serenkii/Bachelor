@@ -14,10 +14,10 @@ import src.physics as physics
 import src.spinconf_util as spinconf_util
 import src.helper as helper
 
-
 # %% INTRODUCTION OF A STATIC MAGNETIC FIELD
 pass
 pass
+
 
 # %% Equilibrium averages
 
@@ -55,8 +55,34 @@ def equilibrium_comparison_Bfield():
 # %% Dispersion relation comparison for B=100T
 
 def dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_dict):
-    # TODO: Actual plot
-    pass
+    rasterized = True
+
+    fig, axs = plt.subplots(nrows=4, ncols=2, figsize=(8, 12))
+
+    fields = k_dict.keys()
+    directions = k_dict[False]
+
+    axs_dict = dict(
+        (B, dict(
+            (direction, axs[i, j])
+            for direction, i in zip(directions, range(4))))
+        for B, j in zip(fields, range(2))
+    )
+
+    for field in fields:
+        for direction in directions:
+            ax = axs_dict[field][direction]
+            k_vectors = k_dict[field][direction]
+            freqs = freq_dict[field][direction]
+            magnon_density = magnon_density_dict[field][direction]
+            im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading='auto',
+                       norm=colors.LogNorm(vmin=magnon_density.min(), vmax=magnon_density.max()),
+                       rasterized=rasterized)
+
+            fig.colorbar(im, ax=ax)
+
+    plt.show()
+
 
 
 def dispersion_comparison_Bfield_table_data():
@@ -133,8 +159,6 @@ def dispersion_comparison_Bfield_table():
     dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_dict)
 
 
-
-
 # %% Comparison of dispersion relation for any direction with positive and negative field
 
 def dispersion_comparison_negB():
@@ -165,7 +189,6 @@ def dispersion_comparison_negB():
         magnon_density_dict[Bstrength] = m
 
     # TODO: Actual plot
-
 
 
 # %% BOUNDARY EFFECTS
