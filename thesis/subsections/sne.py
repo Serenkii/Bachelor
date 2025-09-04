@@ -1,4 +1,18 @@
 import numpy as np
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import ImageGrid
+import matplotlib.colors as colors
+from matplotlib.collections import PolyCollection
+
+import src.utility as util
+import src.mag_util as mag_util
+import src.bulk_util as bulk_util
+import src.utility as util
+import src.plot_util as plot_util
+import src.physics as physics
+import src.spinconf_util as spinconf_util
+import src.helper as helper
 
 
 # %% Spin accumulation / net magnetization
@@ -24,7 +38,8 @@ def sne_spin_accumulation():
         "-110": "/data/scc/marian.gunsch/12/AM_tilt_Tstairs_y_T0_openbou/"
     }
 
-
+    mag_util.npy_files_from_dict(paths)
+    mag_util.npy_files_from_dict(equi_T0_paths)
 
 
 # %% Spin currents (transversal)
@@ -44,6 +59,8 @@ def spin_currents_open():
         "-110": "110",
         "110": "-110"
     }
+
+    mag_util.npy_files_from_dict(paths)
 
 
 def spin_currents_upperABC():
@@ -72,8 +89,14 @@ def sne_magnon_spectrum():
         "110": "-110"
     }
 
+    mag_util.npy_files_from_dict(paths)
+
 
 # %% Main
 
 def main():
-    pass
+    sne_spin_accumulation()
+    spin_currents_open()
+    spin_currents_upperABC()
+    spin_currents_uploABC()
+    sne_magnon_spectrum()

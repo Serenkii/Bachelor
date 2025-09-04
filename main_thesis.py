@@ -1,5 +1,6 @@
+import sys
 import numpy as np
-import thesis.mpl_configuration
+import thesis.mpl_configuration as mpl_configuration
 
 import matplotlib.pyplot as plt
 
@@ -17,4 +18,12 @@ def main():
 
 
 if __name__ == '__main__':
+    mpl_configuration.configure()
+
+    if len(sys.argv) == 1:
+        mpl_configuration.default_configure()
+    if len(sys.argv) >= 2:
+        backend = sys.argv[1]
+        ssh = True if len(sys.argv) == 3 and sys.argv[2] == 'True' else False
+
     main()

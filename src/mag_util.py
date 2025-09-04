@@ -12,7 +12,7 @@ import src.physics as physics
 
 default_slice_dict = {'t': 0, 'x': 1, 'y': 2, 'z': 3, '1': 1, '2': 2, '3': 3}
 
-default_force_overwrite = True
+default_force_overwrite = False
 
 
 def time_avg(spin_data):
@@ -492,8 +492,10 @@ def get_dummy_data(size=512, time_steps=100000, sublatticeA=True, components="z"
 # Untested
 def infer_data_path(path, also_return_path_B=False):
     folder_list = path.split("/")
-    if folder_list[-1] == "":
+    if folder_list[-1] == "":       # path ends with '/'
         folder_list.pop()
+    else:
+        path += "/"
 
     return_list = []
 
@@ -508,14 +510,14 @@ def infer_data_path(path, also_return_path_B=False):
             return_list.append(f"{path[:-1]}B.dat")
 
     elif folder_list[-1] == "spin-configs-99-999":
-        return_list.append(f"{path}/mag-profile-99-999.altermagnetA.dat")
+        return_list.append(f"{path}mag-profile-99-999.altermagnetA.dat")
         if also_return_path_B:
-            return_list.append(f"{path}/mag-profile-99-999.altermagnetB.dat")
+            return_list.append(f"{path}mag-profile-99-999.altermagnetB.dat")
 
     else:
-        return_list.append(f"{path}/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat")
+        return_list.append(f"{path}spin-configs-99-999/mag-profile-99-999.altermagnetA.dat")
         if also_return_path_B:
-            return_list.append(f"{path}/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat")
+            return_list.append(f"{path}spin-configs-99-999/mag-profile-99-999.altermagnetB.dat")
 
     for entry in return_list:
         if not os.path.exists(entry):
@@ -525,7 +527,11 @@ def infer_data_path(path, also_return_path_B=False):
 
 
 # Untested
-def npy_files(dat_path: str, npy_path=None, slice_index=-100000, force=False, return_data=True):
+def npy_files(dat_path: str, npy_path=None, slice_index=-100000, force=default_force_overwrite, return_data=True,
+              **load_kwargs):
+    if "max_rows" not in load_kwargs.keys():
+        load_kwargs["max_rows"] = 1_000_000
+
     base_folder = "data/profiles/"
 
     data_path_A, data_path_B = infer_data_path(dat_path, True)
@@ -539,18 +545,18 @@ def npy_files(dat_path: str, npy_path=None, slice_index=-100000, force=False, re
     elif npy_path.endswith(".npy"):
         npy_path = npy_path[:-4]
 
-    npy_path_A = f"{npy_path}A.npy"
-    npy_path_B = f"{npy_path}B.npy"
+    npy_path_A = f"{npy_path}.A.npy"
+    npy_path_B = f"{npy_path}.B.npy"
 
     data_dict = dict(A=None, B=None)
 
     for npy_path, dat_path, SL in zip((npy_path_A, npy_path_B), (data_path_A, data_path_B), ("A", "B")):
         print(f"Handling sublattice {SL}...")
-        if os.path.isfile(npy_path_A) and not force:
+        if os.path.isfile(npy_path) and not force:
             print(f"File {npy_path} already exists. Nothing will be overwritten.")
         else:
             print(f"Reading data from {dat_path}...")
-            data = np.loadtxt(dat_path)[slice_index:]
+            data = np.loadtxt(dat_path, **load_kwargs)[slice_index:]
             print(f"Saving data to {npy_path}...")
             np.save(npy_path, data)
             if return_data:
@@ -562,6 +568,7 @@ def npy_files(dat_path: str, npy_path=None, slice_index=-100000, force=False, re
     for SL, npy_path in zip(data_dict.keys(), (npy_path_A, npy_path_B)):
         if data_dict[SL] is None:
             print(f"{SL}: Loading data from {npy_path}...")
+            data_dict[SL] = np.load(npy_path)
 
     print("\n")
 
@@ -569,7 +576,7 @@ def npy_files(dat_path: str, npy_path=None, slice_index=-100000, force=False, re
 
 
 # Untested
-def npy_files_from_dict(path_dict, slice_index=-100000, force=False, which=None):
+def npy_files_from_dict(path_dict, slice_index=-100000, force=default_force_overwrite, which=None, **load_kwargs):
     """
     Returns a dictionary containing data from specific paths. Used .npy files to read/save.
     :param path_dict:
@@ -580,8 +587,8 @@ def npy_files_from_dict(path_dict, slice_index=-100000, force=False, which=None)
     """
     data_A = dict()
     data_B = dict()
-    for key in path_dict():
-        datA, datB = npy_files(path_dict[key], slice_index=slice_index, force=force)
+    for key in path_dict:
+        datA, datB = npy_files(path_dict[key], slice_index=slice_index, force=force, **load_kwargs)
         if which is not None:
             data_A[key] = get_component(datA, which, 0)
             data_B[key] = get_component(datB, which, 0)

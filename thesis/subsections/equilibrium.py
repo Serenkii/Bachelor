@@ -8,11 +8,11 @@ from matplotlib.collections import PolyCollection
 import src.utility as util
 import src.mag_util as mag_util
 import src.bulk_util as bulk_util
-import src.utility as util
 import src.plot_util as plot_util
 import src.physics as physics
 import src.spinconf_util as spinconf_util
 import src.helper as helper
+import thesis.mpl_configuration as mpl_conf
 
 # %% INTRODUCTION OF A STATIC MAGNETIC FIELD
 pass
@@ -21,11 +21,46 @@ pass
 
 # %% Equilibrium averages
 
+def equilibrium_comparison_Bfield_plot(Sx, Sy, Sz, magn):
+    plot_kwargs = dict(marker="o", linestyle="-") #, linewidth=1.5)
+
+    fig = plt.figure()
+    gs = fig.add_gridspec(nrows=3, height_ratios=(2, 1.1, 1.1), hspace=0.1,
+                          left=0.15, right=0.9, bottom=0.15, top=0.9)
+
+    ax1 = fig.add_subplot(gs[0, 0])
+    ax2 = fig.add_subplot(gs[1, 0], sharex=ax1)
+    ax3 = fig.add_subplot(gs[2, 0], sharex=ax1)
+
+    fields = sorted(Sz["A"].keys())
+
+    ax1.axhline(0, color="gray", linewidth=0.8, linestyle="--")
+
+    ax1.set_ylabel(r"$\langle m_{\mathrm{net}} \rangle$")
+    ax1.plot(fields, [magn[B] for B in fields], label=r"$m_{\mathrm{net}}$", **plot_kwargs)
+
+    ax2.set_ylabel(r"$\langle m_{\mathrm{A}} \rangle$")
+    ax2.plot(fields, [Sz["A"][B] for B in fields], label=r"$m_{\mathrm{A}}$", **plot_kwargs)
+
+    ax3.set_ylabel(r"$- \langle m_{\mathrm{B}} \rangle$")
+    ax3.plot(fields, [-Sz["B"][B] for B in fields], label=r"$-m_{\mathrm{B}}$", **plot_kwargs)
+
+    ax1.label_outer()
+    ax2.label_outer()
+
+    ax3.set_xticks(fields)
+    ax3.set_xlabel("Magnetic field strength $B$ (T)")
+
+    fig.savefig(f"out/thesis/equilibrium/comparison_B_field.pdf")
+
+    plt.show()
+
+
 def equilibrium_comparison_Bfield():
     print("\n\nEQUILIBRIUM COMPARISON: MAGNETIC FIELD")
 
     paths = {
-        -100: "/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_Bn100-2/",
+        -100: "/data/scc/marian.gunsch/06/06_AM_tilted_Tstairs_T2_x_Bn100/",
         -50: "/data/scc/marian.gunsch/10/AM_Tstairs_T2_Bn50",
         0: "/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
         50: "/data/scc/marian.gunsch/10/AM_Tstairs_T2_B50",
@@ -44,12 +79,13 @@ def equilibrium_comparison_Bfield():
 
     for B_field in field_strengths:
         for sl in ["A", "B"]:
-            Sx[sl][B_field] = np.mean(mag_util.get_component(data[sl], "x"))
-            Sy[sl][B_field] = np.mean(mag_util.get_component(data[sl], "y"))
-            Sz[sl][B_field] = np.mean(mag_util.get_component(data[sl], "z"))
-        magn[B_field] = physics.magnetization(Sz["A"], Sz["B"])
+            Sx[sl][B_field] = np.mean(mag_util.get_component(data[sl][B_field], "x"))
+            Sy[sl][B_field] = np.mean(mag_util.get_component(data[sl][B_field], "y"))
+            Sz[sl][B_field] = np.mean(mag_util.get_component(data[sl][B_field], "z"))
+        magn[B_field] = physics.magnetization(Sz["A"][B_field], Sz["B"][B_field])
 
-    # TODO: Actual plot
+    equilibrium_comparison_Bfield_plot(Sx, Sy, Sz, magn)
+
 
 
 # %% Dispersion relation comparison for B=100T
@@ -87,16 +123,16 @@ def dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_di
 
 def dispersion_comparison_Bfield_table_data():
     paths_noB = {
-        "100": f"/data_dict/scc/marian.gunsch/10/AM_Tstairs_T2_x-2/",
-        "010": f"/data_dict/scc/marian.gunsch/10/AM_Tstairs_T2_y-2/",
-        "110": f"/data_dict/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
-        "-110": f"/data_dict/scc/marian.gunsch/10/AM__tilt_Tstairs_T2_y-2/"  # oups
+        "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x-2/",
+        "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y-2/",
+        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
+        "-110": f"/data/scc/marian.gunsch/10/AM__tilt_Tstairs_T2_y-2/"  # oups
     }
     paths_B = {
-        "100": f"/data_dict/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100-2/",
-        "010": f"/data_dict/scc/marian.gunsch/10/AM_Tstairs_T2_y_B100-2/",
-        "110": f"/data_dict/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_B100-2/",
-        "-110": f"/data_dict/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_y_B100-2/"
+        "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100-2/",
+        "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y_B100-2/",
+        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_B100-2/",
+        "-110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_y_B100-2/"
     }
 
     delta_x = {
@@ -238,7 +274,7 @@ def broken_axes_boundary_plot(bottom_x, bottom_y, left_x, left_y, x_min=0, x_max
                               x1_label="", x2_label="", y_label=""):
     shared_kwargs = dict(marker="o", linestyle="--", linewidth=0.7)
 
-    fig, gs = create_figure()
+    fig, gs = create_figure((mpl_conf.get_width(), mpl_conf.get_width() / 1.26))
 
     # Main colorplot: 2x2 axes
     ax00 = fig.add_subplot(gs[0, 1])  # top-left main quadrant (high y, low x)
@@ -517,7 +553,7 @@ def boundary_effects(temperature=2):
     plot_colormap_tilted(fig_tilted, axs_tilted, real_space["110"], real_space["-110"], magn_config,
                          r"$\langle S^z \rangle$")
 
-    fig_tilted.savefig(f"out/thesis/boundary_tilted_T{temperature}.pdf")
+    fig_tilted.savefig(f"out/thesis/equilibrium/boundary_tilted_T{temperature}.pdf")
 
     plt.show()
 
@@ -539,7 +575,7 @@ def boundary_effects(temperature=2):
                           x_centered, y_centered, magn_centered, x_shifted, y_shifted, magn_shifted,
                           r"$\langle S^z \rangle$")
 
-    fig_aligned.savefig(f"out/thesis/boundary_aligned_T{temperature}.pdf")
+    fig_aligned.savefig(f"out/thesis/equilibrium/boundary_aligned_T{temperature}.pdf")
 
     plt.show()
 
@@ -548,8 +584,8 @@ def boundary_effects(temperature=2):
 
 def main():
     pass
-    boundary_effects(2)
-    boundary_effects(0)
-    equilibrium_comparison_Bfield()
+    # boundary_effects(2)
+    # boundary_effects(0)
+    # equilibrium_comparison_Bfield()
     dispersion_comparison_Bfield_table()
-    dispersion_comparison_negB()
+    # dispersion_comparison_negB()

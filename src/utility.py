@@ -15,6 +15,8 @@ import os
 
 # %% Path suffixes
 profile_suffix = "spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+profile_suffix_A = "spin-configs-99-999/mag-profile-99-999.altermagnetA.dat"
+profile_suffix_B = "spin-configs-99-999/mag-profile-99-999.altermagnetB.dat"
 config_suffix = "spin-configs-99-999/spin-config-99-999-005000.dat"
 
 
