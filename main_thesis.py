@@ -8,13 +8,15 @@ import thesis.subsections.miscellaneous as miscellaneous
 import thesis.subsections.equilibrium as equilibrium
 import thesis.subsections.sse as sse
 import thesis.subsections.sne as sne
+import thesis.subsections.dmi as dmi
 
 
 def main():
     # miscellaneous.main()
     equilibrium.main()
-    # sse.main()
-    # sne.main()
+    sse.main()
+    sne.main()
+    dmi.main()
 
 
 if __name__ == '__main__':

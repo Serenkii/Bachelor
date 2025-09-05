@@ -1,9 +1,12 @@
+import warnings
+
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
 import matplotlib.colors as colors
 from matplotlib.collections import PolyCollection
+import matplotlib.ticker as ticker
 
 import src.utility as util
 import src.mag_util as mag_util
@@ -13,6 +16,11 @@ import src.physics as physics
 import src.spinconf_util as spinconf_util
 import src.helper as helper
 import thesis.mpl_configuration as mpl_conf
+
+# %%
+
+save_base_path = "out/thesis/equilibrium/"
+
 
 # %% INTRODUCTION OF A STATIC MAGNETIC FIELD
 pass
@@ -90,10 +98,45 @@ def equilibrium_comparison_Bfield():
 
 # %% Dispersion relation comparison for B=100T
 
-def dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_dict):
-    rasterized = True
+def dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_dict, version=1):
+    if not version in [1, 2]:
+        raise ValueError("version must be 1 or 2")
 
-    fig, axs = plt.subplots(nrows=4, ncols=2, figsize=(8, 12))
+    print(f"Plotting version {version}...")
+
+    rasterized = True
+    j0 = 0 if version == 1 else 1
+
+    fig = plt.figure(figsize=mpl_conf.get_size(1.0, False))
+
+    if version == 1:
+        gs = fig.add_gridspec(nrows=5, ncols=2, height_ratios=[4, 4, 4, 4, 0.2], hspace=0.65, wspace=0.05)
+    else:
+        gs = fig.add_gridspec(nrows=6, ncols=3, width_ratios=[2, 3, 3], height_ratios=[4, 4, 4, 4, 1.2, 0.2],
+                              hspace=0.07, wspace=0.05)
+
+    axs = np.empty((4, 2), dtype=object)
+    for i in range(4):
+        for j in range(2):
+            if i == j == 0:
+                axs[i, j] = fig.add_subplot(gs[i, j + j0])
+            elif version == 1:
+                axs[i, j] = fig.add_subplot(gs[i, j + j0], sharey=axs[0, 0])
+            else:
+                axs[i, j] = fig.add_subplot(gs[i, j + j0], sharey=axs[0, 0], sharex=axs[0, 0])
+
+            axs[i, j].xaxis.set_major_locator(ticker.MultipleLocator(base=np.pi / 2))
+            axs[i, j].xaxis.set_major_formatter(ticker.FuncFormatter(plot_util.multiple_of_pi_over_2))
+
+        axs[i, 1].tick_params(labelleft=False)
+
+    if version == 2:
+        for i in range(3):
+            for j in range(2):
+                axs[i, j].tick_params(labelbottom=False)
+
+    # colorbar axis spans across bottom
+    cax = fig.add_subplot(gs[-1, j0:])
 
     fields = k_dict.keys()
     directions = k_dict[False]
@@ -105,18 +148,74 @@ def dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_di
         for B, j in zip(fields, range(2))
     )
 
+    axs_dict[False]["100"].set_title(r"$B = 0$")
+    axs_dict[True]["100"].set_title(r"$B > 0$")
+
+    min_magn_dens = np.inf
+    max_magn_dens = - np.inf
     for field in fields:
         for direction in directions:
+            magnon_density = magnon_density_dict[field][direction]
+            min_magn_dens = min(magnon_density.min(), min_magn_dens)
+            max_magn_dens = max(magnon_density.max(), max_magn_dens)
+
+    im_list = []
+
+    print("[", end="")
+    for field in fields:
+        for direction in directions:
+            print("-", end="")
             ax = axs_dict[field][direction]
             k_vectors = k_dict[field][direction]
             freqs = freq_dict[field][direction]
+
+            freqs *= 1e-15
+            if not field:
+                ax.set_ylabel(r"$\omega$ (\SI{e15}{\radian\per\second})")
+
             magnon_density = magnon_density_dict[field][direction]
             im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading='auto',
-                       norm=colors.LogNorm(vmin=magnon_density.min(), vmax=magnon_density.max()),
-                       rasterized=rasterized)
+                               norm=colors.LogNorm(vmin=min_magn_dens, vmax=max_magn_dens),
+                               rasterized=rasterized)
+            im_list.append(im)
 
-            fig.colorbar(im, ax=ax)
+            ax.axhline(0, color="gray", linewidth=0.8, linestyle="--")
+            ax.axvline(0, color="gray", linewidth=0.8, linestyle="--")
 
+
+    def set_xlabels_1():
+        for field in fields:
+            for direction in directions:
+                ax = axs_dict[field][direction]
+                a = r"\tilde{a}" if direction in ["110", "-110"] else r"a"
+                ax.set_xlabel(rf"$k \cdot {a}$ in \hkl[{direction}]")
+
+    def set_xlabels_2():
+        for field in fields:
+            ax = axs_dict[field]["-110"]
+            ax.set_xlabel(r"$k \cdot a_{\mathrm{d}}$")
+        gs_dict = dict((direction, gs[i, 0]) for direction, i in zip(directions, range(4)))
+        for direction in directions:
+            bbox = gs_dict[direction].get_position(fig)
+            x = bbox.x0
+            y = (bbox.y0 + bbox.y1) / 2
+            fig.text(x, y, rf"\hkl[{direction}]", ha="left", va="center", fontsize=mpl.rcParams["axes.titlesize"],
+                     rotation=90)
+
+    if version == 1:
+        set_xlabels_1()
+    else:
+        set_xlabels_2()
+
+    print("-", end="")
+    cb = fig.colorbar(im_list[-1], cax=cax, orientation="horizontal")
+    cb.set_label(r"Magnon density (arb. unit)")
+    print("]")
+
+    print("Saving fig...")
+    fig.savefig(f"{save_base_path}dispersion_comparison_Bfield_table_{version}.pdf")
+
+    print("Showing fig...")
     plt.show()
 
 
@@ -138,9 +237,10 @@ def dispersion_comparison_Bfield_table_data():
     delta_x = {
         "100": physics.lattice_constant,
         "010": physics.lattice_constant,
-        "110": physics.lattice_constant_tilted,
-        "-110": physics.lattice_constant_tilted
+        "110": physics.lattice_constant,
+        "-110": physics.lattice_constant
     }
+
 
     directions = paths_B.keys()
 
@@ -170,14 +270,25 @@ def dispersion_comparison_Bfield_table_data():
         True: dict()
     }
 
+    # warnings.warn("Running with limited amount of datapoints!")   # TODO
+    # min_data_points = 10_000
+    min_data_points = 10_000_000
+
     for magnetic_field in data_dict.keys():
         for direction in directions:
             data_A = data_dict[magnetic_field]["A"][direction]
             data_B = data_dict[magnetic_field]["B"][direction]
-            Sx = physics.magnetization(mag_util.get_component(data_A, "x", 0),
-                                       mag_util.get_component(data_B, "x", 0))
-            Sy = physics.magnetization(mag_util.get_component(data_A, "y", 0),
-                                       mag_util.get_component(data_B, "y", 0))
+
+            data_points = min(data_A.shape[0], data_B.shape[0], min_data_points)
+
+            print(f"{paths[magnetic_field][direction]=}")
+            print(f"{data_A.shape=}")
+            print(f"{data_B.shape=}")
+
+            Sx = physics.magnetization(mag_util.get_component(data_A[:data_points], "x", 10),
+                                       mag_util.get_component(data_B[:data_points], "x", 10))
+            Sy = physics.magnetization(mag_util.get_component(data_A[:data_points], "y", 10),
+                                       mag_util.get_component(data_B[:data_points], "y", 10))
             dx = delta_x[direction]
             dt = util.get_time_step(paths[magnetic_field][direction])
             k, f, m = physics.dispersion(Sx, Sy, dx, dt)
@@ -188,24 +299,105 @@ def dispersion_comparison_Bfield_table_data():
     return k_dict, freq_dict, magnon_density_dict
 
 
-def dispersion_comparison_Bfield_table():
+def dispersion_comparison_Bfield_table(version=1):
     print("\n\nDISPERSION RELATION COMPARISON: MAGNETIC FIELD")
 
     k_dict, freq_dict, magnon_density_dict = dispersion_comparison_Bfield_table_data()
-    dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_dict)
+    dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_dict, version=version)
 
 
 # %% Comparison of dispersion relation for any direction with positive and negative field
+
+def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict):
+    print("Plotting...")
+
+    rasterized = True
+
+    fig = plt.figure(figsize=(mpl_conf.get_width(1.0), mpl_conf.get_height(0.67)))
+    gs = fig.add_gridspec(nrows=1, ncols=4, width_ratios=[4, 4, 4, 0.2], wspace=0.07, bottom=0.21, right=0.85)
+
+    fields = sorted(k_dict.keys())
+
+    axs_dict = dict()
+    for i, B in zip(range(len(fields)), fields):
+        if B == fields[0]:
+            axs_dict[B] = fig.add_subplot(gs[0, i])
+        else:
+            axs_dict[B] = fig.add_subplot(gs[0, i], sharex=axs_dict[fields[0]], sharey=axs_dict[fields[0]])
+
+        axs_dict[B].xaxis.set_major_locator(ticker.MultipleLocator(base=np.pi/2))
+        axs_dict[B].xaxis.set_major_formatter(ticker.FuncFormatter(plot_util.multiple_of_pi_over_2))
+
+        if not gs[0, i].is_first_col():
+            axs_dict[B].tick_params(labelleft=False)
+
+
+    # colorbar axis
+    cax = fig.add_subplot(gs[0, -1])
+
+    min_magn_dens = np.inf
+    max_magn_dens = - np.inf
+
+    for field in fields:
+        magnon_density = magnon_density_dict[field]
+        min_magn_dens = min(magnon_density.min(), min_magn_dens)
+        max_magn_dens = max(magnon_density.max(), max_magn_dens)
+
+    for field in fields:
+        if field == 0:
+            axs_dict[field].set_title(r"$B = 0$")
+        elif field < 0:
+            axs_dict[field].set_title(r"$B < 0$")
+        else:
+            axs_dict[field].set_title(r"$B > 0$")
+
+    im_list = []
+
+    print("[", end="")
+    for field in fields:
+        print("-", end="")
+        ax = axs_dict[field]
+        k_vectors = k_dict[field]
+        freqs = freq_dict[field]
+
+        freqs *= 1e-15
+        if field == fields[0]:
+            ax.set_ylabel(r"$\omega$ (\SI{e15}{\radian\per\second})")
+
+        magnon_density = magnon_density_dict[field]
+        im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading='auto',
+                           norm=colors.LogNorm(vmin=min_magn_dens, vmax=max_magn_dens),
+                           rasterized=rasterized)
+        im_list.append(im)
+
+        ax.axhline(0, color="gray", linewidth=0.8, linestyle="--")
+        ax.axvline(0, color="gray", linewidth=0.8, linestyle="--")
+
+        ax.set_xlabel(r"$k \cdot \tilde{a}$")
+
+    print("-", end="")
+    cb = fig.colorbar(im_list[-1], cax=cax, orientation="vertical")
+    cb.set_label(r"Magnon density (arb. unit)")
+    print("]")
+
+    print("Saving fig...")
+    fig.savefig(f"{save_base_path}dispersion_comparison_negBfield.pdf")
+
+    print("Showing fig...")
+    plt.show()
+
+
 
 def dispersion_comparison_negB():
     print("\n\nDISPERSION RELATION COMPARISON: POSITIVE AND NEGATIVE MAGNETIC FIELD FIELD")
 
     paths = {
         -100: "/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_Bn100-2/",
+        0: "/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
         100: "/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_B100-2/"
     }
 
-    dx = physics.lattice_constant_tilted
+    dx = physics.lattice_constant
 
     data_A, data_B = mag_util.npy_files_from_dict(paths)
 
@@ -213,18 +405,28 @@ def dispersion_comparison_negB():
     freq_dict = dict()
     magnon_density_dict = dict()
 
+    # warnings.warn("Running with limited amount of datapoints!")   # TODO
+    # min_data_points = 10_000
+    min_data_points = 10_000_000
+
     for Bstrength in paths.keys():
-        Sx = physics.magnetization(mag_util.get_component(data_A[Bstrength], "x", 0),
-                                   mag_util.get_component(data_B[Bstrength], "x", 0))
-        Sy = physics.magnetization(mag_util.get_component(data_A[Bstrength], "y", 0),
-                                   mag_util.get_component(data_B[Bstrength], "y", 0))
+        data_points = min(data_A[Bstrength].shape[0], data_B[Bstrength].shape[0], min_data_points)
+
+        print(f"{paths[Bstrength]=}")
+        print(f"{data_A[Bstrength].shape=}")
+        print(f"{data_B[Bstrength].shape=}")
+
+        Sx = physics.magnetization(mag_util.get_component(data_A[Bstrength][:data_points], "x", 0),
+                                   mag_util.get_component(data_B[Bstrength][:data_points], "x", 0))
+        Sy = physics.magnetization(mag_util.get_component(data_A[Bstrength][:data_points], "y", 0),
+                                   mag_util.get_component(data_B[Bstrength][:data_points], "y", 0))
         dt = util.get_time_step(paths[Bstrength])
         k, f, m = physics.dispersion(Sx, Sy, dx, dt)
         k_dict[Bstrength] = k
         freq_dict[Bstrength] = f
         magnon_density_dict[Bstrength] = m
 
-    # TODO: Actual plot
+    dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict)
 
 
 # %% BOUNDARY EFFECTS
@@ -584,8 +786,12 @@ def boundary_effects(temperature=2):
 
 def main():
     pass
-    # boundary_effects(2)
+    boundary_effects(2)
     # boundary_effects(0)
-    # equilibrium_comparison_Bfield()
-    dispersion_comparison_Bfield_table()
-    # dispersion_comparison_negB()
+
+    equilibrium_comparison_Bfield()
+
+    dispersion_comparison_Bfield_table(1)
+    dispersion_comparison_Bfield_table(2)
+
+    dispersion_comparison_negB()

@@ -54,3 +54,23 @@ def quick_plot_spin_currents(j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other
 def quick_plot_components():
     raise NotImplementedError
 
+
+# formatter for multiples of pi/2
+def multiple_of_pi_over_2(x, pos):
+    # how many half-pi’s
+    n = int(np.round(x / (np.pi / 2)))
+    if n == 0:
+        return r"$0$"
+    elif n == 1:
+        return r"$\tfrac{\pi}{2}$"
+    elif n == -1:
+        return r"$-\tfrac{\pi}{2}$"
+    elif n == 2:
+        return r"$\pi$"
+    elif n == -2:
+        return r"$-\pi$"
+    elif n % 2 == 0:
+        return fr"${n // 2}\pi$"
+    else:
+        return fr"${n}\tfrac{{\pi}}{{2}}$"
+

@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 import matplotlib as mpl
@@ -12,7 +14,10 @@ import src.physics as physics
 
 default_slice_dict = {'t': 0, 'x': 1, 'y': 2, 'z': 3, '1': 1, '2': 2, '3': 3}
 
-default_force_overwrite = False
+default_force_overwrite = True
+
+if default_force_overwrite:
+    warnings.warn("FORCE OVERWRITE ENABLED!")
 
 
 def time_avg(spin_data):
@@ -532,9 +537,12 @@ def npy_files(dat_path: str, npy_path=None, slice_index=-100000, force=default_f
     if "max_rows" not in load_kwargs.keys():
         load_kwargs["max_rows"] = 1_000_000
 
-    base_folder = "data/profiles/"
+    base_folder = "/data/scc/marian.gunsch/npy/profiles/"
 
     data_path_A, data_path_B = infer_data_path(dat_path, True)
+
+    print(f"data-path A: {data_path_A}")
+    print(f"data-path B: {data_path_B}")
 
     if not npy_path:
         folder_list = data_path_A.split("/")

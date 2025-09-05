@@ -1,3 +1,5 @@
+import warnings
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
@@ -5,18 +7,23 @@ inches_per_pt = 1 / 72.27
 tex_linewidth_pts = 404.02908
 tex_linewidth_inch = tex_linewidth_pts * inches_per_pt
 
+tex_height_pts = 693.49821
+tex_height_inch = tex_linewidth_pts * inches_per_pt
+
 
 def get_width(fraction=1.0):
     return tex_linewidth_inch * fraction
 
 
-def get_height(fraction=1.0):
+def get_height(fraction=1.0, smaller=True):
     golden_ratio = (5 ** 0.5 - 1) / 2
-    return get_width(fraction) * golden_ratio
+    if smaller:
+        return get_width(fraction) * golden_ratio
+    return get_width(fraction) / golden_ratio
 
 
-def get_size(fraction=1.0):
-    return get_width(fraction), get_height(fraction)
+def get_size(fraction=1.0, height_smaller=True):
+    return get_width(fraction), get_height(fraction, height_smaller)
 
 
 def get_frac_for_latex(width_in):
@@ -36,7 +43,9 @@ def configure_backends(backend="Qt5Agg", ssh=False):
     # See here: https://matplotlib.org/stable/users/explain/figure/backends.html
 
 def configure():
-    latex_preamble = r"\usepackage{miller}"
+    latex_preamble = (r"\usepackage{miller}"
+                      r"\usepackage{siunitx}"
+                      r"\usepackage{amsmath}")
 
     # Use LaTeX for all text
     mpl.rcParams.update({
@@ -50,9 +59,12 @@ def configure():
         # "xtick.labelsize": 12,
         # "ytick.labelsize": 12,
         # "legend.fontsize": 12,
-        "figure.dpi": 300,
+        "figure.dpi": 100,
         "text.latex.preamble": latex_preamble,
     })
+
+    if mpl.rcParams["figure.dpi"] < 300:
+        warnings.warn("Default figure dpi is below 300.")
 
 
 def alt_configure():
