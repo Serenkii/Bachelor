@@ -1,4 +1,5 @@
 import os
+import warnings
 
 import numpy as np
 
@@ -19,4 +20,14 @@ def create_slice_list(slice_string, column_dict):
 
 
 def get_absolute_T_step_index(relative_position, N):
-    return int(np.floor(relative_position * N)) + 1    # TODO: +1 might be needed depending on definitions
+    warnings.warn("Not sure what is correct...")
+    return get_index_first_cold(relative_position, N)
+
+def get_index_first_cold(relative_position, N):
+    return int(np.floor(relative_position * N)) + 2
+
+def get_index_last_warm(relative_position, N):
+    return int(np.floor(relative_position * N)) + 1
+
+def get_Tstep_pos(relative_position, N):
+    return get_index_last_warm(relative_position, N) + 0.5

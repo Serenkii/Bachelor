@@ -112,8 +112,8 @@ def dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_di
     if version == 1:
         gs = fig.add_gridspec(nrows=5, ncols=2, height_ratios=[4, 4, 4, 4, 0.2], hspace=0.65, wspace=0.05)
     else:
-        gs = fig.add_gridspec(nrows=6, ncols=3, width_ratios=[2, 3, 3], height_ratios=[4, 4, 4, 4, 1.2, 0.2],
-                              hspace=0.07, wspace=0.05)
+        gs = fig.add_gridspec(nrows=6, ncols=3, width_ratios=[1.5, 3, 3], height_ratios=[4, 4, 4, 4, 1.2, 0.2],
+                              hspace=0.07, wspace=0.05, left=0.05)
 
     axs = np.empty((4, 2), dtype=object)
     for i in range(4):
@@ -174,9 +174,11 @@ def dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_di
                 ax.set_ylabel(r"$\omega$ (\SI{e15}{\radian\per\second})")
 
             magnon_density = magnon_density_dict[field][direction]
-            im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading='auto',
+            im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading='gouraud',
                                norm=colors.LogNorm(vmin=min_magn_dens, vmax=max_magn_dens),
                                rasterized=rasterized)
+            print("Using shading='gouraud'")
+
             im_list.append(im)
 
             ax.axhline(0, color="gray", linewidth=0.8, linestyle="--")
@@ -209,7 +211,7 @@ def dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_di
 
     print("-", end="")
     cb = fig.colorbar(im_list[-1], cax=cax, orientation="horizontal")
-    cb.set_label(r"Magnon density (arb. unit)")
+    cb.set_label(r"magnon density (arb. unit)")
     print("]")
 
     print("Saving fig...")
@@ -270,9 +272,9 @@ def dispersion_comparison_Bfield_table_data():
         True: dict()
     }
 
-    # warnings.warn("Running with limited amount of datapoints!")   # TODO
-    # min_data_points = 10_000
-    min_data_points = 10_000_000
+    warnings.warn("Running with limited amount of datapoints!")   # TODO
+    min_data_points = 10_000
+    # min_data_points = 10_000_000
 
     for magnetic_field in data_dict.keys():
         for direction in directions:
@@ -365,9 +367,10 @@ def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict):
             ax.set_ylabel(r"$\omega$ (\SI{e15}{\radian\per\second})")
 
         magnon_density = magnon_density_dict[field]
-        im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading='auto',
+        im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading='gouraud',
                            norm=colors.LogNorm(vmin=min_magn_dens, vmax=max_magn_dens),
                            rasterized=rasterized)
+        print("Using shading='gouraud'")
         im_list.append(im)
 
         ax.axhline(0, color="gray", linewidth=0.8, linestyle="--")
@@ -405,9 +408,9 @@ def dispersion_comparison_negB():
     freq_dict = dict()
     magnon_density_dict = dict()
 
-    # warnings.warn("Running with limited amount of datapoints!")   # TODO
-    # min_data_points = 10_000
-    min_data_points = 10_000_000
+    warnings.warn("Running with limited amount of datapoints!")   # TODO
+    min_data_points = 10_000
+    # min_data_points = 10_000_000
 
     for Bstrength in paths.keys():
         data_points = min(data_A[Bstrength].shape[0], data_B[Bstrength].shape[0], min_data_points)
@@ -786,7 +789,7 @@ def boundary_effects(temperature=2):
 
 def main():
     pass
-    boundary_effects(2)
+    # boundary_effects(2)
     # boundary_effects(0)
 
     equilibrium_comparison_Bfield()

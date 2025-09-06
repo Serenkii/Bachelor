@@ -80,6 +80,7 @@ def linear_fit_func(x, m, c):
     :param c:
     :return:
     """
+    pass
 
 
 def perform_exp_fit():

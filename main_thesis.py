@@ -13,10 +13,10 @@ import thesis.subsections.dmi as dmi
 
 def main():
     # miscellaneous.main()
-    equilibrium.main()
+    # equilibrium.main()
     sse.main()
-    sne.main()
-    dmi.main()
+    # sne.main()
+    # dmi.main()
 
 
 if __name__ == '__main__':

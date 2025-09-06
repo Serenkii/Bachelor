@@ -14,7 +14,7 @@ import src.physics as physics
 
 default_slice_dict = {'t': 0, 'x': 1, 'y': 2, 'z': 3, '1': 1, '2': 2, '3': 3}
 
-default_force_overwrite = True
+default_force_overwrite = False
 
 if default_force_overwrite:
     warnings.warn("FORCE OVERWRITE ENABLED!")
