@@ -1,5 +1,7 @@
+import warnings
+
 import numpy as np
-import thesis.mpl_configuration
+import thesis.mpl_configuration as mpl_config
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -9,6 +11,8 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 
 seeblau = "#00a9e0"
 font_size = 12
+
+mpl_config.configure()
 
 # %%
 
@@ -57,6 +61,65 @@ def crop_pdf_to_content(input_pdf, output_pdf, dpi=1500, margin_x0=0, margin_y0=
     doc.save(output_pdf)
 
 
+def crop_to_size(input_pdf, output_pdf=None, width_inch=None, height_inch=None, width_pts=None, height_pts=None,
+                 width_latex_ratio=None, height_latex_ratio=None, anchor=(0.5, 0.5)):
+
+    if output_pdf is None:
+        output_pdf = f"{input_pdf[:-4]}_cropped.pdf"
+
+    if [width_inch, width_pts, width_latex_ratio].count(None) < 2:
+        raise ValueError("Too many parameters defined.")
+    if [height_inch, height_pts].count(None) < 2:
+        raise ValueError("Too many parameters defined.")
+
+    if width_inch:
+        width_pts = mpl_config.inches_to_pts(width_inch)
+    if height_inch:
+        height_pts = mpl_config.inches_to_pts(height_inch)
+    if width_latex_ratio:
+        width_pts = mpl_config.tex_linewidth_pts * width_latex_ratio
+    if height_latex_ratio:
+        height_pts = mpl_config.tex_linewidth_pts * height_latex_ratio
+
+    print(f"Trying to crop pdf {input_pdf}...", end="\t")
+
+    doc = fitz.open(input_pdf)
+
+    for page in doc:
+        print(page.mediabox)
+
+        x0 = page.mediabox.x0
+        x1 = page.mediabox.x1
+        y0 = page.mediabox.y0
+        y1 = page.mediabox.y1
+
+        if width_pts is not None:     # Only change if wanted
+            middle = anchor[0] * (x0 + x1)
+            x0 = middle - 0.5 * width_pts
+            x1 = middle + 0.5 * width_pts
+        else:
+            width_pts = x1 - x0
+
+        if height_pts is not None:
+            middle = (1 - anchor[1]) * (y0 + y1)
+            y0 = middle - 0.5 * height_pts
+            y1 = middle + 0.5 * height_pts
+        else:
+            height_pts = y1 - y0
+
+        crop_rect = fitz.Rect(x0, y0, x1, y1)
+
+        page.set_cropbox(crop_rect)
+
+    print(f"Saving into {output_pdf}...")
+    doc.save(output_pdf)
+
+    latex_width_ratio = mpl_config.get_frac_for_latex(mpl_config.pts_to_inches(width_pts))
+    print(f"Latex width ratio of output: {latex_width_ratio}")
+
+    return width_pts, height_pts
+
+
 # %% draw a vector / fancy arrow
 from matplotlib.patches import FancyArrowPatch
 from matplotlib.patches import ArrowStyle
@@ -96,14 +159,14 @@ class Arrow3D(FancyArrowPatch):
         proj = self.axes.get_proj()
         xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, proj)
         self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
-        print("WARNING: Method created with no clue what I am doing.")
+        warnings.warn("Method created with no clue what I am doing.")
         return min(np.min(xs), np.min(ys), np.min(zs)) - 1e3  # Used for depth sorting
         # TODO: I have no idea if this makes sense
 
 
 # %% LLG
 def llg_equation(save_name=None, thermal_noise=0.0):
-    font_size = 12
+    font_size = "large"
 
     A = 0.3
     dA0 = +0.2
@@ -167,7 +230,8 @@ def llg_equation(save_name=None, thermal_noise=0.0):
     ax.legend()
     plt.show()
 
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"},
+                           figsize=(mpl_config.get_width(1.0), mpl_config.get_width(1.0)))
 
     u, v = np.mgrid[0:2 * np.pi:20j, 0:(np.pi / 2):10j]
     x = np.cos(u) * np.sin(v)
@@ -244,15 +308,19 @@ def llg_equation(save_name=None, thermal_noise=0.0):
 
     if save_name:
         fig.savefig(save_name, bbox_inches='tight', pad_inches=0)
+        # fig.savefig(save_name)
 
-        crop_pdf_to_content(save_name,
-                            f"{save_name[:-4]}_cropped.pdf",
-                            margin_y0=400, margin_y1=-100, margin_x0=100, margin_x1=100)
+        crop_to_size(save_name, width_latex_ratio=0.72, height_latex_ratio=0.55, anchor=(0.5, 0.47))
+
+        # crop_pdf_to_content(save_name,
+        #                     f"{save_name[:-4]}_cropped.pdf",
+        #                     # margin_y0=400, margin_y1=-100, margin_x0=100, margin_x1=100
+        #                     )
 
     plt.show()
 
 
-# %% DMI
+# %% in plane out plane vector 2d
 def vector_in_plane_2d(axis, position: tuple, radius=0.2, color="black", **kwargs):
     circle_in = patches.Circle(position, radius, fill=False, edgecolor=color, **kwargs)
     axis.add_patch(circle_in)
@@ -282,9 +350,9 @@ def arrow_2d_from_midpoint(midpoint, direction, *args, length_arrow=None, **kwar
     end = midpoint + half_vec
     return FancyArrowPatch(start, end, *args, **kwargs)
 
-
+# %% DMI
 def dmi1(save_name=None):
-    font_size = 14
+    font_size = "medium"
 
     b = 0.0
     D = 0.5
@@ -295,27 +363,27 @@ def dmi1(save_name=None):
 
     print(np.dot(-D_vec, np.cross(S1, S2)))
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=mpl_config.get_size(0.49))
 
     # connecting lines
     ax.plot([-1, 1], [0, 0], marker="", linestyle="-", linewidth=0.5, color="k")
 
     # Spin 1
-    S1_arrow = arrow_2d_from_midpoint([-1, 0], S1[1:], shrinkA=0, shrinkB=0, mutation_scale=30, lw=3, arrowstyle="-|>",
+    S1_arrow = arrow_2d_from_midpoint([-1, 0], S1[1:], shrinkA=0, shrinkB=0, mutation_scale=15, lw=1.5, arrowstyle="-|>",
                                       color="k")
     ax.add_artist(S1_arrow)
-    ax.plot(-1, 0, linestyle="", marker="o", markersize=10, color=seeblau)
+    ax.plot(-1, 0, linestyle="", marker="o", markersize=5, color=seeblau)
     ax.text(-1.1, 0, r"$\vec{S}_i$", size=font_size, color=seeblau, ha="right", va="bottom")
 
     # Spin 2
-    S2_arrow = arrow_2d_from_midpoint([1, 0], S2[1:], shrinkA=0, shrinkB=0, mutation_scale=30, lw=3, arrowstyle="-|>",
+    S2_arrow = arrow_2d_from_midpoint([1, 0], S2[1:], shrinkA=0, shrinkB=0, mutation_scale=15, lw=1.5, arrowstyle="-|>",
                                       color="k")
     ax.add_artist(S2_arrow)
-    ax.plot(1, 0, linestyle="", marker="o", markersize=10, color=seeblau)
+    ax.plot(1, 0, linestyle="", marker="o", markersize=5, color=seeblau)
     ax.text(1.1, 0, r"$\vec{S}_j$", size=font_size, color=seeblau, ha="left", va="bottom")
 
     # red atom
-    ax.plot(0, 0, marker="p", linestyle="", markersize=15, color="r")
+    ax.plot(0, 0, marker="p", linestyle="", markersize=7.5, color="r")
 
     # symmetry point
     ax.plot(0, 0, marker=".", linestyle="", color="green")
@@ -348,7 +416,7 @@ def dmi1(save_name=None):
 
 
 def dmi2(save_name=None):
-    font_size = 14
+    font_size = "medium"
 
     b = 0.1
     D = 0.5
@@ -359,24 +427,24 @@ def dmi2(save_name=None):
 
     print(np.dot(-D_vec, np.cross(S1, S2)))
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=mpl_config.get_size(0.49))
 
     # connecting lines
-    ax.plot([-1, 1], [0, 0], marker="", linestyle="-", linewidth=0.5, color="k")
-    ax.plot([-1, 0, 1], [0, 0.45, 0], marker="", color="grey", linewidth=0.3)
+    ax.plot([-1, 1], [0, 0], marker="", linestyle="-", linewidth=0.25, color="k")
+    ax.plot([-1, 0, 1], [0, 0.45, 0], marker="", color="grey", linewidth=0.15)
 
     # Spin 1
-    S1_arrow = arrow_2d_from_midpoint([-1, 0], S1[1:], shrinkA=0, shrinkB=0, mutation_scale=30, lw=3, arrowstyle="-|>",
+    S1_arrow = arrow_2d_from_midpoint([-1, 0], S1[1:], shrinkA=0, shrinkB=0, mutation_scale=15, lw=1.5, arrowstyle="-|>",
                                       color="k")
     ax.add_artist(S1_arrow)
-    ax.plot(-1, 0, linestyle="", marker="o", markersize=10, color=seeblau)
+    ax.plot(-1, 0, linestyle="", marker="o", markersize=5, color=seeblau)
     ax.text(-1.1, 0, r"$\vec{S}_i$", size=font_size, color=seeblau, ha="right", va="bottom")
 
     # Spin 2
-    S2_arrow = arrow_2d_from_midpoint([1, 0], S2[1:], shrinkA=0, shrinkB=0, mutation_scale=30, lw=3, arrowstyle="-|>",
+    S2_arrow = arrow_2d_from_midpoint([1, 0], S2[1:], shrinkA=0, shrinkB=0, mutation_scale=15, lw=1.5, arrowstyle="-|>",
                                       color="k")
     ax.add_artist(S2_arrow)
-    ax.plot(1, 0, linestyle="", marker="o", markersize=10, color=seeblau)
+    ax.plot(1, 0, linestyle="", marker="o", markersize=5, color=seeblau)
     ax.text(1.1, 0, r"$\vec{S}_j$", size=font_size, color=seeblau, ha="left", va="bottom")
 
     # symmetry axis
@@ -384,7 +452,7 @@ def dmi2(save_name=None):
     ax.text(0.4, -0.6, r"$C_2$", size=font_size, color="green", ha="left", va="top")
 
     # red atom
-    ax.plot(0, 0.45, marker="p", linestyle="", markersize=15, color="r")
+    ax.plot(0, 0.45, marker="p", linestyle="", markersize=7.5, color="r")
 
     # dmi vector
     vector_out_plane_2d(ax, (0, 0), color="orange", zorder=5)
@@ -396,7 +464,7 @@ def dmi2(save_name=None):
     height = 0.2
     theta2 = 50  # ending angle in degrees
 
-    arc = patches.Arc(center, width, height, angle=0, theta1=130, theta2=theta2, lw=0.8, color='black', zorder=5)
+    arc = patches.Arc(center, width, height, angle=0, theta1=130, theta2=theta2, lw=0.4, color='black', zorder=5)
     ax.add_patch(arc)
 
     # Convert angle to radians
@@ -415,7 +483,7 @@ def dmi2(save_name=None):
     ax.annotate("",
                 xy=(x_end, y_end),
                 xytext=(x_back, y_back),
-                arrowprops=dict(arrowstyle="-|>", color='black', lw=0.8))
+                arrowprops=dict(arrowstyle="-|>", mutation_scale=7, color='black', lw=0.4))
 
     ax.set_xlim(-2, 2)
     ax.set_ylim(-1, 1)
@@ -431,6 +499,8 @@ def dmi2(save_name=None):
 
 # %% Spin waves
 def spin_waves(save_name):
+    warnings.warn("Not edited when applying LaTeX-size and figure restrictions on 08/09/25. Therefore untested!")
+
     N = 8
     phi0 = 0
     n = np.arange(N)
@@ -490,7 +560,7 @@ def spin_waves(save_name):
 # %% AFM modes
 
 def afm_modes(save_name=None):
-    font_size = 12
+    font_size = "medium"
 
     H_E = 2  # exchange
     H_A = 0.2  # anisotropy
@@ -513,21 +583,22 @@ def afm_modes(save_name=None):
     Sy_2_b = 0.0
     Sz_2_b = - np.sqrt(1 - Sx_2_b ** 2 - Sy_2_b ** 2)
 
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(mpl_config.get_width(0.75),
+                                                                     mpl_config.get_width()))
 
     # spin arrows
-    arrow_S2_a = Arrow3D([-1, -1 + Sx_2_a], [0, Sy_2_a], [0, Sz_2_a], mutation_scale=20,
-                         shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="r", zorder=0)
+    arrow_S2_a = Arrow3D([-1, -1 + Sx_2_a], [0, Sy_2_a], [0, Sz_2_a], mutation_scale=10,
+                         shrinkA=0, shrinkB=0, lw=0.5, arrowstyle="-|>", color="r", zorder=0)
     ax.add_artist(arrow_S2_a)
-    arrow_S1_a = Arrow3D([-1, -1 + Sx_1_a], [0, Sy_1_a], [0, Sz_1_a], mutation_scale=20,
-                         shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="b", zorder=0)
+    arrow_S1_a = Arrow3D([-1, -1 + Sx_1_a], [0, Sy_1_a], [0, Sz_1_a], mutation_scale=10,
+                         shrinkA=0, shrinkB=0, lw=0.5, arrowstyle="-|>", color="b", zorder=0)
     ax.add_artist(arrow_S1_a)
 
-    arrow_S2_b = Arrow3D([1, 1 + Sx_2_b], [0, Sy_2_b], [0, Sz_2_b], mutation_scale=20,
-                         shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="r", zorder=0)
+    arrow_S2_b = Arrow3D([1, 1 + Sx_2_b], [0, Sy_2_b], [0, Sz_2_b], mutation_scale=10,
+                         shrinkA=0, shrinkB=0, lw=0.5, arrowstyle="-|>", color="r", zorder=0)
     ax.add_artist(arrow_S2_b)
-    arrow_S1_b = Arrow3D([1, 1 + Sx_1_b], [0, Sy_1_b], [0, Sz_1_b], mutation_scale=20,
-                         shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="b", zorder=0)
+    arrow_S1_b = Arrow3D([1, 1 + Sx_1_b], [0, Sy_1_b], [0, Sz_1_b], mutation_scale=10,
+                         shrinkA=0, shrinkB=0, lw=0.5, arrowstyle="-|>", color="b", zorder=0)
     ax.add_artist(arrow_S1_b)
 
     # precession circles
@@ -535,7 +606,7 @@ def afm_modes(save_name=None):
     circle_x = np.cos(phi)
     circle_y = np.sin(phi)
 
-    circle_kwargs = dict(linestyle="--", linewidth=0.8)
+    circle_kwargs = dict(linestyle="--", linewidth=0.4)
     ax.plot(Sx_1_a * circle_x - 1, Sx_1_a * circle_y, Sz_1_a, **circle_kwargs, color="b")
     ax.plot(Sx_2_a * circle_x - 1, Sx_2_a * circle_y, Sz_2_a, **circle_kwargs, color="r")
     ax.plot(Sx_1_b * circle_x + 1, Sx_1_b * circle_y, Sz_1_b, **circle_kwargs, color="b")
@@ -552,7 +623,7 @@ def afm_modes(save_name=None):
         z_arc = np.zeros_like(theta)
 
         # draw arc
-        ax.plot(x_arc, y_arc, z_arc, color="k", linestyle="-", linewidth=1, zorder=100)
+        ax.plot(x_arc, y_arc, z_arc, color="k", linestyle="-", linewidth=0.5, zorder=100)
 
         # compute direction of arrowhead (tangent to arc at the end)
         dx = -radius * np.sin(theta[-1]) * chirality
@@ -583,10 +654,10 @@ def afm_modes(save_name=None):
     ax.text(Sx_2_b + 1, 0, 0.5 * Sz_2_b, r"$\vec{S}_2$", size=font_size, va="center", ha="right", color="r")
 
     # z axis
-    ax.plot([-1.0, -1.0], [0.0, 0.0], [-1.0, 1.0], marker="", linestyle="--", color="k", linewidth=0.8)
-    ax.plot([1.0, 1.0], [0.0, 0.0], [-1.0, 1.0], marker="", linestyle="--", color="k", linewidth=0.8)
-    z_axis_arrow = Arrow3D([0.0, 0.0], [0, 0.0], [0.2, 0.8], mutation_scale=10,
-                           shrinkA=0, shrinkB=0, lw=1, arrowstyle="-|>", color="k", zorder=0)
+    ax.plot([-1.0, -1.0], [0.0, 0.0], [-1.0, 1.0], marker="", linestyle="--", color="k", linewidth=0.4)
+    ax.plot([1.0, 1.0], [0.0, 0.0], [-1.0, 1.0], marker="", linestyle="--", color="k", linewidth=0.4)
+    z_axis_arrow = Arrow3D([0.0, 0.0], [0, 0.0], [0.2, 0.8], mutation_scale=5,
+                           shrinkA=0, shrinkB=0, lw=0.5, arrowstyle="-|>", color="k", zorder=0)
     ax.add_artist(z_axis_arrow)
     ax.text(0.05, 0.0, 0.8, r"$z$", size=font_size, va="top", ha="left")
 
@@ -606,9 +677,7 @@ def afm_modes(save_name=None):
     if save_name:
         fig.savefig(save_name, bbox_inches='tight', pad_inches=0)
 
-        crop_pdf_to_content(save_name,
-                            f"{save_name[:-4]}_cropped.pdf",
-                            margin_y0=250, margin_y1=0, margin_x0=100, margin_x1=150)
+        crop_to_size(save_name, anchor=(0.5, 0.5), width_latex_ratio=0.5, height_latex_ratio=0.4)
 
     plt.show()
 
@@ -618,7 +687,7 @@ def afm_modes(save_name=None):
 def toy_model(save_name=None):
     colors = ["red", "blue"]
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(mpl_config.get_width(), mpl_config.get_width()))
     N = 6
     corner_dN = 2
 
@@ -630,44 +699,39 @@ def toy_model(save_name=None):
                 color = colors[(x + y) % 2]
                 ax.plot(x, -y, color=color, linestyle="", marker="o", ms=8)
 
-    def draw_axes(position, box_width, distance_txt=0.05, text_size=10):
+    def draw_axes(position, box_width, distance_txt=0.05, text_size="small"):
         position = np.array(position)
         arrow_kwargs = dict(shrinkA=0, shrinkB=0, mutation_scale=6, lw=1, arrowstyle="<|-|>", color="k")
-
-        previous_font_size = mpl.rcParams["font.size"]
-        mpl.rcParams["font.size"] = text_size
 
         start = position - np.array([box_width / 2, 0])
         end = position + np.array([box_width / 2, 0])
         arrow = FancyArrowPatch(start, end, **arrow_kwargs)
         ax.add_patch(arrow)
-        ax.text(end[0], end[1] - distance_txt, r"$x$", va="top", ha="right")
-        ax.text(end[0], end[1] + distance_txt, r"$\hkl[100]$", va="bottom", ha="center")
-        ax.text(start[0], start[1] + distance_txt, r"$\hkl[-100]$", va="bottom", ha="center")
+        ax.text(end[0], end[1] - distance_txt, r"$x$", va="top", ha="right", size=text_size)
+        ax.text(end[0], end[1] + distance_txt, r"$\hkl[100]$", va="bottom", ha="center", size=text_size)
+        ax.text(start[0], start[1] + distance_txt, r"$\hkl[-100]$", va="bottom", ha="center", size=text_size)
 
         start = position - np.array([0, box_width / 2])
         end = position + np.array([0, box_width / 2])
         arrow = FancyArrowPatch(start, end, **arrow_kwargs)
         ax.add_patch(arrow)
-        ax.text(end[0] - distance_txt * 2, end[1], r"$y$", va="top", ha="right")
-        ax.text(end[0], end[1] + distance_txt, r"$\hkl[010]$", va="bottom", ha="center")
-        ax.text(start[0], start[1] - distance_txt, r"$\hkl[0-10]$", va="top", ha="center")
+        ax.text(end[0] - distance_txt * 2, end[1], r"$y$", va="top", ha="right", size=text_size)
+        ax.text(end[0], end[1] + distance_txt, r"$\hkl[010]$", va="bottom", ha="center", size=text_size)
+        ax.text(start[0], start[1] - distance_txt, r"$\hkl[0-10]$", va="top", ha="center", size=text_size)
 
         start = position - np.array([box_width / 2, box_width / 2])
         end = position + np.array([box_width / 2, box_width / 2])
         arrow = FancyArrowPatch(start, end, **arrow_kwargs)
         ax.add_patch(arrow)
-        ax.text(start[0], start[1] - distance_txt, r"$\hkl[-1-10]$", va="top", ha="center")
-        ax.text(end[0], end[1] + distance_txt, r"$\hkl[110]$", va="bottom", ha="center")
+        ax.text(start[0], start[1] - distance_txt, r"$\hkl[-1-10]$", va="top", ha="center", size=text_size)
+        ax.text(end[0], end[1] + distance_txt, r"$\hkl[110]$", va="bottom", ha="center", size=text_size)
 
         start = position + np.array([- box_width / 2, box_width / 2])
         end = position + np.array([box_width / 2, - box_width / 2])
         arrow = FancyArrowPatch(start, end, **arrow_kwargs)
         ax.add_patch(arrow)
-        ax.text(start[0], start[1] + distance_txt, r"$\hkl[-110]$", va="bottom", ha="center")
-        ax.text(end[0], end[1] - distance_txt, r"$\hkl[1-10]$", va="top", ha="center")
-
-        mpl.rcParams["font.size"] = previous_font_size
+        ax.text(start[0], start[1] + distance_txt, r"$\hkl[-110]$", va="bottom", ha="center", size=text_size)
+        ax.text(end[0], end[1] - distance_txt, r"$\hkl[1-10]$", va="top", ha="center", size=text_size)
 
     def draw_lattice_constant(distance=0.2):
         arrow_kwargs = dict(shrinkA=0, shrinkB=0, mutation_scale=3, lw=1, arrowstyle="|-|", color="k")
@@ -716,7 +780,7 @@ def toy_model(save_name=None):
         ax.plot(start[0], start[1], color=color2, marker='o', ms=2, zorder=5)
         ax.text(start[0] - 0.055, start[1] + 0.055, r"$\vec{r}_{\mathrm{A}}$", color=color2, va="bottom", ha="right")
 
-    def draw_exchange_interactions(color_J1="green", color_J2_1="magenta", color_J2_2="purple", text_size=10):
+    def draw_exchange_interactions(color_J1="green", color_J2_1="magenta", color_J2_2="purple", text_size="small"):
         shared_kwargs = dict(marker="", linestyle="-")
         paths_x = dict(
             J1=[[4, 4], [3, 5],
@@ -742,24 +806,19 @@ def toy_model(save_name=None):
                 ax.plot(path_x, path_y, **path_kwargs, **shared_kwargs)
 
         # Text
-        previous_font_size = mpl.rcParams["font.size"]
-        mpl.rcParams["font.size"] = text_size
-
         d = 0.06
         d_ = 0.5 * np.sqrt(2) * d
 
-        ax.text(4.5, -1 - d, r"$J_1$", va="top", ha="center", color=color_J1)
-        ax.text(4 + d, -0.5, r"$J_1$", va="center", ha="left", color=color_J1)
-        ax.text(3.5, -1 + d, r"$J_1$", va="bottom", ha="center", color=color_J1)
-        ax.text(4 - d, -1.5, r"$J_1$", va="center", ha="right", color=color_J1)
+        ax.text(4.5, -1 - d, r"$J_1$", va="top", ha="center", color=color_J1, size=text_size)
+        ax.text(4 + d, -0.5, r"$J_1$", va="center", ha="left", color=color_J1, size=text_size)
+        ax.text(3.5, -1 + d, r"$J_1$", va="bottom", ha="center", color=color_J1, size=text_size)
+        ax.text(4 - d, -1.5, r"$J_1$", va="center", ha="right", color=color_J1, size=text_size)
 
-        ax.text(4.75 + d_, -0.25 - d_, r"$J_2'$", va="top", ha="left", color=color_J2_2)
-        ax.text(3.25 + d_, -1.75 - d_, r"$J_2'$", va="top", ha="left", color=color_J2_2)
+        ax.text(4.75 + d_, -0.25 - d_, r"$J_2'$", va="top", ha="left", color=color_J2_2, size=text_size)
+        ax.text(3.25 + d_, -1.75 - d_, r"$J_2'$", va="top", ha="left", color=color_J2_2, size=text_size)
 
-        ax.text(4.75 - d_, -1.75 - d_, r"$J_2$", va="top", ha="right", color=color_J2_1)
-        ax.text(3.25 + d_, -0.25 + d_, r"$J_2$", va="bottom", ha="left", color=color_J2_1)
-
-        mpl.rcParams["font.size"] = previous_font_size
+        ax.text(4.75 - d_, -1.75 - d_, r"$J_2$", va="top", ha="right", color=color_J2_1, size=text_size)
+        ax.text(3.25 + d_, -0.25 + d_, r"$J_2$", va="bottom", ha="left", color=color_J2_1, size=text_size)
 
     def add_circular_arrow(center, radius, theta1, theta2,
                            color='black', lw=0.7, delta_angle=6, mutation_scale=7, zorder=5):
@@ -805,7 +864,7 @@ def toy_model(save_name=None):
         ax.text(0, -2.45, r"spin down $\downarrow$", size=10, ha="center", va="top", color="red")
 
     draw_symmetry()
-    draw_exchange_interactions(text_size=12)
+    draw_exchange_interactions(text_size="medium")
     draw_wigner_seitz()
     draw_points()
     draw_lattice_vectors()
@@ -824,6 +883,8 @@ def toy_model(save_name=None):
 
     if save_name:
         fig.savefig(save_name, bbox_inches='tight', pad_inches=0)
+
+        crop_to_size(save_name)
 
     plt.show()
 
@@ -858,7 +919,7 @@ def create_imagegrid_config(tilted, kwargs_empty, kwargs_A, kwargs_B, point_kwar
     generator_func = generate_tilted_config if tilted else generate_nontilted_config
     kwargs_empty = kwargs_empty or dict()
 
-    fig = plt.figure(figsize=[6.5, 6])
+    fig = plt.figure(figsize=(mpl_config.get_width(), mpl_config.get_width(0.9)))
     grid = ImageGrid(
         fig, 111, nrows_ncols=(2, 2),
         axes_pad=(0.2, 0.2),  # (horizontal, vertical) pad in inches → equal visually
@@ -942,10 +1003,10 @@ def spin_config_tilted(save_path=None):
     point_kwargs = dict(linestyle="", marker="o")
 
     fig, axs, grid = create_imagegrid_config(True, kwargs_empty, kwargs_A, kwargs_B, point_kwargs)
-    fig.suptitle("Tilted configuration")
+    # fig.suptitle("Tilted configuration")
 
     # Interaction energies
-    def draw_exchange_interactions(ax, color_J1="green", color_J2_1="magenta", color_J2_2="purple", text_size=12):
+    def draw_exchange_interactions(ax, color_J1="green", color_J2_1="magenta", color_J2_2="purple"):
         shared_kwargs = dict(marker="", linestyle="-", zorder=1)
         paths_x = dict(
             J1=[[0, 2], [0, 2]],
@@ -968,9 +1029,6 @@ def spin_config_tilted(save_path=None):
                 ax.plot(path_x, path_y, **path_kwargs, **shared_kwargs)
 
         # Text
-        previous_font_size = mpl.rcParams["font.size"]
-        mpl.rcParams["font.size"] = text_size
-
         box = dict(
             boxstyle="circle",
             facecolor="white",  # background color
@@ -982,7 +1040,6 @@ def spin_config_tilted(save_path=None):
         ax.text(2, 1, "$J_2$", va="center", ha="center", color=color_J2_1, bbox=box)
         ax.text(1, 2, "$J_2'$", va="center", ha="center", color=color_J2_2, bbox=box)
 
-        mpl.rcParams["font.size"] = previous_font_size
 
     draw_exchange_interactions(axs[0, 1])
 
@@ -1012,12 +1069,14 @@ def spin_config_tilted(save_path=None):
         ax.add_patch(bar)
 
         ax.text(2.5 + distance - 0.06, 0.5 - distance + 0.06, r"$a$", va="bottom", ha="right")
-        ax.text(0.5, 0 - distance * 1.4 - 0.1, r"$\tilde{a}$", va="top", ha="center")
+        ax.text(0.5, 0 - distance * 1.4 - 0.1, r"$a_{\mathrm{tilt}}$", va="top", ha="center")
 
     draw_lattice_constant(axs[1, 0])
 
     if save_path:
         fig.savefig(save_path)
+
+        crop_to_size(save_path)
 
     plt.show()
 
@@ -1029,9 +1088,9 @@ def spin_config_nontilted(save_path=None):
     point_kwargs = dict(linestyle="", marker="o")
 
     fig, axs, grid = create_imagegrid_config(False, None, kwargs_A, kwargs_B, point_kwargs)
-    fig.suptitle("Aligned configuration")
+    # fig.suptitle("Aligned configuration")
 
-    def draw_exchange_interactions(ax, color_J1="green", color_J2_1="magenta", color_J2_2="purple", text_size=12):
+    def draw_exchange_interactions(ax, color_J1="green", color_J2_1="magenta", color_J2_2="purple"):
         shared_kwargs = dict(marker="", linestyle="-", zorder=1)
         paths_x = dict(
             J1=[[1, 3], [2, 2]],
@@ -1054,9 +1113,6 @@ def spin_config_nontilted(save_path=None):
                 ax.plot(path_x, path_y, **path_kwargs, **shared_kwargs)
 
         # Text
-        previous_font_size = mpl.rcParams["font.size"]
-        mpl.rcParams["font.size"] = text_size
-
         box = dict(
             boxstyle="circle",
             facecolor="white",  # background color
@@ -1068,7 +1124,6 @@ def spin_config_nontilted(save_path=None):
         ax.text(1.5, 2.5, "$J_2$", va="center", ha="center", color=color_J2_1, bbox=box)
         ax.text(1.5, 1.5, "$J_2'$", va="center", ha="center", color=color_J2_2, bbox=box)
 
-        mpl.rcParams["font.size"] = previous_font_size
 
     draw_exchange_interactions(axs[0, 1])
 
@@ -1101,12 +1156,14 @@ def spin_config_nontilted(save_path=None):
              ha="center", va="center", clip_on=False)
 
     average_area_bracket(axs[0, 0], 3, 3, True)
-    axs[0, 0].text(1.6, 2.5, "profile averaging", color="green", va="center", ha="left", clip_on=False)
+    axs[0, 0].text(1.6, 2.5, "profile avg.", color="green", va="center", ha="left", clip_on=True)
     average_area_bracket(axs[1, 1], 2, 2, False)
     average_area_bracket(axs[1, 1], 3, 3, False)
 
     if save_path:
         fig.savefig(save_path)
+
+        crop_to_size(save_path)
 
     plt.show()
 
@@ -1115,29 +1172,28 @@ def spin_config_nontilted(save_path=None):
 
 
 if __name__ == '__main__':
-    # llg_equation("out/theoretical_figures/llg_equation.pdf")
-    # llg_equation("out/theoretical_figures/llg_equation_T.pdf", 2)
+    # llg_equation("out/theoretical_figures_/llg_equation.pdf")
+    # llg_equation("out/theoretical_figures_/llg_equation_T.pdf", 2)
 
-    # dmi1("out/theoretical_figures/dmi1.pdf")
+    # dmi1("out/theoretical_figures_/dmi1.pdf")
+    #
+    # dmi2("out/theoretical_figures_/dmi2.pdf")
+    #
+    # spin_waves("out/theoretical_figures_/spin_wave.pdf")
+    #
+    # afm_modes("out/theoretical_figures_/afm_modes.pdf")
 
-    # dmi2("out/theoretical_figures/dmi2.pdf")
+    # toy_model("out/theoretical_figures_/toy_model.pdf")
 
-    # spin_waves("out/theoretical_figures/spin_wave.pdf")
+    spin_config_tilted("out/theoretical_figures_/config_tilted.pdf")
+    spin_config_nontilted("out/theoretical_figures_/config_nontilted.pdf")
 
-    # afm_modes("out/theoretical_figures/afm_modes.pdf")
-
-    # toy_model("out/theoretical_figures/toy_model.pdf")
-
-    spin_config_tilted("out/theoretical_figures/config_tilted.pdf")
-    spin_config_nontilted("out/theoretical_figures/config_nontilted.pdf")
 
 # %% cropping testing
 
-save_name = "out/theoretical_figures/toy_model.pdf"
+save_name = "out/theoretical_figures_/config_tilted.pdf"
 
 test = False
 
 if test:
-    crop_pdf_to_content(save_name,
-                        f"{save_name[:-4]}_cropped.pdf",
-                        margin_y0=250, margin_y1=0, margin_x0=100, margin_x1=150)
+    print(crop_to_size(save_name, anchor=(0.5, 0.5)))

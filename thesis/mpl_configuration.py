@@ -11,6 +11,14 @@ tex_height_pts = 693.49821
 tex_height_inch = tex_linewidth_pts * inches_per_pt
 
 
+def inches_to_pts(inches):
+    return inches / inches_per_pt
+
+
+def pts_to_inches(pts):
+    return pts * inches_per_pt
+
+
 def get_width(fraction=1.0):
     return tex_linewidth_inch * fraction
 
@@ -41,6 +49,7 @@ def configure_backends(backend="Qt5Agg", ssh=False):
         mpl.use(backend)
     # mpl.use('Qt5Agg')   # for interactive plots https://stackoverflow.com/questions/49844189/how-to-get-interactive-plot-of-pyplot-when-using-pycharm
     # See here: https://matplotlib.org/stable/users/explain/figure/backends.html
+
 
 def configure():
     latex_preamble = (r"\usepackage{miller}"
@@ -75,6 +84,3 @@ def alt_configure():
 def default_configure():
     configure_backends("module://backend_interagg", ssh=False)  # "Qt5Agg"
     configure()
-
-
-

@@ -97,7 +97,7 @@ def plot_magn_Bfield(magn_dict, ylabel=r"magnetization $\langle m \rangle$", xli
     val_range = max_val - min_val
     pad = 0.05
 
-    ax.set_xlabel(r"position $x/(2\tilde{a})$")
+    ax.set_xlabel(r"position $x/\tilde{a}$")
     ax.set_ylabel(ylabel)
 
     ax.set_xlim(*xlim)
