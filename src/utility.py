@@ -72,19 +72,12 @@ def exp_fit_func_2(x, A, alpha, B, beta):
     return A * np.exp(- alpha * x) + B * np.exp(- beta * x)
 
 
-def linear_fit_func(x, m, c):
-    r"""
-    Function of form $m * x + c$
-    :param x:
-    :param m:
-    :param c:
-    :return:
-    """
-    pass
+def perform_linear_fit():
+
+    def linear(x, m, c):
+        return m * x + c
 
 
-def perform_exp_fit():
-    pass
 
 
 

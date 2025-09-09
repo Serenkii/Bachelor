@@ -94,6 +94,8 @@ def equilibrium_comparison_Bfield():
 
     equilibrium_comparison_Bfield_plot(Sx, Sy, Sz, magn)
 
+    warnings.warn("Think about introducing a linear fit here!")
+
 
 
 # %% Dispersion relation comparison for B=100T

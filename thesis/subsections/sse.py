@@ -1,9 +1,12 @@
+import warnings
+
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
 import matplotlib.colors as colors
 from matplotlib.collections import PolyCollection
+from scipy.optimize import curve_fit
 
 import src.utility as util
 import src.mag_util as mag_util
@@ -22,7 +25,8 @@ save_base_path = "out/thesis/sse/"
 shared_kwargs = dict(markersize=0.5, linewidth=1.0)
 plot_kwargs_dict = {
     "110": dict(**shared_kwargs, marker="", linestyle="-"),     # marker="s"
-    "-110": dict(**shared_kwargs, marker="", linestyle="--")     # marker="D"
+    "-110": dict(**shared_kwargs, marker="", linestyle="--"),     # marker="D"
+    "100": dict(**shared_kwargs, marker="", linestyle=":")
 }
 
 paths = {
@@ -44,8 +48,8 @@ if B_fields != paths["-110"].keys():
     raise AttributeError("Conflicting keys!")
 
 directions = paths.keys()
-field_strengths = sorted(paths["110"].keys(), reverse=True)
-assert field_strengths == sorted(paths["-110"].keys(), reverse=True)
+field_strengths = sorted(paths["110"].keys(), reverse=False)
+assert field_strengths == sorted(paths["-110"].keys(), reverse=False)
 
 data_A = {
     "110": dict(),
@@ -69,6 +73,7 @@ def initialize_data():
             magnetization[direction][B] = physics.magnetization(
                 mag_util.get_component(data_A[direction][B], "z", 15),
                 mag_util.get_component(data_B[direction][B], "z", 15), True)
+
 
 # %% INTRODUCTION OF A STATIC MAGNETIC FIELD (MAGNETIZATION)
 
@@ -188,6 +193,22 @@ def peak_dependence():
         for B in field_strengths:
             peaks[direction][B] = abs_max_func[direction](magnetization[direction][B][area_slice])
 
+
+    def linear_func(x, m, c):
+        x = np.array(x)
+        return m * x + c
+
+    popt = dict()
+    pcov = dict()
+    perr = dict()
+    for direction in directions:
+        popt[direction], pcov[direction] = curve_fit(linear_func, field_strengths, [peaks[direction][B] for B in field_strengths])
+        perr[direction] = np.sqrt(np.diag(pcov[direction]))
+
+        print(f"{popt=}")
+        print(f"{pcov=}")
+        print(f"{perr=}")
+
     # Plot
 
     fig, ax = plt.subplots()
@@ -195,8 +216,13 @@ def peak_dependence():
     ax.set_xlabel(r"magnetic field strength $B$ (\si{\tesla})")
     ax.set_ylabel(r"abs. peak magnon accum. $\left\lvert \langle \Delta m \rangle \right\rvert_{\max}$")
 
-    ax.plot(field_strengths, [peaks["110"][B] for B in field_strengths], label=r"\hkl[110]", linestyle="-", marker="o")
-    ax.plot(field_strengths, [-peaks["-110"][B] for B in field_strengths], label=r"\hkl[-110]", linestyle="-", marker="o")
+    sign = - 1
+
+    ax.plot(field_strengths, linear_func(field_strengths, *popt["110"]), linestyle="-", marker="", color="k")
+    ax.plot(field_strengths, sign * linear_func(field_strengths, *popt["-110"]), linestyle="-", marker="", color="k")
+
+    ax.plot(field_strengths, [peaks["110"][B] for B in field_strengths], label=r"\hkl[110]", linestyle="", marker="o")
+    ax.plot(field_strengths, [sign * peaks["-110"][B] for B in field_strengths], label=r"\hkl[-110]", linestyle="", marker="s")
 
     ax.legend(loc="upper center")
 
@@ -212,14 +238,215 @@ def peak_dependence():
 def direction_comparison():
     path_100 = "/data/scc/marian.gunsch/13/13_AM_xTstep_T2_B100/"
 
-    mag_util.npy_files(path_100, return_data=False)
+    B_strength = 100
+
+    eq_path = "/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100-2/"
+    tempA, tempB = mag_util.npy_files(eq_path)
+    eq_magn = np.mean(physics.magnetization(
+        mag_util.get_component(tempA, "z", 15),
+        mag_util.get_component(tempB, "z", 15), True)
+    )
+
+    step_pos = helper.get_absolute_T_step_index(0.49, 256)
+    max_magn = - np.inf
+    max_accu = - np.inf
+    min_magn = np.inf
+    min_accu = np.inf
+    pad = 0.05
+
+    tempA, tempB = mag_util.npy_files(path_100)
+    data_A_ = {
+        "100": tempA,
+        "110": data_A["110"][B_strength],
+        "-110": data_A["-110"][B_strength]
+    }
+    data_B_ = {
+        "100": tempB,
+        "110": data_B["110"][B_strength],
+        "-110": data_B["-110"][B_strength]
+    }
+
+    lattice_const = {
+        "100": physics.lattice_constant,
+        "110": physics.lattice_constant_tilted,
+        "-110": physics.lattice_constant_tilted
+    }
+
+    directions_ = data_A_.keys()
+    magnetization_ = dict()
+    magn_accumulation = dict()
+
+    for direction in directions_:
+        magnetization_[direction] = physics.magnetization(
+            mag_util.get_component(data_A_[direction], "z", 15),
+            mag_util.get_component(data_B_[direction], "z", 15), True)
+
+        magn_accumulation[direction] = np.copy(magnetization_[direction])
+        magn_accumulation[direction][:step_pos] -= eq_magn
+
+        max_magn = max(max_magn, np.max(magnetization_[direction][15:-15]))
+        max_accu = max(max_accu, np.max(magn_accumulation[direction][15:-15]))
+        min_magn = min(min_magn, np.min(magnetization_[direction][15:-15]))
+        min_accu = min(min_accu, np.min(magn_accumulation[direction][15:-15]))
+
+
+    magn_range = max_magn - min_magn
+    accu_range = max_accu - min_accu
+
+    def plot():
+        fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
+
+        ax2.set_xlabel("position $x / a$")
+        ax1.set_ylabel("magnetization $m$")
+        ax2.set_ylabel("magnon accum. $\Delta m$")
+
+        actual_step_pos = helper.get_Tstep_pos(0.49, 255)
+        ax1.set_xlim(- 60, + 60)
+        ax1.set_ylim(min_magn - pad * magn_range, max_magn + pad * magn_range)
+        ax2.set_ylim(min_accu - pad * accu_range, max_accu + pad * accu_range)
+
+        markers = ("o", "s", "D")
+
+        for direction, marker in zip(directions_, markers):
+            x = (np.arange(0, magnetization_[direction].shape[0], dtype=float) - actual_step_pos) * lattice_const[direction]
+            ax1.plot(x, magnetization_[direction], label=fr"\hkl[{direction}]", **plot_kwargs_dict[direction])
+
+            ax2.plot(x, magn_accumulation[direction], label=fr"\hkl[{direction}]", **plot_kwargs_dict[direction])
+
+        dT_pt = None
+        for ax, min_val, max_val in zip((ax1, ax2), (min_magn, min_accu), (max_magn, max_accu)):
+            val_range = max_val - min_val
+            label = r"$\Delta T$" if ax == ax2 else None
+            dT_pt, = ax.plot(0, min_val - pad * val_range, marker=10,
+                             color="r", linestyle="", label=label)
+            ax.plot(0, max_val + pad * val_range, marker=11, color="r",
+                    linestyle="",)
+
+        legend_dT = plt.legend(handles=[dT_pt,], loc="lower left")
+        ax2.add_artist(legend_dT)
+
+        ax1.legend()
+        fig.tight_layout()
+
+        fig.savefig(f"{save_base_path}direction_comparison.pdf")
+
+        plt.show()
+
+    plot()
+
 
 
 # %% Propagation lengths for [110] and [-110] for different B-fields
 def propagation_lengths():
-    start = helper.get_index_first_cold(0.49, 256) + 2
-    fit_area = slice(start, start + 60)
+    x0 = 3
+    start = helper.get_index_first_cold(0.49, 256) + x0
+    fit_area = slice(start, start + 45)
 
+    def exp_func1(x, A, l):
+        x = np.array(x)
+        return A * np.exp(-x / l)
+
+    def exp_func5(x, A_beta, lambda_beta, A_alpha, lambda_alpha):
+        x = np.array(x)
+        return A_beta * np.exp(-x / lambda_beta) - A_alpha * np.exp(-x / lambda_alpha)
+
+    def exp_func6(x, A_beta, lambda_beta, A_alpha, lambda_alpha):
+        x = np.array(x)
+        return A_beta * np.exp(-(x - x0) / lambda_beta) - A_alpha * np.exp(-(x - x0) / lambda_alpha)
+
+
+    popt = dict()
+    pcov = dict()
+    perr = dict()
+
+    def attempt(fit_func, lower, upper, p0, log=False):
+        for direction in directions:
+            popt[direction] = dict()
+            pcov[direction] = dict()
+            perr[direction] = dict()
+
+            for B in field_strengths:
+                popt[direction][B], pcov[direction][B] = curve_fit(
+                    fit_func, np.arange(fit_area.stop - fit_area.start), magnetization[direction][B][fit_area],
+                    bounds=(lower, upper), p0=p0
+                )
+                perr[direction][B] = np.sqrt(np.diag(pcov[direction][B]))
+
+        if log:
+            print(f"popt:\n{popt}\n\n"
+                  f"pcov:\n{pcov}\n\n"
+                  f"perr:\n{perr}\n"
+                  )
+        return fit_func
+
+    def biexp_attempt():
+        fit_func = exp_func6
+
+        p0 = (0.995, 50, 0.995, 50)
+        lower = (0.8, 3, 0.8, 3)
+        upper = (1.0, 100, 1.0, 100)
+
+        return attempt(fit_func, lower, upper, p0, log=True)
+
+    def mono_exp():
+        fit_func = exp_func1
+
+        p0 = (0.002, 50)
+        lower = (-0.1, 3)
+        upper = (0.1, 100)
+
+        return attempt(fit_func, lower, upper, p0, log=True)
+
+
+    fit_func = mono_exp()
+
+    def plot():
+        x_axis = np.arange(len(magnetization["110"][0]))
+        x_fit = np.linspace(0, fit_area.stop - fit_area.start, 300)
+
+        fig, ax = plt.subplots()
+
+        for direction in directions:
+            for B in field_strengths:
+                ax.plot(x_axis, magnetization[direction][B], linestyle="", marker="o", markersize=0.2)
+                ax.plot(x_fit + fit_area.start, fit_func(x_fit, *popt[direction][B]), linestyle="-", marker="",
+                        linewidth=0.2, color="k")
+
+        ax.set_xlim(120, 200)
+        ax.set_ylim(-0.002, 0.002)
+
+        plt.show()
+
+    plot()
+
+    if fit_func != exp_func1:
+        warnings.warn("I have only implemented a mono-exponential fit.")
+        return
+
+    # Plotting...
+
+    fig, ax = plt.subplots()
+
+    ax.set_xlabel(r"magnetic field strength $B$ (\si{\tesla})")
+    ax.set_ylabel(r"propagation length $\lambda / \tilde{a}$")
+
+    for direction in directions:
+        length = [popt[direction][B][1] for B in field_strengths]
+        length_unc = [perr[direction][B][1] for B in field_strengths]
+        ax.errorbar(field_strengths, length, yerr=length_unc, marker="_", capsize=2.7, label=rf"\hkl[{direction}]",
+                    # linestyle=(0, (5, 10)), linewidth=0.5
+                    linestyle=""
+                    )
+        print(f"x: {field_strengths}")
+        print(f"y: {np.array(length)}")
+
+    ax.legend(loc="lower center")
+
+    fig.tight_layout()
+
+    fig.savefig(f"{save_base_path}propagation_length_dependence.pdf")
+
+    plt.show()
 
 
 
@@ -241,7 +468,14 @@ def sse_spin_currents():
 def main():
     initialize_data()
 
-    sse_magnetization_Bfield()
-    sse_magnaccum_Bfield()
+    # sse_magnetization_Bfield()
+    # sse_magnaccum_Bfield()
 
-    peak_dependence()
+    # peak_dependence()
+
+    # direction_comparison()
+
+    # propagation_lengths()
+
+    sse_spin_currents()
+
