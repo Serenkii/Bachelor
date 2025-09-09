@@ -560,6 +560,9 @@ def spin_waves(save_name):
 # %% AFM modes
 
 def afm_modes(save_name=None):
+    scaling_factor = 2.0
+    sf = scaling_factor
+
     font_size = "medium"
 
     H_E = 2  # exchange
@@ -587,18 +590,18 @@ def afm_modes(save_name=None):
                                                                      mpl_config.get_width()))
 
     # spin arrows
-    arrow_S2_a = Arrow3D([-1, -1 + Sx_2_a], [0, Sy_2_a], [0, Sz_2_a], mutation_scale=10,
-                         shrinkA=0, shrinkB=0, lw=0.5, arrowstyle="-|>", color="r", zorder=0)
+    arrow_S2_a = Arrow3D([-1, -1 + Sx_2_a], [0, Sy_2_a], [0, Sz_2_a], mutation_scale=10 * sf,
+                         shrinkA=0, shrinkB=0, lw=0.5 * sf, arrowstyle="-|>", color="r", zorder=0)
     ax.add_artist(arrow_S2_a)
-    arrow_S1_a = Arrow3D([-1, -1 + Sx_1_a], [0, Sy_1_a], [0, Sz_1_a], mutation_scale=10,
-                         shrinkA=0, shrinkB=0, lw=0.5, arrowstyle="-|>", color="b", zorder=0)
+    arrow_S1_a = Arrow3D([-1, -1 + Sx_1_a], [0, Sy_1_a], [0, Sz_1_a], mutation_scale=10 * sf,
+                         shrinkA=0, shrinkB=0, lw=0.5 * sf, arrowstyle="-|>", color="b", zorder=0)
     ax.add_artist(arrow_S1_a)
 
-    arrow_S2_b = Arrow3D([1, 1 + Sx_2_b], [0, Sy_2_b], [0, Sz_2_b], mutation_scale=10,
-                         shrinkA=0, shrinkB=0, lw=0.5, arrowstyle="-|>", color="r", zorder=0)
+    arrow_S2_b = Arrow3D([1, 1 + Sx_2_b], [0, Sy_2_b], [0, Sz_2_b], mutation_scale=10 * sf,
+                         shrinkA=0, shrinkB=0, lw=0.5 * sf, arrowstyle="-|>", color="r", zorder=0)
     ax.add_artist(arrow_S2_b)
-    arrow_S1_b = Arrow3D([1, 1 + Sx_1_b], [0, Sy_1_b], [0, Sz_1_b], mutation_scale=10,
-                         shrinkA=0, shrinkB=0, lw=0.5, arrowstyle="-|>", color="b", zorder=0)
+    arrow_S1_b = Arrow3D([1, 1 + Sx_1_b], [0, Sy_1_b], [0, Sz_1_b], mutation_scale=10 * sf,
+                         shrinkA=0, shrinkB=0, lw=0.5 * sf, arrowstyle="-|>", color="b", zorder=0)
     ax.add_artist(arrow_S1_b)
 
     # precession circles
@@ -606,7 +609,7 @@ def afm_modes(save_name=None):
     circle_x = np.cos(phi)
     circle_y = np.sin(phi)
 
-    circle_kwargs = dict(linestyle="--", linewidth=0.4)
+    circle_kwargs = dict(linestyle="--", linewidth=0.4 * sf)
     ax.plot(Sx_1_a * circle_x - 1, Sx_1_a * circle_y, Sz_1_a, **circle_kwargs, color="b")
     ax.plot(Sx_2_a * circle_x - 1, Sx_2_a * circle_y, Sz_2_a, **circle_kwargs, color="r")
     ax.plot(Sx_1_b * circle_x + 1, Sx_1_b * circle_y, Sz_1_b, **circle_kwargs, color="b")
@@ -623,7 +626,7 @@ def afm_modes(save_name=None):
         z_arc = np.zeros_like(theta)
 
         # draw arc
-        ax.plot(x_arc, y_arc, z_arc, color="k", linestyle="-", linewidth=0.5, zorder=100)
+        ax.plot(x_arc, y_arc, z_arc, color="k", linestyle="-", linewidth=0.5 * sf, zorder=100)
 
         # compute direction of arrowhead (tangent to arc at the end)
         dx = -radius * np.sin(theta[-1]) * chirality
@@ -654,10 +657,10 @@ def afm_modes(save_name=None):
     ax.text(Sx_2_b + 1, 0, 0.5 * Sz_2_b, r"$\vec{S}_2$", size=font_size, va="center", ha="right", color="r")
 
     # z axis
-    ax.plot([-1.0, -1.0], [0.0, 0.0], [-1.0, 1.0], marker="", linestyle="--", color="k", linewidth=0.4)
-    ax.plot([1.0, 1.0], [0.0, 0.0], [-1.0, 1.0], marker="", linestyle="--", color="k", linewidth=0.4)
-    z_axis_arrow = Arrow3D([0.0, 0.0], [0, 0.0], [0.2, 0.8], mutation_scale=5,
-                           shrinkA=0, shrinkB=0, lw=0.5, arrowstyle="-|>", color="k", zorder=0)
+    ax.plot([-1.0, -1.0], [0.0, 0.0], [-1.0, 1.0], marker="", linestyle="--", color="k", linewidth=0.4 * sf)
+    ax.plot([1.0, 1.0], [0.0, 0.0], [-1.0, 1.0], marker="", linestyle="--", color="k", linewidth=0.4 * sf)
+    z_axis_arrow = Arrow3D([0.0, 0.0], [0, 0.0], [0.2, 0.8], mutation_scale=5 * sf,
+                           shrinkA=0, shrinkB=0, lw=0.5 * sf, arrowstyle="-|>", color="k", zorder=0)
     ax.add_artist(z_axis_arrow)
     ax.text(0.05, 0.0, 0.8, r"$z$", size=font_size, va="top", ha="left")
 
@@ -1181,12 +1184,12 @@ if __name__ == '__main__':
     #
     # spin_waves("out/theoretical_figures_/spin_wave.pdf")
     #
-    # afm_modes("out/theoretical_figures_/afm_modes.pdf")
+    afm_modes("out/theoretical_figures_/afm_modes.pdf")
 
     # toy_model("out/theoretical_figures_/toy_model.pdf")
 
-    spin_config_tilted("out/theoretical_figures_/config_tilted.pdf")
-    spin_config_nontilted("out/theoretical_figures_/config_nontilted.pdf")
+    # spin_config_tilted("out/theoretical_figures_/config_tilted.pdf")
+    # spin_config_nontilted("out/theoretical_figures_/config_nontilted.pdf")
 
 
 # %% cropping testing
