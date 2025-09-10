@@ -403,6 +403,21 @@ def average_z_layers(data, *args, force_return_tuple=False):
     return return_tuple
 
 
+def spin_current(data, data_direction, cryst_direction):
+    
+    if not data_direction in ["x", "y"]:
+        raise ValueError("'data_direction' must be 'x' or 'y'.")
+    if not cryst_direction in ["100", "010", "110", "-110"]:
+        raise ValueError("'cryst_direction' must be '100' or '010' or '110' or '-110'.")
+    
+    
+    pass
+
+    # data_direction is either x or y
+    # crystdirection is either 100, 010, 110, -110, ...
+
+
+
 # %% Testing and stuff
 
 """

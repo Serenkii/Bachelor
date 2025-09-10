@@ -1,9 +1,12 @@
+import warnings
+
 import numpy as np
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 import scipy as sp
+import scipy.constants as cnst
 
 import src.utility as util
 import src.mag_util as mag_util
@@ -15,6 +18,16 @@ lattice_constant = 1
 grid_constant = lattice_constant
 grid_constant_tilted = grid_constant / np.sqrt(2)
 lattice_constant_tilted = 2 * grid_constant_tilted
+
+lattice_constant_factor = 3 * cnst.angstrom
+
+J1_meV = -20
+J2a_meV = 15
+J2b_meV = 5
+
+J1 = J1_meV * cnst.eV * 1e-3
+J2a = J2a_meV * cnst.eV * 1e-3
+J2b = J2b_meV * cnst.eV * 1e-3
 
 
 def neel_vector(Sz_A, Sz_B, do_time_avg=False):
@@ -158,4 +171,20 @@ def seebeck(dataA, dataB, eq_data, rel_step_pos):
     magnon_accumulation[step_pos:] = magn[step_pos:] - magn_eqL
 
     return magn, neel, magnon_accumulation, delta_neel
+
+
+def handle_spin_current_unit_prefactor(tilted, normed=False):
+    gamma = cnst.physical_constants["electron gyromag. ratio"][0]
+    muB = cnst.physical_constants["Bohr magneton"][0]
+
+    a_aligned = lattice_constant * lattice_constant_factor
+    a_tilted = lattice_constant_tilted * lattice_constant_factor
+
+    a = a_tilted if tilted else a_aligned
+
+    if normed:
+        warnings.warn("Because J1 is negative, this will flip the sign!")
+        return 1.0 / J1
+    else:
+        return gamma / muB * a
 

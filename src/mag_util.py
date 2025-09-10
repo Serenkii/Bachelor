@@ -6,6 +6,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 import scipy as sp
+import scipy.constants as cnst
 
 import os
 
@@ -605,3 +606,38 @@ def npy_files_from_dict(path_dict, slice_index=-100000, force=default_force_over
             data_B[key] = datB
 
     return data_A, data_B
+
+
+
+def spin_current(dataA, dataB, direction, skip_time_steps=15, normed_units=False):
+    S_A = get_components_as_dict(dataA, "xy", skip_time_steps, False)
+    S_B = get_components_as_dict(dataB, "xy", skip_time_steps, False)
+
+    J1 = physics.J1
+    J2a = physics.J2a
+    J2b = physics.J2b
+
+    def handle_tilted(Ja, Jb):
+        current_au = - (Ja * np.mean(S_A["x"][:,:-1] * S_A["y"][:,1:] - S_A["y"][:,:-1] * S_A["x"][:,1:], axis=0) +
+                      Jb * np.mean(S_B["x"][:, :-1] * S_B["y"][:, 1:] - S_B["y"][:, :-1] * S_B["x"][:, 1:], axis=0))
+        return current_au
+
+    def handle_aligned():
+        current_au = - J1 * (np.mean((S_A["x"][:,:-1] * S_B["y"][:,1:] - S_A["y"][:,:-1] * S_B["x"][:,1:]), axis=0) +
+                      np.mean((S_B["x"][:,:-1] * S_A["y"][:,1:] - S_B["y"][:,:-1] * S_A["x"][:,1:]), axis=0))
+        return current_au
+
+    tilted = True
+    if direction in ["100", "010"]:
+        current_au = handle_aligned()
+        tilted = False
+    elif direction == "110":
+        current_au = handle_tilted(J2b, J2a)
+    elif direction == "-110":
+        current_au = handle_tilted(J2a, J2b)
+    else:
+        raise ValueError(f"Unknown direction '{direction}'.")
+
+    return physics.handle_spin_current_unit_prefactor(tilted, normed_units) * current_au
+
+

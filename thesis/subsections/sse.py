@@ -115,10 +115,10 @@ def plot_magn_Bfield(magn_dict, ylabel=r"magnetization $\langle m \rangle$", xli
     ax.add_artist(legend1)
     ax.add_artist(legend2)
 
-    dT_pt, = ax.plot(helper.get_Tstep_pos(0.49, 256), min_val - pad * val_range, marker=10,
+    dT_pt, = ax.plot(helper.get_actual_Tstep_pos(0.49, 256), min_val - pad * val_range, marker=10,
                      color="r", linestyle="", label=r"$\Delta T$")
-    ax.plot(helper.get_Tstep_pos(0.49, 256), max_val + pad * val_range, marker=11, color="r",
-            linestyle="",)
+    ax.plot(helper.get_actual_Tstep_pos(0.49, 256), max_val + pad * val_range, marker=11, color="r",
+            linestyle="", )
 
     legend_dT = plt.legend(handles=[dT_pt,], loc="lower left")
     ax.add_artist(legend_dT)
@@ -300,7 +300,7 @@ def direction_comparison():
         ax1.set_ylabel("magnetization $m$")
         ax2.set_ylabel("magnon accum. $\Delta m$")
 
-        actual_step_pos = helper.get_Tstep_pos(0.49, 255)
+        actual_step_pos = helper.get_actual_Tstep_pos(0.49, 255)
         ax1.set_xlim(- 60, + 60)
         ax1.set_ylim(min_magn - pad * magn_range, max_magn + pad * magn_range)
         ax2.set_ylim(min_accu - pad * accu_range, max_accu + pad * accu_range)
@@ -388,14 +388,14 @@ def propagation_lengths():
 
         return attempt(fit_func, lower, upper, p0, log=True)
 
-    def mono_exp():
+    def mono_exp(log=False):
         fit_func = exp_func1
 
         p0 = (0.002, 50)
         lower = (-0.1, 3)
         upper = (0.1, 100)
 
-        return attempt(fit_func, lower, upper, p0, log=True)
+        return attempt(fit_func, lower, upper, p0, log=log)
 
 
     fit_func = mono_exp()
@@ -453,14 +453,54 @@ def propagation_lengths():
 # %% SPIN CURRENTS
 def sse_spin_currents():
 
+    # TODO: Implement aligned direction
+    # TODO: sensible position of temperaturestep with different scalings
+    # TODO: maybe just divide by a_d because we are only looking at qualitative picture
+    # TODO: Think about units
+    warnings.warn("Unfinished method! See TODOS!")
+
     paths = {
-        "100": "/data/scc/marian.gunsch/16/AM_xTstep_T2/",
-        "010": "/data/scc/marian.gunsch/16/AM_yTstep_T2/",          # Not sure whether to use
-        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_DMI_T2-2/",
-        "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_DMI_T2-2/"
+        # "100": "/data/scc/marian.gunsch/16/AM_xTstep_T2/",
+        # "010": "/data/scc/marian.gunsch/16/AM_yTstep_T2/",          # Not sure whether to use
+        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_T2-2/",
+        "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
     }
 
-    mag_util.npy_files_from_dict(paths)
+    dataA_, dataB_ = mag_util.npy_files_from_dict(paths)
+
+    directions_ = paths.keys()
+    currents = dict()
+
+    for direction in directions_:
+        currents[direction] = mag_util.spin_current(dataA_[direction], dataB_[direction], direction, normed_units=False)
+
+    fig, ax = plt.subplots()
+    ax.set_xlabel("position $x$ TODO")
+    ax.set_ylabel(r"spin current $j^{\mathrm{L}}$ (\si{\meter\per\second})")
+    ax.set_xlim(0.5, 254.5)
+
+    x_tilted = np.arange(currents['110'].shape[0]) + 0.5
+
+    act_step_pos = helper.get_actual_Tstep_pos(0.49, currents['110'].shape[0])
+
+    lines = []
+
+    for direction in directions_:
+        line, = ax.plot(x_tilted, currents[direction], label=f"\hkl[{direction}]")
+        lines.append(line)
+
+    legend = plt.legend(handles=lines, loc="upper right")
+    ax.add_artist(legend)
+
+    handle = plot_util.place_Tstep_marking(ax, act_step_pos)
+    legend_dT = plt.legend(handles=[handle, ], loc="lower left")
+    ax.add_artist(legend_dT)
+
+    fig.tight_layout()
+
+    plt.show()
+
+
 
 
 # %% Main
