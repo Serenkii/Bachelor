@@ -14,6 +14,8 @@ import src.bulk_util as bulk_util
 
 import src.helper as helper
 
+# %%
+
 lattice_constant = 1
 grid_constant = lattice_constant
 grid_constant_tilted = grid_constant / np.sqrt(2)
@@ -29,6 +31,8 @@ J1 = J1_meV * cnst.eV * 1e-3
 J2a = J2a_meV * cnst.eV * 1e-3
 J2b = J2b_meV * cnst.eV * 1e-3
 
+
+# %%
 
 def neel_vector(Sz_A, Sz_B, do_time_avg=False):
     """
@@ -99,40 +103,27 @@ def dispersion_from_path(pathA, pathargv, tilted: bool, time_steps=100000, facto
 
 
 
-# Seems to be working
-def spin_currents(spin_x_A, spin_y_A, spin_x_B, spin_y_B):
-    """
-    Returns different spin currents according to different definitions. The spin currents are returned as an array.
-    The array index corresponds to the index of the lattice layer or rather the position between the index and the
-    following layer. Therefore, the returned spin current also has one entry less than the passed spins.
-    :param spin_x_A:
-    :param spin_y_A:
-    :param spin_x_B:
-    :param spin_y_B:
-    :return: j_interSL_+, j_interSL_-, j_intraSL_A, j_intraSL_B, j_ulrike
-    """
-    ## Following formulas are from paper 'Atomistic spin dynamics simulations of magnonic spin Seebeck
-    ## and spin Nernst effects in altermagnets' by Markus Weißenhofer and Alberto Marmadoro
 
-    # inter-sublattice spin current
-    j_inter_1 = - (np.average(spin_x_A[:, :-1] * spin_y_A[:, 1:], axis=0)
-                   + np.average(spin_y_B[:, :-1] * spin_x_B[:, 1:], axis=0))
-    j_inter_2 = - (np.average(spin_x_A[:, :-1] * spin_y_A[:, 1:], axis=0)
-                   - np.average(spin_y_B[:, :-1] * spin_x_B[:, 1:], axis=0))
+def handle_spin_current_unit_prefactor(tilted, normed=False):
+    gamma = cnst.physical_constants["electron gyromag. ratio"][0]
+    muB = cnst.physical_constants["Bohr magneton"][0]
 
-    # intra-sublattice spin current
-    j_intra_A = - (np.average(spin_x_A[:, :-1] * spin_y_A[:, 1:], axis=0)
-                   - np.average(spin_y_A[:, :-1] * spin_x_A[:, 1:], axis=0))
-    j_intra_B = - (np.average(spin_x_B[:, :-1] * spin_y_B[:, 1:], axis=0)
-                   - np.average(spin_y_B[:, :-1] * spin_x_B[:, 1:], axis=0))
+    a_aligned = lattice_constant * lattice_constant_factor
+    a_tilted = lattice_constant_tilted * lattice_constant_factor
 
-    ## Following formula is from Ulrike Ritzmann's dissertation, page 86, formula (7.6)
-    j_otherpaper = - np.average(spin_x_A[:, :-1] * spin_y_A[:, 1:] - spin_y_B[:, :-1] * spin_x_B[:, 1:], axis=0)
+    a = a_tilted if tilted else a_aligned
 
-    return j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_otherpaper
+    if normed:
+        warnings.warn("Because J1 is negative, this will flip the sign!")
+        return 1.0 / J1
+    else:
+        return gamma / muB * a
 
+
+# %%
 
 # TODO: Implement way to either select component you want or to give all components as dictionaries
+# @warnings.deprecated()
 def seebeck(dataA, dataB, eq_data, rel_step_pos):
     """
 
@@ -173,18 +164,37 @@ def seebeck(dataA, dataB, eq_data, rel_step_pos):
     return magn, neel, magnon_accumulation, delta_neel
 
 
-def handle_spin_current_unit_prefactor(tilted, normed=False):
-    gamma = cnst.physical_constants["electron gyromag. ratio"][0]
-    muB = cnst.physical_constants["Bohr magneton"][0]
 
-    a_aligned = lattice_constant * lattice_constant_factor
-    a_tilted = lattice_constant_tilted * lattice_constant_factor
 
-    a = a_tilted if tilted else a_aligned
+# Seems to be working
+# @warnings.deprecated("Use mag_util.spin_current() instead!")
+def spin_currents(spin_x_A, spin_y_A, spin_x_B, spin_y_B):
+    """
+    Returns different spin currents according to different definitions. The spin currents are returned as an array.
+    The array index corresponds to the index of the lattice layer or rather the position between the index and the
+    following layer. Therefore, the returned spin current also has one entry less than the passed spins.
+    :param spin_x_A:
+    :param spin_y_A:
+    :param spin_x_B:
+    :param spin_y_B:
+    :return: j_interSL_+, j_interSL_-, j_intraSL_A, j_intraSL_B, j_ulrike
+    """
+    ## Following formulas are from paper 'Atomistic spin dynamics simulations of magnonic spin Seebeck
+    ## and spin Nernst effects in altermagnets' by Markus Weißenhofer and Alberto Marmadoro
 
-    if normed:
-        warnings.warn("Because J1 is negative, this will flip the sign!")
-        return 1.0 / J1
-    else:
-        return gamma / muB * a
+    # inter-sublattice spin current
+    j_inter_1 = - (np.average(spin_x_A[:, :-1] * spin_y_A[:, 1:], axis=0)
+                   + np.average(spin_y_B[:, :-1] * spin_x_B[:, 1:], axis=0))
+    j_inter_2 = - (np.average(spin_x_A[:, :-1] * spin_y_A[:, 1:], axis=0)
+                   - np.average(spin_y_B[:, :-1] * spin_x_B[:, 1:], axis=0))
 
+    # intra-sublattice spin current
+    j_intra_A = - (np.average(spin_x_A[:, :-1] * spin_y_A[:, 1:], axis=0)
+                   - np.average(spin_y_A[:, :-1] * spin_x_A[:, 1:], axis=0))
+    j_intra_B = - (np.average(spin_x_B[:, :-1] * spin_y_B[:, 1:], axis=0)
+                   - np.average(spin_y_B[:, :-1] * spin_x_B[:, 1:], axis=0))
+
+    ## Following formula is from Ulrike Ritzmann's dissertation, page 86, formula (7.6)
+    j_otherpaper = - np.average(spin_x_A[:, :-1] * spin_y_A[:, 1:] - spin_y_B[:, :-1] * spin_x_B[:, 1:], axis=0)
+
+    return j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_otherpaper

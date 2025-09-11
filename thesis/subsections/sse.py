@@ -297,8 +297,8 @@ def direction_comparison():
         fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
 
         ax2.set_xlabel("position $x / a$")
-        ax1.set_ylabel("magnetization $m$")
-        ax2.set_ylabel("magnon accum. $\Delta m$")
+        ax1.set_ylabel(r"magnetization $m$")
+        ax2.set_ylabel(r"magnon accum. $\Delta m$")
 
         actual_step_pos = helper.get_actual_Tstep_pos(0.49, 255)
         ax1.set_xlim(- 60, + 60)
@@ -486,7 +486,7 @@ def sse_spin_currents():
     lines = []
 
     for direction in directions_:
-        line, = ax.plot(x_tilted, currents[direction], label=f"\hkl[{direction}]")
+        line, = ax.plot(x_tilted, currents[direction], label=fr"\hkl[{direction}]")
         lines.append(line)
 
     legend = plt.legend(handles=lines, loc="upper right")

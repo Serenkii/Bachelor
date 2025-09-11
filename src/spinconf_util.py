@@ -1,3 +1,7 @@
+import os
+
+import warnings
+
 import numpy as np
 
 import matplotlib as mpl
@@ -11,6 +15,42 @@ from scipy.ndimage import median_filter
 
 import src.physics as physics
 import src.helper as helper
+
+
+# %%
+default_force_overwrite = False
+if default_force_overwrite:
+    warnings.warn("FORCE OVERWRITE ENABLED!")
+
+# %% Functions
+
+
+def infer_config_path(path):
+    folder_list = path.split("/")
+    if folder_list[-1] == "":       # path ends with '/'
+        folder_list.pop()
+        path = path[:-1]    # remove /
+
+    return_path = path
+
+    if path.endswith(".dat"):
+        pass
+
+    elif folder_list[-1].startswith("spin-config-99-999") and folder_list[-2] == "spin-configs-99-999":
+        return_path = f"{path}.dat"
+
+    elif folder_list[-1] == "spin-configs-99-999":
+        return_path = f"{path}/spin-config-99-999-005000.dat"
+
+    else:
+        return_path = f"{path}/spin-configs-99-999/spin-config-99-999-005000.dat"
+
+    if not os.path.exists(return_path):
+        raise FileNotFoundError(f"Unable to infer data file from '{path}'. Unsuccessful attempt yielded '{return_path}'.")
+
+    return return_path
+
+
 
 def get_dimensions(path):
     """
@@ -54,6 +94,9 @@ def read_spin_config_dat_raw(path, empty_filler=np.nan, fixed_version=True):
     if not fixed_version:
         raise NotImplementedError("Only the 'fixed' version is implemented. By that, I mean with different order of "
                                   "x, y, z")
+
+    path = infer_config_path(path)
+
     number_sublattices = 2
 
     data = np.loadtxt(path)
@@ -92,6 +135,8 @@ def read_spin_config_dat(path, is_tilted=True, shift=None, fixed_version=False, 
     :param fixed_version: If a new definition for indices shall be used
     :return: A multidimensional array containing the spin components, averaged over all z layers.
     """
+
+    path = infer_config_path(path)
 
     number_sublattices = 2
 
@@ -134,7 +179,7 @@ def read_spin_config_dat(path, is_tilted=True, shift=None, fixed_version=False, 
         else:
             raise ValueError(f"Shift {shift} not recognized. Options: none, left, right")
 
-    if not is_tilted or shift is not None:
+    if is_tilted or shift is not None:
         if np.isnan(value_grid).any():
             raise ValueError(f"A value of the value_grid containing the data of the specified path '{path}' could not be "
                              f"set using the available data in the spin configuration file. Check the file (and maybe"
@@ -144,6 +189,60 @@ def read_spin_config_dat(path, is_tilted=True, shift=None, fixed_version=False, 
 
     return value_grid
 
+
+def npy_file(dat_path: str, npy_path=None, force=default_force_overwrite, return_data=True, is_tilted=True, shift=None,
+             empty_value=np.nan):
+
+    base_folder = "/data/scc/marian.gunsch/npy/configs/"
+
+    data_path = infer_config_path(dat_path)
+
+    print(f"config-path: {data_path}")
+
+    if not npy_path:
+        folder_list = data_path.split("/")
+        index0 = folder_list.index("marian.gunsch")
+        save_name = f"{folder_list[index0 + 1].zfill(2)}"
+        for i in range(index0 + 2, index0 + 4):
+            if folder_list[i] == "spin-configs-99-999":
+                break
+            save_name += f"_{folder_list[i]}"
+        save_name += f".conf.npy"
+        npy_path = f"{base_folder}{save_name}"
+
+    data = None
+    print(f"Handling config file...")
+    if os.path.isfile(npy_path) and not force:
+        print(f"File {npy_path} already exists. Nothing will be overwritten.")
+        warnings.warn("Careful! This means that the empty_value cannot be updated!")
+    else:
+        print(f"Reading data from {dat_path}...")
+        data = read_spin_config_dat(dat_path, is_tilted, shift, True, empty_value)
+        print(f"Saving data to {npy_path}...")
+        np.save(npy_path, data)
+
+    if not return_data:
+        return None
+
+    if data is None:
+        print(f"Loading data from {npy_path}...")
+        data = np.load(npy_path)
+
+    print("\n")
+
+    return data
+
+
+
+def npy_file_from_dict(path_dict, is_tilted, force=default_force_overwrite, shift=None, empty_value=np.nan):
+    data_dict = dict()
+
+    for key in path_dict:
+        data_dict[key] = npy_file(path_dict[key], None, force, True, is_tilted[key], shift, empty_value)
+
+    return data_dict
+
+# %%
 
 def average_aligned_data(data, method="default", include_edges=False, return_space_arr=False):
     if method != "default":
@@ -179,41 +278,6 @@ def average_aligned_data(data, method="default", include_edges=False, return_spa
             return x_centered, y_centered, data_centered, x_shifted, y_shifted, data_shifted
         return data_centered, data_shifted
 
-
-def save_spin_config_as_npy(dat_path, save_path, is_tilted=True):
-    """
-    Saves the spin configuration file in the specified data path as a new .npy file in the specified path. Any existing
-    file will be overwritten.
-    :param dat_path: The path of the spin configuration file.
-    :param save_path: The npy file path.
-    :param is_tilted: Specify if the tilted configuration is used.
-    :return:
-    """
-    grid_data = read_spin_config_dat(dat_path, is_tilted=is_tilted)
-    np.save(save_path, grid_data)
-
-
-# TODO: Fix
-def read_spin_config_arrjob(path_prefix, path_suffix, start, stop=None, step=1, average=True, is_tilted=True):
-    if stop is None:
-        stop = start
-        start = 1
-
-    array_job_size = int(np.ceil((1 + (stop - start)) / step))
-
-    data_first = read_spin_config_dat(f"{path_prefix}{start}{path_suffix}", is_tilted=is_tilted)
-
-    data_arr = np.empty((array_job_size,) + data_first.shape, dtype=data_first.dtype)
-    data_arr[0] = data_first
-
-    for i in range(1, array_job_size):
-        job_index = start + i * step
-        print(f"{job_index}.", end="")
-        data_arr[i] = read_spin_config_dat(f"{path_prefix}{job_index}{path_suffix}", is_tilted=is_tilted)
-
-    if average:
-        return np.mean(data_arr, axis=0)
-    return data_arr
 
 
 def plot_colormap(data_grid, title="", rel_step_pos=0.49, show_step=False, zoom=False, save_path=None, fig_comment=None,
@@ -286,7 +350,113 @@ def plot_colormap(data_grid, title="", rel_step_pos=0.49, show_step=False, zoom=
     plt.show()
 
 
+
+def convolute(data, filter="denoise", denoise_kwargs=None):
+    """
+    Convolute the given two-dimensional data array with one of a few filters. A three-dimensional array is also allowed,
+    as long as the array is squeezable into a two-dimensional array.
+    The implementation of this method can be improved.
+    Available filters:
+    'none' returns a copy of the original array.
+    'uniform' applies the scipy uniform filter.
+    'denoise' applies the denoise_bilateral filter from skimage.restoration.
+    :param data:
+    :param filter: The filter that should be applied: 'none', 'uniform' or 'denoise'
+    :param denoise_kwargs: If the specified filter is 'denoise', one can supply additional keyword arguments.
+    :return: A copy of the original array with the filter applied.
+    """
+    copy = np.squeeze(data)
+
+    if filter is None or filter == 0 or filter == "none" or filter == "copy":
+        return copy
+
+    elif filter == "uniform" or filter == "uni" or filter == 1:
+        return uniform_filter(copy, size=4)
+
+    elif filter == "denoise" or filter == 2:
+        from skimage.restoration import denoise_bilateral
+        if denoise_kwargs:
+            return denoise_bilateral(copy, **denoise_kwargs)
+        return denoise_bilateral(copy, sigma_color=0.001, sigma_spatial=4, mode='edge')  # TODO: Finetune even further
+
+    raise ValueError(f"Unknown filter '{filter}'.")
+
+
+def average_z_layers(data, *args, force_return_tuple=False, keepdims=True):
+    """
+    Takes a minimum of one data arrays of spin configurations and returns them averaged along z direction for each.
+    :param data: A spin configuration array.
+    :param args: (optional) additional spin configuration arrays.
+    :param force_return_tuple: If True, also returns a tuple if only one spin configuration array was passed.
+    :return: Returns either a single data array averaged along z direction, or a tuple of all passed data arrays.
+    """
+    if len(args) == 0 and not force_return_tuple:
+        return np.mean(data, axis=2, keepdims=keepdims)
+
+    data_tuple = (data,) + args
+    return_tuple = ()
+    for arg in data_tuple:
+        return_tuple = return_tuple + (np.mean(arg, axis=2, keepdims=keepdims),)
+    return return_tuple
+
+
+def spin_current(data, data_direction, cryst_direction):
+    raise NotImplementedError()
+
+    if not data_direction in ["x", "y"]:
+        raise ValueError("'data_direction' must be 'x' or 'y'.")
+    if not cryst_direction in ["100", "010", "110", "-110"]:
+        raise ValueError("'cryst_direction' must be '100' or '010' or '110' or '-110'.")
+    
+    
+    pass
+
+    # data_direction is either x or y
+    # crystdirection is either 100, 010, 110, -110, ...
+
+
+
+# %% Old and unwanted (just keep for backwards compatibility)
+
+
+def save_spin_config_as_npy(dat_path, save_path, is_tilted=True):
+    """
+    Saves the spin configuration file in the specified data path as a new .npy file in the specified path. Any existing
+    file will be overwritten.
+    :param dat_path: The path of the spin configuration file.
+    :param save_path: The npy file path.
+    :param is_tilted: Specify if the tilted configuration is used.
+    :return:
+    """
+    grid_data = read_spin_config_dat(dat_path, is_tilted=is_tilted)
+    np.save(save_path, grid_data)
+
+
+# TODO: Fix
+def read_spin_config_arrjob(path_prefix, path_suffix, start, stop=None, step=1, average=True, is_tilted=True):
+    if stop is None:
+        stop = start
+        start = 1
+
+    array_job_size = int(np.ceil((1 + (stop - start)) / step))
+
+    data_first = read_spin_config_dat(f"{path_prefix}{start}{path_suffix}", is_tilted=is_tilted)
+
+    data_arr = np.empty((array_job_size,) + data_first.shape, dtype=data_first.dtype)
+    data_arr[0] = data_first
+
+    for i in range(1, array_job_size):
+        job_index = start + i * step
+        print(f"{job_index}.", end="")
+        data_arr[i] = read_spin_config_dat(f"{path_prefix}{job_index}{path_suffix}", is_tilted=is_tilted)
+
+    if average:
+        return np.mean(data_arr, axis=0)
+    return data_arr
+
+
 # TODO: Test!!!
+# @warnings.deprecated("Use spin_currents() instead!")
 def calculate_spin_currents(data_grid, direction, fixed_version=False):
     if direction in ["transversal", "y", "trans"] and not fixed_version or direction in ["longitudinal", "x", "long"] and fixed_version:
         slice1 = (slice(0, -1), slice(None))  # equals [:-1, :]
@@ -351,70 +521,6 @@ def calculate_magnetization_neel(data_grid, equi_data_warm=None, direction="x", 
         neel_vector[component][slice_cold] -= neel_cold[component]
 
     return magnetization, neel_vector
-
-
-
-def convolute(data, filter="denoise", denoise_kwargs=None):
-    """
-    Convolute the given two-dimensional data array with one of a few filters. A three-dimensional array is also allowed,
-    as long as the array is squeezable into a two-dimensional array.
-    The implementation of this method can be improved.
-    Available filters:
-    'none' returns a copy of the original array.
-    'uniform' applies the scipy uniform filter.
-    'denoise' applies the denoise_bilateral filter from skimage.restoration.
-    :param data:
-    :param filter: The filter that should be applied: 'none', 'uniform' or 'denoise'
-    :param denoise_kwargs: If the specified filter is 'denoise', one can supply additional keyword arguments.
-    :return: A copy of the original array with the filter applied.
-    """
-    copy = np.squeeze(data)
-
-    if filter is None or filter == 0 or filter == "none" or filter == "copy":
-        return copy
-
-    elif filter == "uniform" or filter == "uni" or filter == 1:
-        return uniform_filter(copy, size=4)
-
-    elif filter == "denoise" or filter == 2:
-        from skimage.restoration import denoise_bilateral
-        if denoise_kwargs:
-            return denoise_bilateral(copy, **denoise_kwargs)
-        return denoise_bilateral(copy, sigma_color=0.001, sigma_spatial=4, mode='edge')  # TODO: Finetune even further
-
-    raise ValueError(f"Unknown filter '{filter}'.")
-
-
-def average_z_layers(data, *args, force_return_tuple=False):
-    """
-    Takes a minimum of one data arrays of spin configurations and returns them averaged along z direction for each.
-    :param data: A spin configuration array.
-    :param args: (optional) additional spin configuration arrays.
-    :param force_return_tuple: If True, also returns a tuple if only one spin configuration array was passed.
-    :return: Returns either a single data array averaged along z direction, or a tuple of all passed data arrays.
-    """
-    if len(args) == 0 and not force_return_tuple:
-        return np.mean(data, axis=2, keepdims=True)
-
-    data_tuple = (data,) + args
-    return_tuple = ()
-    for arg in data_tuple:
-        return_tuple = return_tuple + (np.mean(arg, axis=2, keepdims=True),)
-    return return_tuple
-
-
-def spin_current(data, data_direction, cryst_direction):
-    
-    if not data_direction in ["x", "y"]:
-        raise ValueError("'data_direction' must be 'x' or 'y'.")
-    if not cryst_direction in ["100", "010", "110", "-110"]:
-        raise ValueError("'cryst_direction' must be '100' or '010' or '110' or '-110'.")
-    
-    
-    pass
-
-    # data_direction is either x or y
-    # crystdirection is either 100, 010, 110, -110, ...
 
 
 

@@ -12,10 +12,11 @@ import thesis.subsections.dmi as dmi
 
 
 def main():
+    pass
     # miscellaneous.main()
     # equilibrium.main()
-    sse.main()
-    # sne.main()
+    # sse.main()
+    sne.main()
     # dmi.main()
 
 

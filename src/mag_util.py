@@ -500,8 +500,7 @@ def infer_data_path(path, also_return_path_B=False):
     folder_list = path.split("/")
     if folder_list[-1] == "":       # path ends with '/'
         folder_list.pop()
-    else:
-        path += "/"
+        path = path[:-1]    # remove /
 
     return_list = []
 
@@ -516,18 +515,18 @@ def infer_data_path(path, also_return_path_B=False):
             return_list.append(f"{path[:-1]}B.dat")
 
     elif folder_list[-1] == "spin-configs-99-999":
-        return_list.append(f"{path}mag-profile-99-999.altermagnetA.dat")
+        return_list.append(f"{path}/mag-profile-99-999.altermagnetA.dat")
         if also_return_path_B:
-            return_list.append(f"{path}mag-profile-99-999.altermagnetB.dat")
+            return_list.append(f"{path}/mag-profile-99-999.altermagnetB.dat")
 
     else:
-        return_list.append(f"{path}spin-configs-99-999/mag-profile-99-999.altermagnetA.dat")
+        return_list.append(f"{path}/spin-configs-99-999/mag-profile-99-999.altermagnetA.dat")
         if also_return_path_B:
-            return_list.append(f"{path}spin-configs-99-999/mag-profile-99-999.altermagnetB.dat")
+            return_list.append(f"{path}/spin-configs-99-999/mag-profile-99-999.altermagnetB.dat")
 
     for entry in return_list:
         if not os.path.exists(entry):
-            raise OSError(f"Unable to infer data file from '{path}'. Unsuccessful attempt yielded '{entry}'.")
+            raise FileNotFoundError(f"Unable to infer data file from '{path}'. Unsuccessful attempt yielded '{entry}'.")
 
     return tuple(return_list)
 

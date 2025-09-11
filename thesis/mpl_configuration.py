@@ -68,6 +68,8 @@ def configure():
         # "xtick.labelsize": 12,
         # "ytick.labelsize": 12,
         # "legend.fontsize": 12,
+        # "lines.markersize": 6.0,
+        "lines.markersize": 3.0,
         "figure.dpi": 300,
         "text.latex.preamble": latex_preamble,
     })

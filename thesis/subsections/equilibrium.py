@@ -641,14 +641,16 @@ def place_colorbar(fig, axs, pcolormesh, pad=0.02, width=0.02, label=""):
     return cb
 
 
-def plot_colormap_tilted(fig, axs, x, y, magnetization, y_label=""):
+def plot_colormap_tilted(fig, axs, x, y, magnetization, y_label="", vmin_=-0.012, vmax_=0.012):
     X, Y = np.meshgrid(x, y, sparse=True, indexing='xy')
     pcms = []
     for ax in axs:
         pcms.append(ax.pcolormesh(X, Y, magnetization, norm=colors.CenteredNorm(), cmap='RdBu_r'))
 
     vmin = min(p.get_array().min() for p in pcms)
+    vmin = min(vmin, vmin_)
     vmax = max(p.get_array().max() for p in pcms)
+    vmax = max(vmax, vmax_)
     for p in pcms:
         p.set_clim(vmin, vmax)
 
@@ -791,12 +793,12 @@ def boundary_effects(temperature=2):
 
 def main():
     pass
-    # boundary_effects(2)
-    # boundary_effects(0)
+    boundary_effects(2)
+    boundary_effects(0)
 
-    equilibrium_comparison_Bfield()
+    # equilibrium_comparison_Bfield()
 
-    dispersion_comparison_Bfield_table(1)
-    dispersion_comparison_Bfield_table(2)
+    # dispersion_comparison_Bfield_table(1)
+    # dispersion_comparison_Bfield_table(2)
 
-    dispersion_comparison_negB()
+    # dispersion_comparison_negB()

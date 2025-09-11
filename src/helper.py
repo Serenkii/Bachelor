@@ -22,7 +22,7 @@ def create_slice_list(slice_string, column_dict):
 def get_absolute_T_step_index(relative_position, N):
     warnings.warn("Not sure what is correct...")
 
-    func = get_index_last_warm
+    func = get_index_first_cold
 
     warnings.warn(f"Using function '{func}'")
     return func(relative_position, N)
