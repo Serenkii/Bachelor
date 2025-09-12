@@ -400,19 +400,197 @@ def average_z_layers(data, *args, force_return_tuple=False, keepdims=True):
     return return_tuple
 
 
-def spin_current(data, data_direction, cryst_direction):
-    raise NotImplementedError()
+# UNTESTED
+def create_profile(grid_data, profile_direction, avg_slice=slice(None), which="xyz", force_return_dict=False,
+                   fixed_version=True):
+    """
+    If the grid_data is aligned data, it is important to empty_value=np.nan when reading data. Otherwise, the average
+    is wrong!
+    :param grid_data:
+    :param profile_direction: profile along x or y direction?
+    :param avg_slice: Slice which is applied in the other direction.
+    :param which: Components
+    :param force_return_dict: Always return a dictionary, even when which only consists of one component
+    :param fixed_version:
+    :return:
+    """
+    warnings.warn("Untested!")
 
-    if not data_direction in ["x", "y"]:
+    if not fixed_version:
+        warnings.warn("Use fixed version!", DeprecationWarning)
+        raise NotImplementedError("Only the fixed version is implemented.")
+
+    data = np.copy(grid_data)
+    if profile_direction == "y":
+        permutation = (1, 0)        # transform into case "x":
+    elif profile_direction == "x":
+        permutation = (0, 1)        # default case
+    else:
+        raise ValueError("Profiles possible only along x and y direction!")
+
+    data = np.transpose(data, permutation + tuple(range(2, len(data.shape))))
+
+    data = data[:, avg_slice]
+
+    profiles = dict()
+
+    for SL in ["A", "B"]:
+        profiles[SL] = dict()
+        for component in which:
+            S = select_SL_and_component(data, SL, component)
+            profiles[SL][component] = np.nanmean(S, axis=(1, 2))
+
+    if len(which) == 1 and not force_return_dict:
+        return profiles["A"][which], profiles["B"][which]
+    return profiles["A"], profiles["B"]
+
+
+# UNTESTED!
+def spin_current(grid_data, current_direction, cryst_direction, profile_return=None, do_unit_cell_avg=True):
+    """
+
+    :param grid_data:
+    :param current_direction: Calculate spin in 'x' or 'y' direction? If None, config data is returned.
+    :param cryst_direction: Determines sign and mean of calculation
+    :param profile_return: 'x', 'y' or None if config data shall be returned.
+    :param do_unit_cell_avg: If this is True, appropriate averages (convolutions) are taken in the aligned case. The tilted case is always in terms of unit cells.
+    :return:
+    """
+    if not profile_return in ["x", "y", None]:
+        raise ValueError("'profile_return' must be 'x' or 'y' or None to return all the data")
+    if not current_direction in ["x", "y"]:
         raise ValueError("'data_direction' must be 'x' or 'y'.")
-    if not cryst_direction in ["100", "010", "110", "-110"]:
-        raise ValueError("'cryst_direction' must be '100' or '010' or '110' or '-110'.")
-    
-    
-    pass
+    if cryst_direction in ["-100", "-1-10", "0-10", "1-10"]:
+        warnings.warn("Spin current along a direction which is opposite of the available profile directions.")
+    elif not cryst_direction in ["100", "010", "110", "-110"]:
+        raise ValueError("Invalid 'cryst_direction'.")
 
-    # data_direction is either x or y
-    # crystdirection is either 100, 010, 110, -110, ...
+    data = np.copy(grid_data)
+    if current_direction == "y":
+        permutation = (1, 0)        # transform into case "x":
+    elif current_direction == "x":
+        permutation = (0, 1)        # default case
+    else:
+        raise ValueError("'data_direction' must be 'x' or 'y'.")
+
+    data = np.transpose(data, permutation + tuple(range(2, len(data.shape))))
+
+
+    tilted = False if cryst_direction in ["100", "010", "-100", "0-10"] else True
+    sign = +1 if cryst_direction in ["100", "010", "110", "-110"] else -1
+
+
+    def handle_tilted():
+        Ja = physics.J2b
+        Jb = physics.J2a
+        if cryst_direction in ["-110", "1-10"]:
+            Ja, Jb = Jb, Ja
+
+        se = select_SL_and_component
+        curr_au = - (Ja *
+                    (se(data, "A", "x")[:-1] * se(data, "A", "y")[1:] -
+                     se(data, "A", "y")[:-1] * se(data, "A", "x")[1:])
+                    + Jb *
+                    (se(data, "B", "x")[:-1] * se(data, "B", "y")[1:] -
+                     se(data, "B", "y")[:-1] * se(data, "B", "x")[1:])
+                    )
+
+        assert curr_au.shape[0] == data.shape[0] - 1
+
+        return curr_au
+
+
+    def handle_aligned():
+        J1 = physics.J1
+        se = select_SL_and_component
+        # row 0, 2, 4, ... --> 0::2
+        curr1a = - J1 * (se(data, "B", "x")[:-1:2, 0::2] * se(data, "A", "y")[1::2, 0::2] -
+                         se(data, "B", "y")[:-1:2, 0::2] * se(data, "A", "x")[1::2, 0::2])
+        curr1b = - J1 * (se(data, "A", "x")[1:-2:2, 0::2] * se(data, "B", "y")[2:-1:2, 0::2] -
+                         se(data, "A", "y")[1:-2:2, 0::2] * se(data, "B", "x")[2:-1:2, 0::2])
+
+        shape1a = curr1a.shape
+        shape1b = curr1b.shape
+        assert shape1a[1:] == shape1b[1:]       # These checks are valid because we know the grid dimensions
+        assert shape1a[0] == shape1b[0] + 1             #  are even numbers
+        shape1 = (shape1a[0] + shape1b[0], ) + shape1a[1:]
+
+        assert shape1[0] % 2 == 1   # This must now be odd because we have lost one column due to method of calculating
+        assert shape1[0] + 1 == data.shape[0]
+        curr1 = np.empty(shape1, dtype=float)
+        curr1[0::2] = curr1a        # interleave both
+        curr1[1::2] = curr1b
+
+        # row 1, 3, 5, ... --> 1::2
+        curr2a = - J1 * (se(data, "A", "x")[:-1:2, 1::2] * se(data, "B", "y")[1::2, 1::2] -
+                         se(data, "A", "y")[:-1:2, 1::2] * se(data, "B", "x")[1::2, 1::2])
+        curr2b = - J1 * (se(data, "B", "x")[1:-2:2, 1::2] * se(data, "A", "y")[2:-1:2, 1::2] -
+                         se(data, "B", "y")[1:-2:2, 1::2] * se(data, "A", "x")[2:-1:2, 1::2])
+
+        shape2a = curr2a.shape
+        shape2b = curr2b.shape
+        assert shape2a[1:] == shape2b[1:]
+        assert shape2a[0] == shape2b[0] + 1
+        shape2 = (shape2a[0] + shape2b[0], ) + shape2a[1:]
+
+        assert shape2[0] % 2 == 1
+        assert shape2[0] + 1 == data.shape[0]
+        curr2 = np.empty(shape2, dtype=float)
+        curr2[0::2] = curr2a
+        curr2[1::2] = curr2b
+
+        # Put different rows together
+        assert shape1 == shape2     # This must be the same because of even grid dimensions
+        curr_shape = (shape1[0], ) + (shape1[0] + shape2[0], ) + shape1[2:]
+        curr = np.empty(curr_shape, dtype=float)
+        curr[:, 0::2] = curr1
+        curr[:, 1::2] = curr2
+
+        assert curr.shape[0] + 1 == data.shape[0]
+        assert curr.shape[1:] == data.shape[1:]
+
+        return curr
+
+
+    if tilted:
+        current = handle_tilted() * physics.handle_spin_current_unit_prefactor(tilted)
+    elif tilted:
+        current = handle_aligned() * physics.handle_spin_current_unit_prefactor(tilted)
+    else:
+        raise ValueError(f"Invalid crystallographic direction: {cryst_direction}")
+
+    # We need to multiply times two, to get the area of a unit cells --> make it comparable to the tilted variant,
+    # in terms of the area the current flows through. (~ two 'atom points')
+    if not tilted:
+        current *= 2
+
+    current *= sign
+
+    if profile_return:
+        current_ = np.transpose(current, permutation)
+
+        if profile_return == "x":
+            avg_axes = (1, 2)
+        elif profile_return == "y":
+            avg_axes = (0, 2)
+        else:
+            raise ValueError("'profile_return' must be 'x' or 'y' or None to return all the data")
+
+        if cryst_direction in ["-1-10", "-100", "0-10", "1-10"]:
+            warnings.warn("The returned profile is equivalent to a profile in _negative_ x or y direction! Careful!")
+
+        return np.mean(current_, axis=avg_axes)
+
+    if not do_unit_cell_avg:
+        if not tilted:
+            print("The current was multiplied by 2 to correct for the dimensionless area.")
+        if tilted:
+            print("For the tilted setup, the unit cell averaging is always done!")
+        return np.transpose(current, permutation)
+
+    raise NotImplementedError("The unit cell average has not been implemented yet.")
+
+
 
 
 
@@ -538,109 +716,109 @@ for neel)
 
 _run =  [2,]
 
-if __name__ == "__main__" and 0 in _run:
-
-    # %% Testing
-
-    # path1 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
-    # path2 = "/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id2/spin-configs-99-999/spin-config-99-999-010000.dat"
-    # data1 = read_spin_config_dat(path1)
-    # data2 = read_spin_config_arrjob("/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id",
-    #                                 "/spin-configs-99-999/spin-config-99-999-010000.dat",
-    #                                 10, )
-
-    # path3 = "/data/scc/marian.gunsch/AM-tilted_Tstep_seebeck/spin-configs-99-999/spin-config-99-999-010000.dat"
-    # data3 = read_spin_config_dat(path3)
-    path3_eq = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_T2meV/spin-configs-99-999/spin-config-99-999-005000.dat"
-    data3_eq = read_spin_config_dat(path3_eq)
-    #
-    # path4 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
-    # data4 = read_spin_config_dat(path4)
-    #
-    # path5 = "/data/scc/marian.gunsch/01_AM_tilted_Tstep/spin-configs-99-999/spin-config-99-999-010000.dat"
-    # data5 = read_spin_config_dat(path5)
-    #
-    # path6 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T10/spin-configs-99-999/spin-config-99-999-005000.dat" # high T
-    # path7 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T1/spin-configs-99-999/spin-config-99-999-005000.dat"  # low T
-    #
-    # data6 = read_spin_config_dat(path6)
-    # data7 = read_spin_config_dat(path7)
-    #
-    # path8 = "/data/scc/marian.gunsch/AM-DMI_tilted_Tstep_nernst/spin-configs-99-999/spin-config-99-999-010000.dat"  # DMI
-    # data8 = read_spin_config_dat(path8)
-
-    path9 = "/data/scc/marian.gunsch/02_AM_tilted_Tstep_DMI/spin-configs-99-999/spin-config-99-999-005000.dat"  # DMI more layers
-    data9 = read_spin_config_dat(path9)
-
-    data = data9
-
-    print("Read data")
-
-    # plot_colormap(physics.neel_vector(select_SL_and_component(data1, "A", "z"), select_SL_and_component(data1, "B", "z")), "neel, 1")
-    # plot_colormap(physics.magnetizazion(select_SL_and_component(data1, "A", "z"), select_SL_and_component(data1, "B", "z")), "magn, 1")
-    # plot_colormap(physics.neel_vector(select_SL_and_component(data2, "A", "z"), select_SL_and_component(data2, "B", "z")), "neel, 2")
-    # plot_colormap(physics.magnetizazion(select_SL_and_component(data2, "A", "z"), select_SL_and_component(data2, "B", "z")), "magn, 2")
-
-    # %%
-    rel_Tstep_pos = 0.49
-    show_step = False
-    zoom = False
-
-
-    # magn, neel = calculate_magnetization_neel(data4, data3_eq, "x")
-    magn, neel = calculate_magnetization_neel(data, direction="x")
-    # magn, neel = calculate_magnetization_neel(data1, direction="x")
-    plot_colormap(convolute(average_z_layers(magn["z"]), filter="denoise"), "magnetization z", rel_Tstep_pos, show_step,
-                  zoom)
-    plot_colormap(convolute(average_z_layers(neel["z"]), filter="denoise"), "neel vector z", rel_Tstep_pos, show_step,
-                  zoom)
-
-    #%%
-    # direction = "longitudinal"
-    direction = "transversal"
-
-    # j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other_paper = calculate_spin_currents(average_z_layers(data), direction)    # This yields incorrect results (or rather all the spin currents are averaged out before being calculated...)
-    j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other_paper = average_z_layers(*calculate_spin_currents(data, direction))
-
-    # plot_colormap(convolute(j_inter_1), f"j inter +, {direction}", rel_Tstep_pos)
-    # plot_colormap(convolute(j_inter_2), f"j inter -, {direction}", rel_Tstep_pos)
-    # plot_colormap(convolute(j_intra_A), f"j intra A, {direction}", rel_Tstep_pos)
-    # plot_colormap(convolute(j_intra_B), f"j intra B, {direction}", rel_Tstep_pos)
-    # plot_colormap(convolute(j_other_paper), f"j other paper, {direction}", rel_Tstep_pos)
-
-    plot_colormap(j_inter_1, f"j inter +, {direction}", rel_Tstep_pos, show_step, zoom)
-    plot_colormap(j_inter_2, f"j inter -, {direction}", rel_Tstep_pos, show_step, zoom)
-    plot_colormap(j_intra_A, f"j intra A, {direction}", rel_Tstep_pos, show_step, zoom)
-    plot_colormap(j_intra_B, f"j intra B, {direction}", rel_Tstep_pos, show_step, zoom)
-    plot_colormap(j_other_paper, f"j other paper, {direction}", rel_Tstep_pos, show_step, zoom)
-
-
-    # %%
-
-    magnon_count_A = select_SL_and_component(data, "A", "x") ** 2 + select_SL_and_component(data, "A", "y") ** 2
-    magnon_count_B = select_SL_and_component(data, "B", "x") ** 2 + select_SL_and_component(data, "B", "y") ** 2
-
-    plot_colormap(average_z_layers(magnon_count_A), "magnon count A", rel_Tstep_pos, show_step, zoom)
-    plot_colormap(average_z_layers(magnon_count_B), "magnon count B", rel_Tstep_pos, show_step, zoom)
-
-
-if __name__ == "__main__" and 1 in _run:
-
-    # %% Testing not-tilted file
-    non_tilted_path = "/data/scc/marian.gunsch/08_yTstep/T4/spin-configs-99-999/spin-config-99-999-005000.dat"
-
-    data = read_spin_config_dat(non_tilted_path, False)
-
-    # tilted_path = "/data/scc/marian.gunsch/08_tilted_yTstep/T4/spin-configs-99-999/spin-config-99-999-000000.dat"
-    #
-    # data = read_spin_config_dat(tilted_path, True)
-
-
-if __name__ == "__main__" and 2 in _run:
-    np.random.default_rng(462)
-    data = 20 * (np.random.rand(8, 8) - 0.5)
-
-    # print(average_aligned_data(data, "default", False, False))
-    print(average_aligned_data(data, "default", False, True))
-    # print(average_aligned_data(data, "default", True, False))
-    print(average_aligned_data(data, "default", True, True))
+# if __name__ == "__main__" and 0 in _run:
+#
+#     # %% Testing
+#
+#     # path1 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
+#     # path2 = "/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id2/spin-configs-99-999/spin-config-99-999-010000.dat"
+#     # data1 = read_spin_config_dat(path1)
+#     # data2 = read_spin_config_arrjob("/data/scc/marian.gunsch/AM_tiltedX_ttmstep_7meV_2_id",
+#     #                                 "/spin-configs-99-999/spin-config-99-999-010000.dat",
+#     #                                 10, )
+#
+#     # path3 = "/data/scc/marian.gunsch/AM-tilted_Tstep_seebeck/spin-configs-99-999/spin-config-99-999-010000.dat"
+#     # data3 = read_spin_config_dat(path3)
+#     path3_eq = "/data/scc/marian.gunsch/AM_tiltedX_ttmstairs_T2meV/spin-configs-99-999/spin-config-99-999-005000.dat"
+#     data3_eq = read_spin_config_dat(path3_eq)
+#     #
+#     # path4 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T2/spin-configs-99-999/spin-config-99-999-005000.dat"
+#     # data4 = read_spin_config_dat(path4)
+#     #
+#     # path5 = "/data/scc/marian.gunsch/01_AM_tilted_Tstep/spin-configs-99-999/spin-config-99-999-010000.dat"
+#     # data5 = read_spin_config_dat(path5)
+#     #
+#     # path6 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T10/spin-configs-99-999/spin-config-99-999-005000.dat" # high T
+#     # path7 = "/data/scc/marian.gunsch/AM_tiltedX_Tstep_nernst_T1/spin-configs-99-999/spin-config-99-999-005000.dat"  # low T
+#     #
+#     # data6 = read_spin_config_dat(path6)
+#     # data7 = read_spin_config_dat(path7)
+#     #
+#     # path8 = "/data/scc/marian.gunsch/AM-DMI_tilted_Tstep_nernst/spin-configs-99-999/spin-config-99-999-010000.dat"  # DMI
+#     # data8 = read_spin_config_dat(path8)
+#
+#     path9 = "/data/scc/marian.gunsch/02_AM_tilted_Tstep_DMI/spin-configs-99-999/spin-config-99-999-005000.dat"  # DMI more layers
+#     data9 = read_spin_config_dat(path9)
+#
+#     data = data9
+#
+#     print("Read data")
+#
+#     # plot_colormap(physics.neel_vector(select_SL_and_component(data1, "A", "z"), select_SL_and_component(data1, "B", "z")), "neel, 1")
+#     # plot_colormap(physics.magnetizazion(select_SL_and_component(data1, "A", "z"), select_SL_and_component(data1, "B", "z")), "magn, 1")
+#     # plot_colormap(physics.neel_vector(select_SL_and_component(data2, "A", "z"), select_SL_and_component(data2, "B", "z")), "neel, 2")
+#     # plot_colormap(physics.magnetizazion(select_SL_and_component(data2, "A", "z"), select_SL_and_component(data2, "B", "z")), "magn, 2")
+#
+#     # %%
+#     rel_Tstep_pos = 0.49
+#     show_step = False
+#     zoom = False
+#
+#
+#     # magn, neel = calculate_magnetization_neel(data4, data3_eq, "x")
+#     magn, neel = calculate_magnetization_neel(data, direction="x")
+#     # magn, neel = calculate_magnetization_neel(data1, direction="x")
+#     plot_colormap(convolute(average_z_layers(magn["z"]), filter="denoise"), "magnetization z", rel_Tstep_pos, show_step,
+#                   zoom)
+#     plot_colormap(convolute(average_z_layers(neel["z"]), filter="denoise"), "neel vector z", rel_Tstep_pos, show_step,
+#                   zoom)
+#
+#     #%%
+#     # direction = "longitudinal"
+#     direction = "transversal"
+#
+#     # j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other_paper = calculate_spin_currents(average_z_layers(data), direction)    # This yields incorrect results (or rather all the spin currents are averaged out before being calculated...)
+#     j_inter_1, j_inter_2, j_intra_A, j_intra_B, j_other_paper = average_z_layers(*calculate_spin_currents(data, direction))
+#
+#     # plot_colormap(convolute(j_inter_1), f"j inter +, {direction}", rel_Tstep_pos)
+#     # plot_colormap(convolute(j_inter_2), f"j inter -, {direction}", rel_Tstep_pos)
+#     # plot_colormap(convolute(j_intra_A), f"j intra A, {direction}", rel_Tstep_pos)
+#     # plot_colormap(convolute(j_intra_B), f"j intra B, {direction}", rel_Tstep_pos)
+#     # plot_colormap(convolute(j_other_paper), f"j other paper, {direction}", rel_Tstep_pos)
+#
+#     plot_colormap(j_inter_1, f"j inter +, {direction}", rel_Tstep_pos, show_step, zoom)
+#     plot_colormap(j_inter_2, f"j inter -, {direction}", rel_Tstep_pos, show_step, zoom)
+#     plot_colormap(j_intra_A, f"j intra A, {direction}", rel_Tstep_pos, show_step, zoom)
+#     plot_colormap(j_intra_B, f"j intra B, {direction}", rel_Tstep_pos, show_step, zoom)
+#     plot_colormap(j_other_paper, f"j other paper, {direction}", rel_Tstep_pos, show_step, zoom)
+#
+#
+#     # %%
+#
+#     magnon_count_A = select_SL_and_component(data, "A", "x") ** 2 + select_SL_and_component(data, "A", "y") ** 2
+#     magnon_count_B = select_SL_and_component(data, "B", "x") ** 2 + select_SL_and_component(data, "B", "y") ** 2
+#
+#     plot_colormap(average_z_layers(magnon_count_A), "magnon count A", rel_Tstep_pos, show_step, zoom)
+#     plot_colormap(average_z_layers(magnon_count_B), "magnon count B", rel_Tstep_pos, show_step, zoom)
+#
+#
+# if __name__ == "__main__" and 1 in _run:
+#
+#     # %% Testing not-tilted file
+#     non_tilted_path = "/data/scc/marian.gunsch/08_yTstep/T4/spin-configs-99-999/spin-config-99-999-005000.dat"
+#
+#     data = read_spin_config_dat(non_tilted_path, False)
+#
+#     # tilted_path = "/data/scc/marian.gunsch/08_tilted_yTstep/T4/spin-configs-99-999/spin-config-99-999-000000.dat"
+#     #
+#     # data = read_spin_config_dat(tilted_path, True)
+#
+#
+# if __name__ == "__main__" and 2 in _run:
+#     np.random.default_rng(462)
+#     data = 20 * (np.random.rand(8, 8) - 0.5)
+#
+#     # print(average_aligned_data(data, "default", False, False))
+#     print(average_aligned_data(data, "default", False, True))
+#     # print(average_aligned_data(data, "default", True, False))
+#     print(average_aligned_data(data, "default", True, True))

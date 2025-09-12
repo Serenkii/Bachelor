@@ -407,7 +407,7 @@ def sne_spin_accumulation():
     # Profile plots
     # TODO: Take appropriate averages over config data! Plot that for all available directions and compare somehow
     # TODO: Maybe compare to ground state? (ground state being T=0)
-    # TODO: Maybe also a comparison like 50 points away from T step? To confirm it has to be some perpindicular effect?
+    # TODO: Maybe also a comparison like 50 points away from T step? To confirm it has to be some perpendicular effect?
     # TODO: idk
     warnings.warn("Stuff todo!")
 
