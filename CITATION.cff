@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this repository, code snippets, or ideas for your research, please cite it."
+title: "Data Analysis and Plotting for My Bachelor's Thesis 'Computer simulation of altermagnets with relativistic corrections'"
+authors:
+  - family-names: "Duelli"
+    given-names: "Marian Felix"
+version: "0.1.0"
+date-released: "2025-09-13"
+url: "https://github.com/Serenkii/Bachelor"
+keywords:
+  - data analysis
+  - plotting
+  - thesis
+license: "MIT"

@@ -17,6 +17,7 @@ import src.physics as physics
 import src.spinconf_util as spinconf_util
 import src.helper as helper
 import thesis.mpl_configuration as mpl_config
+import src.save_util as save_util
 
 # %% Spin accumulation / net magnetization
 
@@ -370,7 +371,84 @@ def spin_accu_config(tilted_data, direction):
         raise ValueError(f"Direction '{direction}' not valid.")
 
 
-def sne_spin_accumulation():
+def sne_accumulation_profile_plot(x_space, magnetization, profile_dirs, a_labels=None,
+                                  absdistance=24, abspad=1.2, save_name=None):
+    a_labels = a_labels or {"100": r"a", "010": r"a", "110": r"\tilde{a}", "-110": r"\tilde{a}"}
+
+    Tdirections = magnetization.keys()
+
+    plot_kwargs = dict(marker="o", markersize=1.5, linestyle="--", linewidth=0.8)
+
+    if x_space is None:
+        x_space = dict( (direction, np.arange(magnetization.shape[0])) for direction in Tdirections )
+    elif type(x_space) is not dict:
+        x_space = dict( (direction, x_space) for direction in Tdirections )
+
+
+    fig = plt.figure(figsize=(mpl_config.get_width(), mpl_config.get_width(0.9)))
+    gs = fig.add_gridspec(2, 5,
+                          height_ratios=[1, 1],
+                          width_ratios=[2, 2, 0.3, 2, 2],
+                          hspace=0.5,
+                          wspace=0.05,
+                          left=0.17)
+
+    axs = dict()
+    temp = fig.add_subplot(gs[0, 0])
+    axs["100"] = (temp, fig.add_subplot(gs[0, 1], sharey=temp))
+    axs["010"] = (fig.add_subplot(gs[0, 3], sharey=temp), fig.add_subplot(gs[0, 4], sharey=temp))
+    temp = fig.add_subplot(gs[1, 0])
+    axs["110"] = (temp, fig.add_subplot(gs[1, 1], sharey=temp))
+    axs["-110"] = (fig.add_subplot(gs[1, 3], sharey=temp), fig.add_subplot(gs[1, 4], sharey=temp))
+
+    def remove_spines():
+        for d in Tdirections:
+            axs[d][0].spines.right.set_visible(False)
+            axs[d][1].spines.left.set_visible(False)
+            axs[d][1].tick_params(left=False, labelleft=False)
+        for d in ["010", "-110"]:
+            axs[d][0].tick_params(labelleft=False)
+
+    def broken_axes_markings():
+        for d in Tdirections:
+            size = 7
+            util.add_axis_break_marking(axs[d][0], "top right", "horizontal", size)
+            util.add_axis_break_marking(axs[d][0], "bottom right", "horizontal", size)
+            util.add_axis_break_marking(axs[d][1], "top left", "horizontal", size)
+            util.add_axis_break_marking(axs[d][1], "bottom left", "horizontal", size)
+
+    def place_axes_labels(pad=0.055):
+        for d in ["100", "110"]:
+            axs[d][0].set_ylabel(r"$\langle S^z \rangle$")
+        for d in Tdirections:
+            y = axs[d][0].get_position().get_points()[0][1]
+            x1 = axs[d][0].get_position().get_points()[1][0]
+            x2 = axs[d][1].get_position().get_points()[0][0]
+            fig.text(0.5 * (x1 + x2), y - pad, rf"position $x/{a_labels[d]}$ in \hkl[{profile_dirs[d]}]", va="top", ha="center")
+
+
+    remove_spines()
+    broken_axes_markings()
+    place_axes_labels()
+
+    for d in Tdirections:
+        axs[d][0].set_xlim(x_space[d][0] - abspad, x_space[d][0] - abspad + absdistance)
+        axs[d][1].set_xlim(x_space[d][-1] + abspad - absdistance, x_space[d][-1] + abspad)
+
+    for d in Tdirections:
+        axs[d][0].plot(x_space[d], magnetization[d], **plot_kwargs)
+        axs[d][1].plot(x_space[d], magnetization[d], **plot_kwargs)
+
+    if save_name:
+        fig.savefig(f"{save_base_path}{save_name}")
+
+    plt.show()
+
+
+
+
+
+def sne_spin_accumulation(plot_config=True):
     temperature = 2     # available: 1..10
     T = temperature
 
@@ -401,16 +479,55 @@ def sne_spin_accumulation():
     conf_data = spinconf_util.npy_file_from_dict(paths, is_tilted)
 
     # Config plots: To get an idea of what the profile plots later on show
-    spin_accu_config(conf_data["-110"], "-110")
-    spin_accu_config(conf_data["110"], "110")
+    if plot_config:
+        spin_accu_config(conf_data["-110"], "-110")
+        spin_accu_config(conf_data["110"], "110")
+
 
     # Profile plots
-    # TODO: Take appropriate averages over config data! Plot that for all available directions and compare somehow
-    # TODO: Maybe compare to ground state? (ground state being T=0)
-    # TODO: Maybe also a comparison like 50 points away from T step? To confirm it has to be some perpendicular effect?
-    # TODO: idk
-    warnings.warn("Stuff todo!")
+    profile_direction = { "100": "y", "110": "y", "-110": "x", "010": "x" }
+    # The crystallographic profile direction for the respective gradient T directions
+    profile_direction_cryst = { "100": "010", "110": "-110", "-110": "-1-10", "010": "-100" }
+    reverse_profile = { "100": False, "110": False, "-110": True, "010": True }
+    # profile_direction_cryst = {"100": "010", "110": "-110", "-110": "110", "010": "100"}
+    # reverse_profile = {"100": False, "110": False, "-110": False, "010": False}
 
+    # from profiles
+    profilesA, profilesB = mag_util.npy_files_from_dict(paths)
+
+    magn_profiles = dict()
+    for direction in directions:
+        magn_profiles[direction] = physics.magnetization(mag_util.get_component(profilesA[direction]),
+                                                         mag_util.get_component(profilesB[direction]), True)
+        if reverse_profile[direction]:
+            magn_profiles[direction] = magn_profiles[direction][::-1]
+
+    save_name = "sne_accum_fromprofil.pdf"
+    sne_accumulation_profile_plot({d: np.arange(256) for d in directions}, magn_profiles, profile_direction_cryst,
+                                  save_name=save_name)
+
+    save_util.source_paths(f"{save_base_path}{save_name}", str(paths))
+    save_util.description(f"{save_base_path}{save_name}",
+                          "The profiles in the orthogonal directions of the temperature step directions.")
+
+    # from configs
+    slice_ = slice(135, 185)
+    # slice_ = slice(None)
+    magn_conprofiles = dict()
+    for direction in directions:
+        tempA, tempB = spinconf_util.create_profile(conf_data[direction], profile_direction[direction], slice_, "z")
+        magn_conprofiles[direction] = physics.magnetization(tempA, tempB)
+        if reverse_profile[direction]:
+            magn_conprofiles[direction] = magn_conprofiles[direction][::-1]
+
+    save_name = "sne_accum_fromconf.pdf"
+    sne_accumulation_profile_plot({d: np.arange(256) for d in directions}, magn_conprofiles, profile_direction_cryst,
+                                  save_name=save_name)
+
+    save_util.source_paths(f"{save_base_path}{save_name}", str(paths))
+    save_util.description(f"{save_base_path}{save_name}",
+                          "Profiles in the orthogonal directions of the temperature step directions. The "
+                          f"used slice is {slice_}.")
 
 
 # %% Spin currents (transversal)
@@ -466,7 +583,7 @@ def sne_magnon_spectrum():
 # %% Main
 
 def main():
-    sne_spin_accumulation()
+    sne_spin_accumulation(False)
     # spin_currents_open()
     # spin_currents_upperABC()
     # spin_currents_uploABC()

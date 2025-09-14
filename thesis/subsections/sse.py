@@ -459,14 +459,14 @@ def sse_spin_currents():
     # TODO: Think about units
     warnings.warn("Unfinished method! See TODOS!")
 
-    paths = {
-        # "100": "/data/scc/marian.gunsch/16/AM_xTstep_T2/",
-        # "010": "/data/scc/marian.gunsch/16/AM_yTstep_T2/",          # Not sure whether to use
+    paths = {       # if starts running: -2 with 128 z layers to reduce noise
+        "100": "/data/scc/marian.gunsch/16/AM_xTstep_T2-2/",        # with or without _noABC? (makes no difference)
+        "010": "/data/scc/marian.gunsch/16/AM_yTstep_T2-2/",          # Not sure whether to use at all
         "110": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_T2-2/",
         "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
     }
 
-    dataA_, dataB_ = mag_util.npy_files_from_dict(paths)
+    dataA_, dataB_ = mag_util.npy_files_from_dict(paths, slice_index=-5500, force=True)
 
     directions_ = paths.keys()
     currents = dict()
@@ -477,7 +477,7 @@ def sse_spin_currents():
     fig, ax = plt.subplots()
     ax.set_xlabel("position $x$ TODO")
     ax.set_ylabel(r"spin current $j^{\mathrm{L}}$ (\si{\meter\per\second})")
-    ax.set_xlim(0.5, 254.5)
+    # ax.set_xlim(0.5, 254.5)
 
     x_tilted = np.arange(currents['110'].shape[0]) + 0.5
 
@@ -486,7 +486,8 @@ def sse_spin_currents():
     lines = []
 
     for direction in directions_:
-        line, = ax.plot(x_tilted, currents[direction], label=fr"\hkl[{direction}]")
+        # line, = ax.plot(x_tilted, currents[direction], label=fr"\hkl[{direction}]")
+        line, = ax.plot(currents[direction], label=fr"\hkl[{direction}]")
         lines.append(line)
 
     legend = plt.legend(handles=lines, loc="upper right")
@@ -500,7 +501,15 @@ def sse_spin_currents():
 
     plt.show()
 
+    # TEMP
 
+    conf_data = spinconf_util.npy_file_from_dict(paths)
+    cur = spinconf_util.spin_current(conf_data["100"], "x", "100", "x")
+    fig, ax = plt.subplots()
+    ax.plot(cur)
+    # ax.plot(x_tilted, cur)
+    # ax.plot(x_tilted, currents["110"] * 15000)
+    plt.show()
 
 
 # %% Main

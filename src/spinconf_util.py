@@ -234,7 +234,14 @@ def npy_file(dat_path: str, npy_path=None, force=default_force_overwrite, return
 
 
 
-def npy_file_from_dict(path_dict, is_tilted, force=default_force_overwrite, shift=None, empty_value=np.nan):
+def npy_file_from_dict(path_dict, is_tilted=None, force=default_force_overwrite, shift=None, empty_value=np.nan):
+    if not is_tilted:
+        is_tilted = dict()
+        for d in ["100", "010", "-100", "0-10"]:
+            is_tilted[d] = False
+        for d in ["110", "-110", "-1-10", "1-10"]:
+            is_tilted[d] = True
+
     data_dict = dict()
 
     for key in path_dict:
@@ -541,23 +548,21 @@ def spin_current(grid_data, current_direction, cryst_direction, profile_return=N
 
         # Put different rows together
         assert shape1 == shape2     # This must be the same because of even grid dimensions
-        curr_shape = (shape1[0], ) + (shape1[0] + shape2[0], ) + shape1[2:]
+        curr_shape = (shape1[0], ) + (shape1[1] + shape2[1], ) + shape1[2:]
         curr = np.empty(curr_shape, dtype=float)
         curr[:, 0::2] = curr1
         curr[:, 1::2] = curr2
 
         assert curr.shape[0] + 1 == data.shape[0]
-        assert curr.shape[1:] == data.shape[1:]
+        assert curr.shape[1:3] == data.shape[1:3]
 
         return curr
 
 
     if tilted:
         current = handle_tilted() * physics.handle_spin_current_unit_prefactor(tilted)
-    elif tilted:
-        current = handle_aligned() * physics.handle_spin_current_unit_prefactor(tilted)
     else:
-        raise ValueError(f"Invalid crystallographic direction: {cryst_direction}")
+        current = handle_aligned() * physics.handle_spin_current_unit_prefactor(tilted)
 
     # We need to multiply times two, to get the area of a unit cells --> make it comparable to the tilted variant,
     # in terms of the area the current flows through. (~ two 'atom points')
@@ -567,7 +572,7 @@ def spin_current(grid_data, current_direction, cryst_direction, profile_return=N
     current *= sign
 
     if profile_return:
-        current_ = np.transpose(current, permutation)
+        current_ = np.transpose(current, permutation + (2, ))
 
         if profile_return == "x":
             avg_axes = (1, 2)
