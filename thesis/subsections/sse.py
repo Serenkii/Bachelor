@@ -16,7 +16,7 @@ import src.plot_util as plot_util
 import src.physics as physics
 import src.spinconf_util as spinconf_util
 import src.helper as helper
-
+import src.save_util as save_util
 
 # %%
 save_base_path = "out/thesis/sse/"
@@ -462,80 +462,95 @@ def propagation_lengths():
 
 
 # %% SPIN CURRENTS
-def sse_spin_currents():
+def sse_spin_currents(from_profile=True):
 
-    # TODO: Implement aligned direction
-    # TODO: sensible position of temperaturestep with different scalings
-    # TODO: maybe just divide by a_d because we are only looking at qualitative picture
-    # TODO: Think about units
-    warnings.warn("Unfinished method! See TODOS!")
-
+    warnings.warn("Use updated paths, once simulations are finished running.")
     paths = {       # if starts running: -2 with 128 z layers to reduce noise
-        "100": "/data/scc/marian.gunsch/16/AM_xTstep_T2-2/",        # with or without _noABC? (makes no difference)
-        "010": "/data/scc/marian.gunsch/16/AM_yTstep_T2-2/",          # Not sure whether to use at all
+        "100": "/data/scc/marian.gunsch/16/AM_xTstep_T2_noABC/",        # with or without _noABC? (makes no difference)
+        "010": "/data/scc/marian.gunsch/16/AM_yTstep_T2_noABC/",          # Not sure whether to use at all
         "110": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_T2-2/",
         "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
     }
 
-    dataA_, dataB_ = mag_util.npy_files_from_dict(paths, slice_index=-5500, force=True)
+    warnings.warn("Temporary slicing.")
+    if from_profile:
+        dataA_, dataB_ = mag_util.npy_files_from_dict(paths, slice_index=-5500, force=True)
+    else:
+        curr_dir = { "100": "x", "110": "x", "010": "y", "-110":"y"}
+        conf_data = spinconf_util.npy_file_from_dict(paths)
+
+    shift = 0.5     # this is needed because we are working with currents (in between two layers/atoms)
 
     directions_ = paths.keys()
+
     currents = dict()
 
     for direction in directions_:
-        currents[direction] = mag_util.spin_current(dataA_[direction], dataB_[direction], direction, normed_units=False)
+        if from_profile:
+            currents[direction] = mag_util.spin_current(dataA_[direction], dataB_[direction], direction, normed_units=False)
+        else:
+            currents[direction] = spinconf_util.spin_current(conf_data[direction], curr_dir[direction], direction, curr_dir[direction],
+                                                             normed_units=False)
+
+    Tstep_pos = dict()
+    x_space = dict()
+    for direction in directions_:
+        Tstep_pos[direction] = helper.get_actual_Tstep_pos(0.49, currents[direction].shape[0])
+        x = np.arange(len(currents[direction])) + shift
+        x -= Tstep_pos[direction]
+        x = physics.index_to_position(x, direction)
+        x_space[direction] = x
 
     fig, ax = plt.subplots()
-    ax.set_xlabel("position $x$ TODO")
+    ax.set_xlabel("position $x/a$")
     ax.set_ylabel(r"spin current $j^{\mathrm{L}}$ (\si{\meter\per\second})")
-    # ax.set_xlim(0.5, 254.5)
-
-    x_tilted = np.arange(currents['110'].shape[0]) + 0.5
-
-    act_step_pos = helper.get_actual_Tstep_pos(0.49, currents['110'].shape[0])
+    ax.set_xlim(-111.5, 141.5)
 
     lines = []
 
     for direction in directions_:
         # line, = ax.plot(x_tilted, currents[direction], label=fr"\hkl[{direction}]")
-        line, = ax.plot(currents[direction], label=fr"\hkl[{direction}]")
+        line, = ax.plot(x_space[direction], currents[direction], label=fr"\hkl[{direction}]")
         lines.append(line)
 
     legend = plt.legend(handles=lines, loc="upper right")
     ax.add_artist(legend)
 
-    handle = plot_util.place_Tstep_marking(ax, act_step_pos)
+    handle = plot_util.place_Tstep_marking(ax, 0.0)
     legend_dT = plt.legend(handles=[handle, ], loc="lower left")
     ax.add_artist(legend_dT)
 
     fig.tight_layout()
 
+    suffix = "_fromprof" if from_profile else "_fromconf"
+    save_path = f"{save_base_path}sse_spin_currents{suffix}.pdf"
+    fig.savefig(save_path)
+    save_util.source_paths(save_path, paths)
+    shared_description = ("Longitudinal spin current for crystallographic directions. x values for 110 and -110 have "
+                          "been corrected for the appropriate lattice constant.")
+    if from_profile:
+        save_util.description(save_path, f"Used profile data to calculate spin current. {shared_description}")
+    else:
+        save_util.description(save_path, f"Used config data to calculate spin current. {shared_description}")
+
     plt.show()
 
-    # TEMP
-
-    conf_data = spinconf_util.npy_file_from_dict(paths)
-    cur = spinconf_util.spin_current(conf_data["100"], "x", "100", "x")
-    fig, ax = plt.subplots()
-    ax.plot(cur)
-    # ax.plot(x_tilted, cur)
-    # ax.plot(x_tilted, currents["110"] * 15000)
-    plt.show()
 
 
 # %% Main
 
 def main():
-    initialize_data()
+    # initialize_data()
 
     # sse_magnetization_Bfield()
     # sse_magnaccum_Bfield()
 
     # peak_dependence()
 
-    direction_comparison()
+    # direction_comparison()
 
     # propagation_lengths()
 
-    # sse_spin_currents()
+    sse_spin_currents(True)
+    sse_spin_currents(False)
 

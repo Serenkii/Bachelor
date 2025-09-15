@@ -58,10 +58,26 @@ def magnetization(Sz_A, Sz_B, do_time_avg=False):
     return 0.5 * (Sz_A + Sz_B)
 
 
-def index_to_position(array, tilted):
+def get_lattice_constant(tilted):
+    if type(tilted) is str:
+        if tilted in ["100", "010", "-100", "0-10"]:
+            tilted = False
+        elif tilted in ["110", "-110", "-1-10", "1-10"]:
+            tilted = True
+        else:
+            raise ValueError(f"Unknown direction: {tilted}")
+    elif type(tilted) is not bool:
+        raise TypeError(f"Boolean or direction string supported.")
+
     if tilted:
-        return array * lattice_constant_tilted
-    return array * lattice_constant
+        return lattice_constant_tilted
+    return lattice_constant
+
+
+def index_to_position(array, tilted):
+    a = get_lattice_constant(tilted)
+    return a * array
+
 
 
 def spectrum_posdep(Sx, Sy, dt=50e-16, factor=2*np.pi):

@@ -34,5 +34,5 @@ def get_index_last_warm(relative_position, N):
     return int(np.floor(relative_position * N)) + 1
 
 def get_actual_Tstep_pos(relative_position, N):
-    return get_index_last_warm(relative_position, N) - 0.5
+    return get_index_last_warm(relative_position, N) + 0.5
     # TODO

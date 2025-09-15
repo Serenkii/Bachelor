@@ -79,9 +79,9 @@ def place_Tstep_marking(ax, x, label=r"$\Delta T$", **kwargs):
     plot_kwargs = dict(color="green", linestyle="--", marker="", linewidth=1, label=label)
     plot_kwargs.update(kwargs)
 
-    legend_marker, = ax.axvline(x, **plot_kwargs)
+    line = ax.axvline(x, **plot_kwargs)
 
-    return legend_marker
+    return line
 
 
 

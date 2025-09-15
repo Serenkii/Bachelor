@@ -454,7 +454,7 @@ def create_profile(grid_data, profile_direction, avg_slice=slice(None), which="x
 
 
 # UNTESTED!
-def spin_current(grid_data, current_direction, cryst_direction, profile_return=None, do_unit_cell_avg=True):
+def spin_current(grid_data, current_direction, cryst_direction, profile_return=None, do_unit_cell_avg=True, normed_units=False):
     """
 
     :param grid_data:
@@ -561,9 +561,9 @@ def spin_current(grid_data, current_direction, cryst_direction, profile_return=N
 
 
     if tilted:
-        current = handle_tilted() * physics.handle_spin_current_unit_prefactor(tilted)
+        current = handle_tilted() * physics.handle_spin_current_unit_prefactor(tilted, normed_units)
     else:
-        current = handle_aligned() * physics.handle_spin_current_unit_prefactor(tilted)
+        current = handle_aligned() * physics.handle_spin_current_unit_prefactor(tilted, normed_units)
 
     # We need to multiply times two, to get the area of a unit cells --> make it comparable to the tilted variant,
     # in terms of the area the current flows through. (~ two 'atom points')
