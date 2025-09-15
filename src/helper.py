@@ -22,7 +22,7 @@ def create_slice_list(slice_string, column_dict):
 def get_absolute_T_step_index(relative_position, N):
     warnings.warn("Not sure what is correct...")
 
-    func = get_index_first_cold
+    func = get_index_last_warm     # In my opinion, first index cold is the correct choice!
 
     warnings.warn(f"Using function '{func}'")
     return func(relative_position, N)
@@ -34,4 +34,5 @@ def get_index_last_warm(relative_position, N):
     return int(np.floor(relative_position * N)) + 1
 
 def get_actual_Tstep_pos(relative_position, N):
-    return get_index_last_warm(relative_position, N) + 0.5
+    return get_index_last_warm(relative_position, N) - 0.5
+    # TODO

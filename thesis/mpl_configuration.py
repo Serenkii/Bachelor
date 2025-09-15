@@ -30,9 +30,10 @@ def get_height(fraction=1.0, smaller=True):
     return get_width(fraction) / golden_ratio
 
 
-def get_size(fraction=1.0, height_smaller=True):
-    return get_width(fraction), get_height(fraction, height_smaller)
-
+def get_size(fraction=1.0, fractionh=None, height_smaller=True):
+    if not fractionh:
+        return get_width(fraction), get_height(fraction, height_smaller)
+    return get_width(fraction), get_width(fractionh)
 
 def get_frac_for_latex(width_in):
     return width_in / tex_linewidth_inch

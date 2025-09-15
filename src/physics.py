@@ -64,6 +64,20 @@ def index_to_position(array, tilted):
     return array * lattice_constant
 
 
+def spectrum_posdep(Sx, Sy, dt=50e-16, factor=2*np.pi):
+    Sp = Sx + 1j * Sy
+
+    freqs_ = np.fft.fftfreq(Sp.shape[0], d=dt)
+    Sp_F_ = np.fft.fft(Sp, axis=0)
+
+    Sp_F = np.fft.fftshift(Sp_F_, axes=0)
+    freqs = np.fft.fftshift(freqs_, axes=0) * factor
+
+    magnon_density = np.abs(Sp_F) ** 2
+
+    return freqs, magnon_density
+
+
 def dispersion(Sx, Sy, dx=lattice_constant, dt=50e-16, factor=2*np.pi):
     Sp = Sx + 1j * Sy
 

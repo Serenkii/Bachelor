@@ -75,12 +75,11 @@ def multiple_of_pi_over_2(x, pos):
         return fr"${n}\tfrac{{\pi}}{{2}}$"
 
 
-def place_Tstep_marking(ax, x, label=r"$\Delta T$"):
-    ymin, ymax = ax.get_ylim()
-    ax.set_ylim(ymin, ymax)     # set y limits as fixed
+def place_Tstep_marking(ax, x, label=r"$\Delta T$", **kwargs):
+    plot_kwargs = dict(color="green", linestyle="--", marker="", linewidth=1, label=label)
+    plot_kwargs.update(kwargs)
 
-    legend_marker, = ax.plot(x, ymin, marker=10, color="r", linestyle="", label=label)
-    ax.plot(x, ymax, marker=11, color="r", linestyle="")
+    legend_marker, = ax.axvline(x, **plot_kwargs)
 
     return legend_marker
 

@@ -46,7 +46,8 @@ def infer_config_path(path):
         return_path = f"{path}/spin-configs-99-999/spin-config-99-999-005000.dat"
 
     if not os.path.exists(return_path):
-        raise FileNotFoundError(f"Unable to infer data file from '{path}'. Unsuccessful attempt yielded '{return_path}'.")
+        raise FileNotFoundError(f"Unable to infer data file from '{path}'. Unsuccessful attempt yielded '{return_path}'."
+                                f"This file does not exist.")
 
     return return_path
 

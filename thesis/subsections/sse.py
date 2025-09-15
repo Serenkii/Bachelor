@@ -34,9 +34,15 @@ paths = {
     "-110": dict()
 }
 
-for B in range(50, 100 + 1, 10):
+for B in range(50, 100 + 1, 10):        # 50, 60, ..., 90
     paths["110"][B] = f"/data/scc/marian.gunsch/05/05_AM_tilted_xTstep_T2_B{B}/"
     paths["-110"][B] = f"/data/scc/marian.gunsch/05/05_AM_tilted_yTstep_T2_B{B}/"
+
+for B_ in range(50, 100 + 1, 10):       # -50, -60, ..., -90
+    B = -B_
+    warnings.warn("Simulations may not have started...")
+    paths["110"][B] = f"/data/scc/marian.gunsch/17/AM_tilt_xTstep_T2_B/n{B_}/"
+    paths["-110"][B] = f"/data/scc/marian.gunsch/17/AM_tilt_yTstep_T2_B/n{B_}/"
 
 paths["110"][0] = "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_T2-2/"
 paths["-110"][0] = "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
@@ -77,7 +83,11 @@ def initialize_data():
 
 # %% INTRODUCTION OF A STATIC MAGNETIC FIELD (MAGNETIZATION)
 
-def plot_magn_Bfield(magn_dict, ylabel=r"magnetization $\langle m \rangle$", xlim=(0, 255)):
+def plot_magn_Bfield(magn_dict, ylabel=r"magnetization $\langle m \rangle$", xlim=(0, 255),
+                     field_strengths_=(-100, 0, 50, 60, 70, 80, 90, 100)):
+
+    if len(field_strengths_) > 8:
+        warnings.warn(f"{len(field_strengths_)} field strengths are a lot to plot... Messy, huh?")
 
     fig, ax = plt.subplots()
 
@@ -89,7 +99,7 @@ def plot_magn_Bfield(magn_dict, ylabel=r"magnetization $\langle m \rangle$", xli
     lines = dict((direction, []) for direction in directions)
 
     for direction in directions:
-        for B, color in zip(field_strengths, colors):
+        for B, color in zip(field_strengths_, colors):
             # label = r"$\num{" + str(B) + r"}{}$" if direction == "110" else None
             label = r"$\num{" + str(B) + r"}{}$"
             _line, = ax.plot(magn_dict[direction][B], **plot_kwargs_dict[direction],
@@ -213,10 +223,10 @@ def peak_dependence():
 
     fig, ax = plt.subplots()
 
-    ax.set_xlabel(r"magnetic field strength $B$ (\si{\tesla})")
-    ax.set_ylabel(r"abs. peak magnon accum. $\left\lvert \langle \Delta m \rangle \right\rvert_{\max}$")
+    ax.set_xlabel(r"$B$ (\si{\tesla})")
+    ax.set_ylabel(r"peak magnon accum. $ \langle \Delta m \rangle_{\max}$")
 
-    sign = - 1
+    sign = + 1
 
     ax.plot(field_strengths, linear_func(field_strengths, *popt["110"]), linestyle="-", marker="", color="k")
     ax.plot(field_strengths, sign * linear_func(field_strengths, *popt["-110"]), linestyle="-", marker="", color="k")
@@ -237,10 +247,11 @@ def peak_dependence():
 # %% Compare for different directions for one magnetic field strength: magnetization for [100], [110], [-110]
 def direction_comparison():
     path_100 = "/data/scc/marian.gunsch/13/13_AM_xTstep_T2_B100/"
-
-    B_strength = 100
+    # path_100 = "/data/scc/marian.gunsch/13/13_AM_xTstep_T2_Bn100/"
+    B_strength = +100
 
     eq_path = "/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100-2/"
+    # eq_path = "/data/scc/marian.gunsch/06/06_AM_tilted_xTstep_T2_Bn100/"
     tempA, tempB = mag_util.npy_files(eq_path)
     eq_magn = np.mean(physics.magnetization(
         mag_util.get_component(tempA, "z", 15),
@@ -522,9 +533,9 @@ def main():
 
     # peak_dependence()
 
-    # direction_comparison()
+    direction_comparison()
 
     # propagation_lengths()
 
-    sse_spin_currents()
+    # sse_spin_currents()
 

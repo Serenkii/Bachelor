@@ -54,6 +54,7 @@ def savefig(fig, file_path, source_paths, description, **kwargs):
 
 def _getset(file_path, key, update=None):
     if update:
+        update = str(update)
         return edit_metadata(file_path, {key: update})
     metadata = get_metadata(file_path, [key])
     print(metadata)

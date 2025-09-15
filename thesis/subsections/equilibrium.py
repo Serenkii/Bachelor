@@ -796,9 +796,9 @@ def main():
     boundary_effects(2)
     boundary_effects(0)
 
-    # equilibrium_comparison_Bfield()
+    equilibrium_comparison_Bfield()
 
-    # dispersion_comparison_Bfield_table(1)
-    # dispersion_comparison_Bfield_table(2)
+    dispersion_comparison_Bfield_table(1)
+    dispersion_comparison_Bfield_table(2)
 
-    # dispersion_comparison_negB()
+    dispersion_comparison_negB()
