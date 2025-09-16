@@ -526,7 +526,8 @@ def infer_data_path(path, also_return_path_B=False):
 
     for entry in return_list:
         if not os.path.exists(entry):
-            raise FileNotFoundError(f"Unable to infer data file from '{path}'. Unsuccessful attempt yielded '{entry}'.")
+            raise FileNotFoundError(f"Unable to infer data file from '{path}'. Unsuccessful attempt yielded '{entry}' "
+                                    f"which does not exist.")
 
     return tuple(return_list)
 

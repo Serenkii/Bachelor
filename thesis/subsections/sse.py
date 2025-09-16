@@ -234,7 +234,7 @@ def peak_dependence():
     ax.plot(field_strengths, [peaks["110"][B] for B in field_strengths], label=r"\hkl[110]", linestyle="", marker="o")
     ax.plot(field_strengths, [sign * peaks["-110"][B] for B in field_strengths], label=r"\hkl[-110]", linestyle="", marker="s")
 
-    ax.legend(loc="upper center")
+    ax.legend(loc="upper left")
 
     fig.tight_layout()
 
@@ -540,16 +540,16 @@ def sse_spin_currents(from_profile=True):
 # %% Main
 
 def main():
-    # initialize_data()
+    initialize_data()
 
-    # sse_magnetization_Bfield()
-    # sse_magnaccum_Bfield()
+    sse_magnetization_Bfield()
+    sse_magnaccum_Bfield()
 
-    # peak_dependence()
+    peak_dependence()
 
-    # direction_comparison()
+    direction_comparison()
 
-    # propagation_lengths()
+    propagation_lengths()
 
     sse_spin_currents(True)
     sse_spin_currents(False)

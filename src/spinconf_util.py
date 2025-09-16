@@ -582,9 +582,6 @@ def spin_current(grid_data, current_direction, cryst_direction, profile_return=N
         else:
             raise ValueError("'profile_return' must be 'x' or 'y' or None to return all the data")
 
-        if cryst_direction in ["-1-10", "-100", "0-10", "1-10"]:
-            warnings.warn("The returned profile is equivalent to a profile in _negative_ x or y direction! Careful!")
-
         return np.mean(current_, axis=avg_axes)
 
     if not do_unit_cell_avg:
@@ -592,7 +589,7 @@ def spin_current(grid_data, current_direction, cryst_direction, profile_return=N
             print("The current was multiplied by 2 to correct for the dimensionless area.")
         if tilted:
             print("For the tilted setup, the unit cell averaging is always done!")
-        return np.transpose(current, permutation)
+        return np.transpose(np.mean(current, axis=2), permutation)
 
     raise NotImplementedError("The unit cell average has not been implemented yet.")
 

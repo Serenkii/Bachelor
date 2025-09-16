@@ -100,7 +100,9 @@ def equilibrium_comparison_Bfield():
 
 # %% Dispersion relation comparison for B=100T
 
-def dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_dict, version=1):
+def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, version=1,
+                                     left_title=r"$B = 0$", right_title=r"$B > 0$",
+                                     save_path=None):
     if not version in [1, 2]:
         raise ValueError("version must be 1 or 2")
 
@@ -109,7 +111,7 @@ def dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_di
     rasterized = True
     j0 = 0 if version == 1 else 1
 
-    fig = plt.figure(figsize=mpl_conf.get_size(1.0, False))
+    fig = plt.figure(figsize=mpl_conf.get_size(1.0, None, False))
 
     if version == 1:
         gs = fig.add_gridspec(nrows=5, ncols=2, height_ratios=[4, 4, 4, 4, 0.2], hspace=0.65, wspace=0.05)
@@ -150,8 +152,8 @@ def dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_di
         for B, j in zip(fields, range(2))
     )
 
-    axs_dict[False]["100"].set_title(r"$B = 0$")
-    axs_dict[True]["100"].set_title(r"$B > 0$")
+    axs_dict[False]["100"].set_title(left_title)
+    axs_dict[True]["100"].set_title(right_title)
 
     min_magn_dens = np.inf
     max_magn_dens = - np.inf
@@ -216,27 +218,16 @@ def dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_di
     cb.set_label(r"magnon density (arb. unit)")
     print("]")
 
-    print("Saving fig...")
-    fig.savefig(f"{save_base_path}dispersion_comparison_Bfield_table_{version}.pdf")
+    if save_path:
+        print("Saving fig...")
+        fig.savefig(save_path)
 
     print("Showing fig...")
     plt.show()
 
 
 
-def dispersion_comparison_Bfield_table_data():
-    paths_noB = {
-        "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x-2/",
-        "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y-2/",
-        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
-        "-110": f"/data/scc/marian.gunsch/10/AM__tilt_Tstairs_T2_y-2/"  # oups
-    }
-    paths_B = {
-        "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100-2/",
-        "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y_B100-2/",
-        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_B100-2/",
-        "-110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_y_B100-2/"
-    }
+def dispersion_comparison_table_data(paths_no, paths_yes):
 
     delta_x = {
         "100": physics.lattice_constant,
@@ -246,19 +237,19 @@ def dispersion_comparison_Bfield_table_data():
     }
 
 
-    directions = paths_B.keys()
+    directions = paths_yes.keys()
 
-    dataA_noB, dataB_noB = mag_util.npy_files_from_dict(paths_noB)
-    dataA_B, dataB_B = mag_util.npy_files_from_dict(paths_B)
+    dataA_no, dataB_no = mag_util.npy_files_from_dict(paths_no)
+    dataA_yes, dataB_yes = mag_util.npy_files_from_dict(paths_yes)
 
     data_dict = {
-        False: dict(A=dataA_noB, B=dataB_noB),  # No magnetic field
-        True: dict(A=dataA_B, B=dataB_B)  # Yes magnetic field
+        False: dict(A=dataA_no, B=dataB_no),  # No magnetic field
+        True: dict(A=dataA_yes, B=dataB_yes)  # Yes magnetic field
     }
 
     paths = {
-        False: paths_noB,
-        True: paths_B
+        False: paths_no,
+        True: paths_yes
     }
 
     k_dict = {
@@ -303,11 +294,29 @@ def dispersion_comparison_Bfield_table_data():
     return k_dict, freq_dict, magnon_density_dict
 
 
+
+def dispersion_comparison_Bfield_table_data():
+    paths_noB = {
+        "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x-2/",
+        "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y-2/",
+        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
+        "-110": f"/data/scc/marian.gunsch/10/AM__tilt_Tstairs_T2_y-2/"  # oups
+    }
+    paths_B = {
+        "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100-2/",
+        "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y_B100-2/",
+        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_B100-2/",
+        "-110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_y_B100-2/"
+    }
+    return dispersion_comparison_table_data(paths_noB, paths_B)
+
+
 def dispersion_comparison_Bfield_table(version=1):
     print("\n\nDISPERSION RELATION COMPARISON: MAGNETIC FIELD")
 
     k_dict, freq_dict, magnon_density_dict = dispersion_comparison_Bfield_table_data()
-    dispersion_comparison_Bfield_table_plot(k_dict, freq_dict, magnon_density_dict, version=version)
+    dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, version=version,
+                                     save_path=f"{save_base_path}dispersion_comparison_Bfield_table_{version}.pdf")
 
 
 # %% Comparison of dispersion relation for any direction with positive and negative field
@@ -793,12 +802,12 @@ def boundary_effects(temperature=2):
 
 def main():
     pass
-    boundary_effects(2)
-    boundary_effects(0)
-
-    equilibrium_comparison_Bfield()
+    # boundary_effects(2)
+    # boundary_effects(0)
+    #
+    # equilibrium_comparison_Bfield()
 
     dispersion_comparison_Bfield_table(1)
     dispersion_comparison_Bfield_table(2)
 
-    dispersion_comparison_negB()
+    # dispersion_comparison_negB()

@@ -555,23 +555,90 @@ def sne_spin_accumulation(plot_config=True):
 
 # %% Spin currents (transversal)
 
+def transversal_spin_currents(paths, xlim=(-81.5, 1.269 * 81.5), ypad=0.05, **kwargs):
+    plot_kwargs = dict(marker="", linestyle="-", linewidth=1)
+    plot_kwargs.update(kwargs)
+
+    Tstep_directions = paths.keys()
+    transversal_cryst_directions = {
+        "100": "010",
+        "010": "-100",
+        "110": "-110",
+        "-110": "-1-10"
+    }
+    transversal_directions = {
+        "100": "y",
+        "010": "x",
+        "110": "y",
+        "-110": "x"
+    }
+    profile_directions = {
+        "100": "x",
+        "010": "y",
+        "110": "x",
+        "-110": "y"
+    }
+
+    confdata = spinconf_util.npy_file_from_dict(paths)
+
+    currents = dict()
+    Tstep_pos = dict()
+    x_space = dict()
+    for d in Tstep_directions:
+        currents[d] = spinconf_util.spin_current(
+            confdata[d], transversal_directions[d], transversal_cryst_directions[d],
+            profile_directions[d], False)
+
+        Tstep_pos[d] = helper.get_actual_Tstep_pos(0.49, currents[d].shape[0])
+        x = np.arange(len(currents[d]), dtype=float)
+        x -= Tstep_pos[d]
+        x = physics.index_to_position(x, d)
+        x_space[d] = x
+
+    # Plotting
+    fig, ax = plt.subplots()
+
+    lines = []
+    for d in Tstep_directions:
+        line, = ax.plot(x_space[d], currents[d], label=fr"\hkl[{d}]", **plot_kwargs)
+        lines.append(line)
+
+    legend = plt.legend(handles=lines, loc="upper right")
+    ax.add_artist(legend)
+
+    line = plot_util.place_Tstep_marking(ax, 0)
+    legend_dT = plt.legend(handles=[line, ], loc="lower left")
+    ax.add_artist(legend_dT)
+
+    ax.set_xlim(*xlim)
+    min_ = np.inf
+    max_ = - np.inf
+    for d in Tstep_directions:
+        differences = (np.abs(x_space[d] - xlim[0]), np.abs(x_space[d] - xlim[1]))
+        closest_index = (np.argmin(differences[0]), np.argmin(differences[1]))
+        min_ = min(np.min(currents[d][closest_index[0]:closest_index[1]]), min_)
+        max_ = max(np.max(currents[d][closest_index[0]:closest_index[1]]), max_)
+    pad = (max_ - min_) * ypad
+    ax.set_ylim(min_ - pad, max_ + pad)
+
+    plt.show()
+
+
+
 def spin_currents_open():
-    # measurement direction (profile axis)
+    # Tstep direction
     paths = {
         "100": "/data/scc/marian.gunsch/11/AM_xTstep_y/",
         "010": "/data/scc/marian.gunsch/11/AM_yTstep_x/",
-        "-110": "/data/scc/marian.gunsch/11/AM_tilt_xTstep_y/",
-        "110": "/data/scc/marian.gunsch/11/AM_tilt_yTstep_x/"
+        "110": "/data/scc/marian.gunsch/11/AM_tilt_xTstep_y/",
+        "-110": "/data/scc/marian.gunsch/11/AM_tilt_yTstep_x/"
     }
-    # Direction of the temperature step
-    step_dir = {
-        "010": "100",
-        "100": "010",
-        "-110": "110",
-        "110": "-110"
-    }
+    
+    transversal_spin_currents(paths)
 
-    mag_util.npy_files_from_dict(paths)
+    
+    
+
 
 
 def spin_currents_upperABC():
@@ -596,10 +663,9 @@ def sne_spectrum_plot(freq_dict, magnon_density_dict, step_dir, reversed_direct,
     print("Plotting...")
 
     plot_kwargs = dict(linewidth=0.07)
-    rasterized = True
 
-    fig = plt.figure(figsize=mpl_config.get_size(1.0, 0.8))
-    gs = fig.add_gridspec(nrows=2, ncols=4, hspace=0.34, width_ratios=[0.5, 2, 2, 2])
+    fig = plt.figure(figsize=mpl_config.get_size(1.0, 1.4))
+    gs = fig.add_gridspec(nrows=3, ncols=4, hspace=0.34, width_ratios=[0.5, 2, 2, 2])
 
     freq_unit_factor = 1e15
     freq_unit = r"\SI{e15}{\radian\per\second}"
@@ -610,6 +676,9 @@ def sne_spectrum_plot(freq_dict, magnon_density_dict, step_dir, reversed_direct,
                    fig.add_subplot(gs[0, 3], sharey=temp, sharex=temp))
     axs["110"] = (fig.add_subplot(gs[1, 1], sharey=temp, sharex=temp), fig.add_subplot(gs[1, 2], sharey=temp, sharex=temp),
                    fig.add_subplot(gs[1, 3], sharey=temp, sharex=temp))
+    axs["010"] = (fig.add_subplot(gs[2, 1], sharey=temp, sharex=temp), fig.add_subplot(gs[2, 2], sharey=temp, sharex=temp),
+                   fig.add_subplot(gs[2, 3], sharey=temp, sharex=temp))
+
 
     axs["-110"][0].set_xlim(*xlim)
     axs["-110"][0].set_ylim(*ylim)
@@ -617,6 +686,7 @@ def sne_spectrum_plot(freq_dict, magnon_density_dict, step_dir, reversed_direct,
     def handle_ticks():
         for i in range(3):
             axs["-110"][i].tick_params(bottom=True, labelbottom=False)
+            axs["110"][i].tick_params(bottom=True, labelbottom=False)
         for d in freq_dict.keys():
             axs[d][1].tick_params(left=True, labelleft=False)
             axs[d][2].tick_params(left=True, labelleft=False)
@@ -643,11 +713,12 @@ def sne_spectrum_plot(freq_dict, magnon_density_dict, step_dir, reversed_direct,
             freq = freq_dict[direction] / freq_unit_factor
             magnon_density = magnon_density_dict[direction][:, index]
             axs[direction][i].plot(freq, magnon_density, **plot_kwargs)
-            axs[direction][i_].set_title(fr"$x_{{\hkl[{reversed_direct[direction]}]}}" + f"= {index}" + r"\tilde{a}$",
+            a = r"\tilde{a}" if direction in ["-110", "110"] else "a"
+            axs[direction][i_].set_title(fr"$x_{{\hkl[{reversed_direct[direction]}]}}" + f"= {index}{a}" + r"$",
                                          pad=9.0)
 
     for i in range(3):
-        axs["110"][i].set_xlabel(rf"$\omega$ ({freq_unit})")
+        axs["010"][i].set_xlabel(rf"$\omega$ ({freq_unit})")
     for d in freq_dict.keys():
         axs[d][0].set_ylabel(fr"magn. density (arb. u.)")
 
@@ -664,23 +735,29 @@ def sne_spectrum_plot(freq_dict, magnon_density_dict, step_dir, reversed_direct,
 
 
 def sne_magnon_spectrum():
+    #TODO: Clean up this mess
+
     # direction of measurement (profile axis)
     paths = {
         "-110": "/data/scc/marian.gunsch/02/02_AM_tilted_Tstep_hightres/",
-        "110": "/data/scc/marian.gunsch/14/AM_tilt_yTstep_x_hightres/"
+        "110": "/data/scc/marian.gunsch/14/AM_tilt_yTstep_x_hightres/",
+        "010": "/data/scc/marian.gunsch/14/AM_xTstep_y_hightres/"
     }
     # Direction of the temperature step
     step_dir = {
         "-110": "110",
-        "110": "-110"
+        "110": "-110",
+        "010": "100"
     }
     reversed_direct = {     # I hate what I have done here. It is so needlessly complicated...
         "-110": "-110",
-        "110": "-1-10"
+        "110": "-1-10",
+        "010": "010"
     }
     reverse = {
         "-110": False,
-        "110": True
+        "110": True,
+        "010": False
     }
 
     data_A, data_B = mag_util.npy_files_from_dict(paths)
