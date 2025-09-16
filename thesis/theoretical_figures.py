@@ -7,6 +7,15 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from mpl_toolkits.axes_grid1 import ImageGrid
 
+from matplotlib.patches import Polygon, FancyArrowPatch, Circle
+import matplotlib.lines as mlines
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from mpl_toolkits.mplot3d import Axes3D   # noqa: F401
+import matplotlib.cm as cm
+import matplotlib.colors as colors
+from mpl_toolkits.mplot3d.art3d import Line3D
+from mpl_toolkits.mplot3d import proj3d, art3d
+
 # %%
 
 seeblau = "#00a9e0"
@@ -130,9 +139,14 @@ from matplotlib.path import Path
 
 class Arrow3D(FancyArrowPatch):
 
-    def __init__(self, xs, ys, zs, *args, **kwargs):
+    def __init__(self, xs, ys, zs, depth_sorting_method=0, *args, **kwargs):
         super().__init__((0, 0), (0, 0), *args, **kwargs)
         self._verts3d = xs, ys, zs
+        self.depth_sorting_method = depth_sorting_method
+
+    @classmethod
+    def from_start_end(cls, start, end, *args, **kwargs):
+        return cls((start[0], end[0]), (start[1], end[1]), (start[2], end[2]), *args, **kwargs)
 
     @classmethod
     def from_midpoint_and_direction(cls, midpoint, direction, *args, length_arrow=None, **kwargs):
@@ -159,9 +173,49 @@ class Arrow3D(FancyArrowPatch):
         proj = self.axes.get_proj()
         xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, proj)
         self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
+
         warnings.warn("Method created with no clue what I am doing.")
-        return min(np.min(xs), np.min(ys), np.min(zs)) - 1e3  # Used for depth sorting
+        if self.depth_sorting_method == 0:
+            print("0")
+            return min(np.min(xs), np.min(ys), np.min(zs))   # Used for depth sorting
+        if self.depth_sorting_method == 1:
+            print("1")
+            return np.mean(zs)
+        if self.depth_sorting_method == 2:
+            print("2")
+            return np.max(zs)
+        if self.depth_sorting_method == 3:
+            return -9999999
         # TODO: I have no idea if this makes sense
+
+
+class Arrow3D_2(FancyArrowPatch):
+
+    def __init__(self, x, y, z, dx, dy, dz, *args, **kwargs):
+        super().__init__((0, 0), (0, 0), *args, **kwargs)
+        self._xyz = (x, y, z)
+        self._dxdydz = (dx, dy, dz)
+
+    def draw(self, renderer):
+        x1, y1, z1 = self._xyz
+        dx, dy, dz = self._dxdydz
+        x2, y2, z2 = (x1 + dx, y1 + dy, z1 + dz)
+
+        xs, ys, zs = proj3d.proj_transform((x1, x2), (y1, y2), (z1, z2), self.axes.M)
+        self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
+        super().draw(renderer)
+
+    def do_3d_projection(self, renderer=None):
+        x1, y1, z1 = self._xyz
+        dx, dy, dz = self._dxdydz
+        x2, y2, z2 = (x1 + dx, y1 + dy, z1 + dz)
+
+        xs, ys, zs = proj3d.proj_transform((x1, x2), (y1, y2), (z1, z2), self.axes.M)
+        self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
+
+        return np.min(zs)
+
+
 
 
 # %% LLG
@@ -746,6 +800,7 @@ def toy_model(save_name=None):
 
         ax.text(0 - distance - 0.1, -4.5, r"$a$", size=font_size, va="center", ha="right")
         ax.text(0.5, -5 - distance - 0.1, r"$a$", size=font_size, va="top", ha="center")
+        warnings.warn("font size was used...")  # TODO
 
     def draw_wigner_seitz(color="grey"):
         ds = 0.3
@@ -1171,6 +1226,174 @@ def spin_config_nontilted(save_path=None):
     plt.show()
 
 
+# %% Spin Nernst Effect
+
+def draw_thin_film(ax, Lx=4.0, Ly=3.0, Lz=0.2):
+
+    # scalar temperature function (arbitrary units, hot->cold mapped later)
+    # adjust weights if you want more influence of x, y or z
+    def temperature(x, y, z):
+        tx = (1.0 - x / Lx)  # stronger x-dependence (cold at x=0)
+        return tx
+
+    # colormap and will normalize across all faces so colors are consistent
+    cmap = cm.coolwarm  # red (hot) -> blue (cold)
+    # build grids for each face and collect T values to compute global vmin/vmax
+    faces_data = []
+
+    # resolution per face
+    nx, ny, nz = 120, 90, 30
+
+    # Top face z = Lz (X,Y)
+    X, Y = np.meshgrid(np.linspace(0, Lx, nx), np.linspace(0, Ly, ny))
+    Z_top = np.full_like(X, Lz)
+    T_top = temperature(X, Y, Z_top)
+    faces_data.append(('top', X, Y, Z_top, T_top))
+
+    # Bottom face z = 0 (X,Y)
+    Z_bot = np.zeros_like(X)
+    T_bot = temperature(X, Y, Z_bot)
+    faces_data.append(('bottom', X, Y, Z_bot, T_bot))
+
+    # Front face y = 0 (X,Z)  -> for plot_surface we need Xf, Zf as 2D arrays and pass them as X, Y, Z
+    X_f, Z_f = np.meshgrid(np.linspace(0, Lx, nx), np.linspace(0, Lz, nz))
+    Y_front = np.zeros_like(X_f)
+    T_front = temperature(X_f, Y_front, Z_f)
+    faces_data.append(('front', X_f, Y_front, Z_f, T_front))
+
+    # Back face y = Ly (X,Z)
+    Y_back = np.full_like(X_f, Ly)
+    T_back = temperature(X_f, Y_back, Z_f)
+    faces_data.append(('back', X_f, Y_back, Z_f, T_back))
+
+    # Left face x = 0 (Y,Z) -> swap ordering so plot_surface receives (Y, Xmapped, Z)
+    Y_l, Z_l = np.meshgrid(np.linspace(0, Ly, ny), np.linspace(0, Lz, nz))
+    X_left = np.zeros_like(Y_l)
+    T_left = temperature(X_left, Y_l, Z_l)
+    faces_data.append(('left', X_left, Y_l, Z_l, T_left))
+
+    # Right face x = Lx (Y,Z)
+    X_right = np.full_like(Y_l, Lx)
+    T_right = temperature(X_right, Y_l, Z_l)
+    faces_data.append(('right', X_right, Y_l, Z_l, T_right))
+
+    # compute global min/max for consistent colormap mapping
+    all_T = np.hstack([d[-1].ravel() for d in faces_data])
+    vmin, vmax = float(all_T.min()), float(all_T.max())
+    norm = colors.Normalize(vmin=vmin, vmax=vmax)
+
+    # draw each face opaque, with consistent colormap
+    for name, Xa, Ya, Za, Ta in faces_data:
+        # map scalar T to RGBA colors
+        facecolors = cmap(norm(Ta))
+        # plot_surface wants X, Y, Z arrays; we pass the arrays we built above
+        # set linewidth=0 for smooth look, antialiased True/False as needed
+        ax.plot_surface(Xa, Ya, Za, facecolors=facecolors, rstride=1, cstride=1,
+                        linewidth=0, antialiased=True, shade=False)
+
+    # optional: draw black edges for the prism outline for clarity
+    # define the 8 box corners and plot their edges
+    corners = np.array([
+        [0, 0, 0],
+        [Lx, 0, 0],
+        [Lx, Ly, 0],
+        [0, Ly, 0],
+        [0, 0, Lz],
+        [Lx, 0, Lz],
+        [Lx, Ly, Lz],
+        [0, Ly, Lz],
+    ])
+    edges = [
+        (0, 1), (1, 2), (2, 3), (3, 0),  # bottom rectangle
+        (4, 5), (5, 6), (6, 7), (7, 4),  # top rectangle
+        (0, 4), (1, 5), (2, 6), (3, 7)  # vertical edges
+    ]
+    for i, j in edges:
+        if np.all(corners[i] == [Lx, 0, Lz]) or np.all(corners[j] == [Lx, 0, Lz]):
+            ax.plot(*zip(corners[i], corners[j]), color='k', linewidth=0.5, zorder=100)
+            continue
+        ax.plot(*zip(corners[i], corners[j]), color='k', linewidth=0.8)
+
+
+
+
+
+def add_cone(ax, base_center, direction, length=0.3, radius=0.1, color="k", zorder=10_000):
+    # build a cone mesh aligned with direction
+    n = 20
+    theta = np.linspace(0, 2*np.pi, n)
+    circle = np.vstack([radius*np.cos(theta), radius*np.sin(theta), np.zeros(n)])
+    direction = np.array(direction) / np.linalg.norm(direction)
+    z_axis = np.array([0,0,1])
+    v = np.cross(z_axis, direction)
+    c = np.dot(z_axis, direction)
+    if np.linalg.norm(v) < 1e-8:
+        R = np.eye(3)
+    else:
+        vx = np.array([[0,-v[2],v[1]],[v[2],0,-v[0]],[-v[1],v[0],0]])
+        R = np.eye(3) + vx + vx@vx*((1-c)/(np.linalg.norm(v)**2))
+    circle = R @ circle + np.array(base_center)[:,None]
+
+    tip = base_center + length*direction
+    faces = [[list(circle[:,i]), list(circle[:,(i+1)%n]), list(tip)] for i in range(n)]
+    cone = Poly3DCollection(faces, edgecolors="black", color=color, zsort='min')
+    cone.set_zorder(zorder)
+    cone.set_sort_zpos(-1e6)  # very close to camera → always in front
+    ax.add_collection3d(cone)
+
+
+def add_arrow3d(ax, start, end, color="k", lw=6, head_length=0.5, head_width=0.3, zorder=10_000):
+    start = np.array(start)
+    end = np.array(end)
+    vec = end - start
+
+    # shaft
+    line = Line3D(*zip(start, end), color=color, lw=lw, zorder=zorder)
+    ax.add_line(line)
+
+    add_cone(ax, end, vec, head_length, head_width * 0.5, color=color, zorder=zorder)
+
+
+def spin_nernst_effect(save_path=None):
+    Lx, Ly, Lz = 4.0, 3.0, 0.2
+
+    fig = plt.figure(figsize=mpl_config.get_size(1.0, 1.0))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_proj_type('ortho')
+
+    draw_thin_film(ax, Lx, Ly, Lz)
+
+    z = Lz + 0.1
+    ycenter = 0.5 * Ly
+
+    add_arrow3d(ax, (-0.6, ycenter, z), (4.6, ycenter, z), color="k")
+    add_arrow3d(ax,  (0.6 * Lx, -0.6, z), (0.6 * Lx, Ly + 0.5, z), color="purple")
+    # add_arrow3d(ax, (0.6 * Lx, Ly + 0.6, z), (0.6 * Lx, -0.6, z), color="purple")
+
+    ax.text(4.7, ycenter + 0.15, z, r"$- \nabla T$", ha="left", size=mpl.rcParams['axes.titlesize'])
+    # ax.text(0.53 * Lx, -0.9, z, r"$j_S^{\mathrm{SNE}}$", color="purple", ha="right",
+    #         size=mpl.rcParams['axes.titlesize'])
+    ax.text(0.53 * Lx, Ly + 0.7, z, r"$j_S^{\mathrm{SNE}}$", color="purple", ha="right",
+            size=mpl.rcParams['axes.titlesize'])
+
+    ax.set_xlim([-1, 5])
+    ax.set_ylim([-2, 4])
+    ax.set_zlim([-0.2, 2])
+    ax.set_aspect("equal")
+    # ax.set_box_aspect((Lx + 2, Ly + 2, 2))
+    ax.view_init(elev=30, azim=-45)
+
+    ax.set_axis_off()
+
+    fig.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
+
+        crop_to_size(save_path, width_latex_ratio=0.65, height_latex_ratio=0.35, anchor=(0.56, 0.45))
+
+    plt.show()
+
 # %% Main
 
 
@@ -1184,19 +1407,21 @@ if __name__ == '__main__':
     #
     # spin_waves("out/theoretical_figures_/spin_wave.pdf")
     #
-    afm_modes("out/theoretical_figures_/afm_modes.pdf")
+    # afm_modes("out/theoretical_figures_/afm_modes.pdf")
 
     # toy_model("out/theoretical_figures_/toy_model.pdf")
 
     # spin_config_tilted("out/theoretical_figures_/config_tilted.pdf")
     # spin_config_nontilted("out/theoretical_figures_/config_nontilted.pdf")
 
+    spin_nernst_effect("out/theoretical_figures_/sne.pdf")
+
 
 # %% cropping testing
 
-save_name = "out/theoretical_figures_/config_tilted.pdf"
+save_name = "out/theoretical_figures_/sne.pdf"
 
 test = False
 
 if test:
-    print(crop_to_size(save_name, anchor=(0.5, 0.5)))
+    print(crop_to_size(save_name, width_latex_ratio=0.65, height_latex_ratio=0.35, anchor=(0.56, 0.45)))
