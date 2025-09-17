@@ -16,9 +16,13 @@ import src.physics as physics
 default_slice_dict = {'t': 0, 'x': 1, 'y': 2, 'z': 3, '1': 1, '2': 2, '3': 3}
 
 default_force_overwrite = False
+read_fewer_lines = True
 
 if default_force_overwrite:
     warnings.warn("FORCE OVERWRITE ENABLED!")
+if read_fewer_lines:
+    warnings.warn("READ FEWER LINES ENABLED!")
+    warnings.warn("Only for test purposes!")
 
 
 def time_avg(spin_data):
@@ -537,6 +541,10 @@ def npy_files(dat_path: str, npy_path=None, slice_index=-100000, force=default_f
               **load_kwargs):
     if "max_rows" not in load_kwargs.keys():
         load_kwargs["max_rows"] = 1_000_000
+        if read_fewer_lines:
+            warnings.warn("Only read 1000 lines!")
+            load_kwargs["max_rows"] = 1_000
+
 
     base_folder = "/data/scc/marian.gunsch/npy/profiles/"
 

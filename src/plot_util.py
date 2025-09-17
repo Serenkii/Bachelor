@@ -5,6 +5,12 @@ import matplotlib.pyplot as plt
 
 import scipy as sp
 
+# %%
+
+color_by_direction = {
+    (d, color) for d, color in zip(["100", "010", "110", "-110"], mpl.rcParams['axes.prop_cycle'].by_key()['color'])
+}
+
 
 def quick_plot_magn_neel(magnetization, neel_vector, info_string="", delta_x=0, save_suffix=None):
     x = np.arange(delta_x, neel_vector.size - delta_x, 1.0)

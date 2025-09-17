@@ -6,6 +6,7 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 import matplotlib.colors as colors
 from matplotlib.collections import PolyCollection
 from matplotlib.ticker import FormatStrFormatter
+from matplotlib.lines import Line2D
 
 import warnings
 
@@ -121,10 +122,15 @@ def fancy_equilibrium_comparison_plot(S, magn, titles):
         arrowB = FancyArrowPatch(start, endB, **arrow_kwargs, color="red")
         arrow_net = FancyArrowPatch(start, endNet, **arrow_kwargs, color="black")
 
+        point_style = dict(marker="o", markeredgecolor="white", markersize=1.8, linestyle="", linewidth=0.03)
+
         axs[i].add_patch(arrowA)
+        axs[i].plot(*endA, color="blue", **point_style)
         axs[i].add_patch(arrowB)
+        axs[i].plot(*endB, color="red", **point_style)
         if dmi:
             axs[i].add_patch(arrow_net)
+            axs[i].plot(*endNet, color="k", **point_style)
 
         # --- Add text labels with slight offsets ---
         label_ = lambda text : r"$\langle \vec{S}_{\mathrm{" + text + r"}} \rangle$"
@@ -137,7 +143,6 @@ def fancy_equilibrium_comparison_plot(S, magn, titles):
 
         # circle = Circle(start, radius=1, fill=False, alpha=0.8, color="grey", linestyle="--")
         # axs[i].add_patch(circle)
-
 
 
     axs[0].set_xlim(-0.19, 0.19)
@@ -158,7 +163,6 @@ def fancy_equilibrium_comparison_plot(S, magn, titles):
 
 
 def average_spin_components():
-    # TODO!
     paths = {
         False: "/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
         True: "/data/scc/marian.gunsch/00/AM_tiltedX_ttmstairs_DMI_ferri-2/"
@@ -190,8 +194,8 @@ def average_spin_components():
     # S[dmi][sl][component]
     # magn[dmi][component]
 
-    save_path = equilibrium_comparison_plot(S, magn, labels)
-    save_util.source_paths(save_path, paths)
+    # save_path = equilibrium_comparison_plot(S, magn, labels)
+    # save_util.source_paths(save_path, paths)
 
     save_path = fancy_equilibrium_comparison_plot(S, magn, labels)
     save_util.source_paths(save_path, paths)
@@ -229,9 +233,78 @@ def dispersion_relation_dmi():
 
 # %% SPIN SEEBECK EFFECT
 
-def sse_magnon_accumulation_dmi():
-    # TODO!
-    paths = {
+def plot_sse(x_space, magn_dict, xlim=(-76, 76), ylim=(-0.0024, 0.0014), save_name=None):
+
+    DMI = [False, True]
+    components = ["y", "z"]
+    directions = magn_dict[False].keys()
+
+    plot_kwargs_dict = { False: dict(linestyle="--", linewidth=0.7),
+                         True: dict(linestyle="-", linewidth=0.7) }
+
+    fig, axs = plt.subplots(ncols=2, sharex=True, sharey=True)
+    axs = axs.flatten()
+    axs = dict(y=axs[0], z=axs[1])
+
+    colors = mpl.rcParams['axes.prop_cycle'].by_key()['color']
+
+    lines = dict((c, dict((dmi, []) for dmi in DMI)) for c in components)
+
+    for dmi in DMI:
+        for d in directions:
+            for c in components:
+                _line, = axs[c].plot(x_space[dmi][d], magn_dict[dmi][d][c], label=rf"\hkl[{d}]",
+                                       **plot_kwargs_dict[dmi])
+                lines[c][dmi].append(_line)
+
+    for c in components:
+        axs[c].set_xlim(*xlim)
+        axs[c].set_ylim(*ylim)
+        axs[c].set_ylabel(rf"$\langle \Delta m^{c} \rangle$")
+        axs[c].set_xlabel(r"$x / a$")
+
+    def create_inset_axes(ax, region_x, region_y, bounds):
+        axins = ax.inset_axes(
+            bounds,
+            xlim=region_x, ylim=region_y,
+            xticks=axs["y"].get_xticks(), xticklabels=[],
+            yticks=axs["y"].get_yticks(), yticklabels=[]
+        )
+        axins.set_xlim(*region_x)
+        axins.set_ylim(*region_y)
+        for dmi in DMI:
+            for d in directions:
+                axins.plot(x_space[dmi][d], magn_dict[dmi][d]["y"], **plot_kwargs_dict[dmi],
+                           marker="o", markersize=1.5)
+        ax.indicate_inset_zoom(axins, edgecolor="black", alpha=1.0, linewidth=1.0)
+
+
+    create_inset_axes(axs["y"], (-2, 4), (0.00075, 0.00138), [0.04, 0.7, 0.37, 0.27])
+    create_inset_axes(axs["y"], (-4, 2), (-0.00133, -0.0007), [0.6, 0.3, 0.37, 0.27])
+
+    legend1 = axs["y"].legend(handles=lines["y"][False], ncols=2, title="no DMI", fontsize="small",
+                              loc="lower center")
+    axs["y"].add_artist(legend1)
+
+    legend2 = axs["z"].legend(handles=lines["z"][True], ncols=2, title="DMI", fontsize="small",
+                              loc="lower center")
+    axs["z"].add_artist(legend2)
+
+    fig.tight_layout()
+
+    save_path = f"{save_base_path}{save_name}"
+    if save_name:
+        fig.savefig(save_path)
+
+    plt.show()
+
+    return save_path
+
+
+
+def sse_magnon_accumulation_dmi(accumulation=True):
+
+    paths_dmi = {
         "100": "/data/scc/marian.gunsch/16/AM_xTstep_DMI_T2/",
         "010": "/data/scc/marian.gunsch/16/AM_yTstep_DMI_T2/",
         "110": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_DMI_T2-2/",
@@ -245,8 +318,74 @@ def sse_magnon_accumulation_dmi():
         "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
     }
 
-    mag_util.npy_files_from_dict(paths)
-    mag_util.npy_files_from_dict(paths_nodmi)
+    paths_equi_w = {
+        False: "/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
+        True: "/data/scc/marian.gunsch/00/AM_tiltedX_ttmstairs_DMI_ferri-2/"
+    }
+
+    path_equi_c_dmi = "/data/scc/marian.gunsch/03/03_AM_tilted_Tstairs_DMI_T0/"
+
+    directions = paths_nodmi.keys()
+    DMI = [False, True]
+    components = ["y", "z"]
+
+    data_equi = mag_util.npy_files_from_dict(paths_equi_w)
+
+    data_equi_c_dmi = mag_util.npy_files(path_equi_c_dmi)
+
+    data_dmi = mag_util.npy_files_from_dict(paths_dmi)
+    data_nodmi = mag_util.npy_files_from_dict(paths_nodmi)
+
+    data = { True : data_dmi, False : data_nodmi }
+
+    magn_equi = dict()
+    for dmi in DMI:
+        magn_equi[dmi] = dict()
+        for c in components:
+            S_A = np.mean(mag_util.get_component(data_equi[0][dmi], c))
+            S_B = np.mean(mag_util.get_component(data_equi[1][dmi], c))
+            magn_equi[dmi][c] = physics.magnetization(S_A, S_B)
+
+    magn_equi_c_dmi = dict()
+    for c in components:
+        S_A = np.mean(mag_util.get_component(data_equi_c_dmi[0], c))
+        S_B = np.mean(mag_util.get_component(data_equi_c_dmi[1], c))
+        magn_equi_c_dmi[c] = physics.magnetization(S_A, S_B)
+
+    magn = dict()
+    x_space = dict()
+    for dmi in DMI:
+        magn[dmi] = dict()
+        x_space[dmi] = dict()
+        for d in directions:
+            magn[dmi][d] = dict()
+            for c in components:
+                S_A = mag_util.get_component(data[dmi][0][d], c)
+                S_B = mag_util.get_component(data[dmi][1][d], c)
+                magn[dmi][d][c] = physics.magnetization(S_A, S_B, True)
+
+                if not accumulation:
+                    continue
+
+                N = len(magn[dmi][d][c])
+                i = helper.get_absolute_T_step_index(0.49, N)
+                magn[dmi][d][c][:i] -= magn_equi[dmi][c]
+
+                if dmi:     # ground state for dmi not so easy
+                    magn[dmi][d][c][i:] -= magn_equi_c_dmi[c]
+
+
+            N = len(magn[dmi][d]["z"])
+            T_step_pos = helper.get_actual_Tstep_pos(0.49, N) - 1
+            warnings.warn("T step position still unclear")
+            x_space[dmi][d] = np.arange(N) - T_step_pos
+            x_space[dmi][d] *= physics.get_lattice_constant(d)
+
+
+    save_path = plot_sse(x_space, magn, save_name="dmi_sse.pdf")
+    save_util.source_paths(save_path, f"SSE: \n\tDMI: {paths_dmi} \n\tno DMI: {paths_nodmi}\n"
+                                      f"equilibrium: \n\tDMI: {paths_equi_w[True]} \n\tno DMI: {paths_equi_w[False]}\n"
+                                      f"equilibrium cold: \n\tDMI: {path_equi_c_dmi}")
 
 
 
@@ -254,14 +393,53 @@ def sse_magnon_accumulation_dmi():
 
 def sse_magnon_accumulation_dmi_B():
     # TODO!
-    paths = {
+    paths_dmi_B = {
         "100": "/data/scc/marian.gunsch/16/AM_xTstep_DMI_B_T2/",
         "010": "/data/scc/marian.gunsch/16/AM_yTstep_DMI_B_T2/",
         "110": "/data/scc/marian.gunsch/05/05_AM_tilted_xTstep_DMI_T2_staticB/",
         "-110": "/data/scc/marian.gunsch/05/05_AM_tilted_yTstep_DMI_T2_staticB/"
     }
 
-    mag_util.npy_files_from_dict(paths)
+    paths_dmi = {
+        "100": "/data/scc/marian.gunsch/16/AM_xTstep_DMI_T2/",
+        "010": "/data/scc/marian.gunsch/16/AM_yTstep_DMI_T2/",
+        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_DMI_T2-2/",
+        "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_DMI_T2-2/"
+    }
+
+    paths = {
+        "100": "/data/scc/marian.gunsch/16/AM_xTstep_T2/",
+        "010": "/data/scc/marian.gunsch/16/AM_yTstep_T2/",
+        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_T2-2/",
+        "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
+    }
+
+    paths_B = {
+        "100": "/data/scc/marian.gunsch/13/13_AM_xTstep_T2_B100/",
+        "010": "/data/scc/marian.gunsch/13/13_AM_yTstep_T2_B100/",  # simulation not started
+        "110": "/data/scc/marian.gunsch/05/05_AM_tilted_xTstep_T2_B100/",
+        "-110": "/data/scc/marian.gunsch/05/05_AM_tilted_yTstep_T2_B100/"
+    }
+    warnings.warn("Not all simulations are finished!")
+
+    DMI = [False, True]
+    magnetic_fields = [False, True]
+    directions = paths.keys()
+
+    # paths[B][dmi][direction]
+    paths = {
+        False : {
+            False : paths,
+            True : paths_dmi,
+        },
+        True : {
+            False : paths_B,
+            True : paths_dmi_B
+        }
+    }
+
+
+    mag_util.npy_files_from_dict(paths_dmi_B)
 
 
 # %% Main
@@ -269,10 +447,10 @@ def sse_magnon_accumulation_dmi_B():
 def main():
     pass
 
-    average_spin_components()
+    # average_spin_components()
 
     # dispersion_relation_dmi()
 
-    # sse_magnon_accumulation_dmi()
+    sse_magnon_accumulation_dmi()
 
     # sse_magnon_accumulation_dmi_B()

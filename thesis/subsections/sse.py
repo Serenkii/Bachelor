@@ -34,11 +34,11 @@ paths = {
     "-110": dict()
 }
 
-for B in range(50, 100 + 1, 10):        # 50, 60, ..., 90
+for B in range(50, 100 + 1, 10):        # 50, 60, ..., 90, 100
     paths["110"][B] = f"/data/scc/marian.gunsch/05/05_AM_tilted_xTstep_T2_B{B}/"
     paths["-110"][B] = f"/data/scc/marian.gunsch/05/05_AM_tilted_yTstep_T2_B{B}/"
 
-for B_ in range(50, 100 + 1, 10):       # -50, -60, ..., -90
+for B_ in range(50, 90 + 1, 10):       # -50, -60, ..., -90
     B = -B_
     warnings.warn("Simulations may not have started...")
     paths["110"][B] = f"/data/scc/marian.gunsch/17/AM_tilt_xTstep_T2_B/n{B_}/"
@@ -545,12 +545,12 @@ def main():
     sse_magnetization_Bfield()
     sse_magnaccum_Bfield()
 
-    peak_dependence()
-
-    direction_comparison()
-
-    propagation_lengths()
-
-    sse_spin_currents(True)
-    sse_spin_currents(False)
+    # peak_dependence()
+    #
+    # direction_comparison()
+    #
+    # propagation_lengths()
+    #
+    # sse_spin_currents(True)
+    # sse_spin_currents(False)
 

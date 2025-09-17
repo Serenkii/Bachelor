@@ -790,7 +790,7 @@ def sne_magnon_spectrum():
 
 def main():
     # sne_spin_accumulation(True)
-    # spin_currents_open()
+    spin_currents_open()
     # spin_currents_upperABC()
     # spin_currents_uploABC()
-    sne_magnon_spectrum()
+    # sne_magnon_spectrum()
