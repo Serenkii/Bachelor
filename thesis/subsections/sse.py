@@ -545,12 +545,12 @@ def main():
     sse_magnetization_Bfield()
     sse_magnaccum_Bfield()
 
-    # peak_dependence()
-    #
-    # direction_comparison()
-    #
-    # propagation_lengths()
-    #
-    # sse_spin_currents(True)
-    # sse_spin_currents(False)
+    peak_dependence()
+
+    direction_comparison()
+
+    propagation_lengths()
+
+    sse_spin_currents(True)
+    sse_spin_currents(False)
 

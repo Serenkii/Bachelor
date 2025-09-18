@@ -15,8 +15,8 @@ import src.physics as physics
 
 default_slice_dict = {'t': 0, 'x': 1, 'y': 2, 'z': 3, '1': 1, '2': 2, '3': 3}
 
-default_force_overwrite = False
-read_fewer_lines = True
+default_force_overwrite = True
+read_fewer_lines = False
 
 if default_force_overwrite:
     warnings.warn("FORCE OVERWRITE ENABLED!")
@@ -587,6 +587,10 @@ def npy_files(dat_path: str, npy_path=None, slice_index=-100000, force=default_f
             print(f"{SL}: Loading data from {npy_path}...")
             data_dict[SL] = np.load(npy_path)
 
+    if data_dict["A"].shape[0] < 300 or data_dict["B"].shape[0] < 300:
+        warnings.warn("Very few time steps might skew data. Proceed with care!"
+                      "Consider using force=True once.")
+
     print("\n")
 
     return data_dict["A"], data_dict["B"]
@@ -649,3 +653,18 @@ def spin_current(dataA, dataB, direction, skip_time_steps=15, normed_units=False
     return physics.handle_spin_current_unit_prefactor(tilted, normed_units) * current_au
 
 
+
+
+
+def quick_plot_magnetic_profile_from_file(file, component):
+    pathA, pathB = infer_data_path(file, True)
+    dataA = np.loadtxt(pathA, max_rows=1000)
+    dataB = np.loadtxt(pathB, max_rows=1000)
+    S_A = np.mean(get_component(dataA, which=component), axis=0)
+    S_B = np.mean(get_component(dataB, which=component), axis=0)
+    magn = 0.5 * (S_A + S_B)
+
+    fig, ax = plt.subplots()
+    ax.plot(magn, label=component, linewidth=0.6)
+    ax.legend()
+    plt.show()

@@ -71,6 +71,8 @@ def configure():
         # "legend.fontsize": 12,
         "lines.markersize": 6.0,
         # "lines.markersize": 3.0,
+        "legend.fontsize": "small",     # default: medium
+        "legend.title_fontsize": "medium",      # default is None
         "figure.dpi": 300,
         "text.latex.preamble": latex_preamble,
     })
