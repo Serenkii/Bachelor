@@ -15,9 +15,9 @@ def main():
     pass
     # miscellaneous.main()
 
-    # equilibrium.main()
-    # sse.main()
-    # sne.main()
+    equilibrium.main()
+    sse.main()
+    sne.main()
     dmi.main()
 
 

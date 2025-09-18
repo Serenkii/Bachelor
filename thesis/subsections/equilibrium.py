@@ -265,9 +265,9 @@ def dispersion_comparison_table_data(paths_no, paths_yes):
         True: dict()
     }
 
-    warnings.warn("Running with limited amount of datapoints!")   # TODO
-    min_data_points = 10_000
-    # min_data_points = 10_000_000
+    # warnings.warn("Running with limited amount of datapoints!")   # TODO
+    # min_data_points = 10_000
+    min_data_points = 10_000_000
 
     for magnetic_field in data_dict.keys():
         for direction in directions:
@@ -419,9 +419,9 @@ def dispersion_comparison_negB():
     freq_dict = dict()
     magnon_density_dict = dict()
 
-    warnings.warn("Running with limited amount of datapoints!")   # TODO
-    min_data_points = 10_000
-    # min_data_points = 10_000_000
+    # warnings.warn("Running with limited amount of datapoints!")   # TODO
+    # min_data_points = 10_000
+    min_data_points = 10_000_000
 
     for Bstrength in paths.keys():
         data_points = min(data_A[Bstrength].shape[0], data_B[Bstrength].shape[0], min_data_points)
@@ -802,12 +802,12 @@ def boundary_effects(temperature=2):
 
 def main():
     pass
-    # boundary_effects(2)
-    # boundary_effects(0)
-    #
-    # equilibrium_comparison_Bfield()
+    boundary_effects(2)
+    boundary_effects(0)
+
+    equilibrium_comparison_Bfield()
 
     dispersion_comparison_Bfield_table(1)
     dispersion_comparison_Bfield_table(2)
 
-    # dispersion_comparison_negB()
+    dispersion_comparison_negB()

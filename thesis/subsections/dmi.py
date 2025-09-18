@@ -9,6 +9,7 @@ from matplotlib.ticker import FormatStrFormatter
 from matplotlib.lines import Line2D
 
 import warnings
+import itertools
 
 import src.utility as util
 import src.mag_util as mag_util
@@ -101,11 +102,12 @@ def equilibrium_comparison_plot(S, magn, tick_labels):
 
 
 def fancy_equilibrium_comparison_plot(S, magn, titles):
-    arrow_kwargs = dict(arrowstyle="-|>", mutation_scale=20, shrinkA=0, shrinkB=0, lw=1.5)
+    arrow_kwargs = dict(arrowstyle="-|>", mutation_scale=18, shrinkA=0, shrinkB=0, lw=1.5)
 
-    DMI = [False, True]
+    DMI = [False, True, "DMI+B", "B"]   # I prefer this order
 
-    fig, axs = plt.subplots(nrows=1, ncols=2, sharex=True, sharey=True, figsize=mpl_config.get_size(0.8))
+    fig, axs = plt.subplots(nrows=1, ncols=len(DMI), sharex=True, sharey=True,
+                            figsize=(mpl_config.get_width(1.0), mpl_config.get_height(0.8)))
     axs = axs.flatten()
 
     for i, dmi in enumerate(DMI):
@@ -134,22 +136,26 @@ def fancy_equilibrium_comparison_plot(S, magn, titles):
 
         # --- Add text labels with slight offsets ---
         label_ = lambda text : r"$\langle \vec{S}_{\mathrm{" + text + r"}} \rangle$"
-        axs[i].text(endA[0] + 0.04, 0.9 * endA[1], label_("A"), color="blue", va="center", ha="left")
-        axs[i].text(endB[0] + 0.04, 0.9 * endB[1], label_("B"), color="red", va="center", ha="left")
+        shiftB = 0.1 if dmi == "DMI+B" else 0.06
+        shiftnet = -0.1 if dmi == "B" else -0.02
+        axs[i].text(endA[0] - 0.04, 0.8 * endA[1] + 0.06, label_("A"), color="blue", va="center", ha="right")
+        axs[i].text(endB[0] + shiftB, 0.8 * endB[1] - 0.06, label_("B"), color="red", va="center", ha="left")
         if dmi:
-            axs[i].text(endNet[0], endNet[1] + 0.06, label_("net"), color="black", va="bottom", ha="center")
+            axs[i].text(endNet[0] + shiftnet, endNet[1] + 0.06, label_("net"), color="black", va="bottom", ha="center")
 
-        axs[i].set_title(list(titles.values())[i])
+        axs[i].set_title(titles[dmi], fontsize="medium")
 
         # circle = Circle(start, radius=1, fill=False, alpha=0.8, color="grey", linestyle="--")
         # axs[i].add_patch(circle)
 
 
-    axs[0].set_xlim(-0.19, 0.19)
+    axs[0].set_xlim(-0.34, 0.23)
     axs[0].set_ylim(-1.1, 1.1)
 
     axs[0].set_xlabel(r"$\langle S^y \rangle$")
     axs[1].set_xlabel(r"$\langle S^y \rangle$")
+    axs[2].set_xlabel(r"$\langle S^y \rangle$")
+    axs[3].set_xlabel(r"$\langle S^y \rangle$")
     axs[0].set_ylabel(r"$\langle S^z \rangle$")
 
     fig.tight_layout()
@@ -168,16 +174,22 @@ def average_spin_components():
         True: "/data/scc/marian.gunsch/00/AM_tiltedX_ttmstairs_DMI_ferri-2/"
     }
     labels = {
-        False: "no DMI",
-        True: "DMI"
+        False: "$D = 0$, $B = 0$",
+        True: "$D > 0$, $B = 0$"
     }
+    path_B_dmi = "/data/scc/marian.gunsch/19/AM_Tstairs_x_B100_DMI_T2/"
+    paths["DMI+B"] = path_B_dmi
+    labels["DMI+B"] = "$D > 0$, $B > 0$"
+
+    paths["B"] = "/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100-2/"
+    labels["B"] = "$D=0$, $B > 0$"
 
     dataA, dataB = mag_util.npy_files_from_dict(paths)
     data = dict(A=dataA, B=dataB)
 
     components = ["x", "y", "z"]
     sublattices = ["A", "B"]
-    DMI = [False, True]
+    DMI = [False, True, "DMI+B", "B"]
 
     S = dict()
     magn = dict()
@@ -276,7 +288,7 @@ def plot_sse(x_space, magn_dict, xlim=(-76, 76), ylim=(-0.0024, 0.0014), save_na
             for d in directions:
                 axins.plot(x_space[dmi][d], magn_dict[dmi][d]["y"], **plot_kwargs_dict[dmi],
                            marker="o", markersize=1.5)
-        ax.indicate_inset_zoom(axins, edgecolor="black", alpha=1.0, linewidth=1.0)
+        # ax.indicate_inset_zoom(axins, edgecolor="black", alpha=1.0, linewidth=1.0)
 
 
     create_inset_axes(axs["y"], (-2, 4), (0.00075, 0.00138), [0.04, 0.7, 0.37, 0.27])
@@ -376,8 +388,7 @@ def sse_magnon_accumulation_dmi(accumulation=True):
 
 
             N = len(magn[dmi][d]["z"])
-            T_step_pos = helper.get_actual_Tstep_pos(0.49, N) - 1
-            warnings.warn("T step position still unclear")
+            T_step_pos = helper.get_actual_Tstep_pos(0.49, N)
             x_space[dmi][d] = np.arange(N) - T_step_pos
             x_space[dmi][d] *= physics.get_lattice_constant(d)
 
@@ -391,8 +402,160 @@ def sse_magnon_accumulation_dmi(accumulation=True):
 
 # %% SPIN SEEBECK EFFECT DMI + MAGNETIC FIELD
 
-def sse_magnon_accumulation_dmi_B():
-    # TODO!
+def sse_plot_magn_dmi_title_names(B, dmi):
+    B_str = "$B > 0$" if B else "$B = 0$"
+    dmi_str = "$D > 0$" if dmi else "$D = 0$"
+    return f"{B_str}" + r", \quad" + f"{dmi_str}"
+
+
+def sse_plot_magn_dmi_y(x_space, magn, xlim=(-86, 86), ylim=(-0.0019, 0.0019)):
+    c = "y"
+    dmi = True
+    magnetic_fields = [False, True]
+    directions = magn[False][dmi].keys()
+
+    plot_kwargs = dict(linestyle="-", linewidth=0.7, marker="o", markersize=0.8)
+    warnings.warn("Think about using markers here.")
+
+    title_name = sse_plot_magn_dmi_title_names
+
+    fig, axs_arr = plt.subplots(ncols=2, sharex=True, sharey=True)
+    axs_arr = axs_arr.flatten()
+    axs = { False: axs_arr[0], True: axs_arr[1] }
+
+    lines = dict((B, []) for B in magnetic_fields)
+
+    for B in magnetic_fields:
+        for d in directions:
+            line_, = axs[B].plot(x_space[B][dmi][d], magn[B][dmi][d][c], **plot_kwargs,
+                           label=fr"\hkl[{d}]")
+            lines[B].append(line_)
+
+        axs[B].set_title(title_name(B, dmi))
+        axs[B].set_xlabel("$x / a$")
+
+    def create_inset_axes(B, region_x, region_y, bounds):
+        ax = axs[B]
+        axins = ax.inset_axes(
+            bounds,
+            xlim=region_x, ylim=region_y,
+            xticks=ax.get_xticks(), xticklabels=[],
+            yticks=ax.get_yticks(), yticklabels=[]
+        )
+        plot_kwargs_ = plot_kwargs.copy()
+        plot_kwargs_.update(dict(marker="o", markersize=1))
+        axins.set_xlim(*region_x)
+        axins.set_ylim(*region_y)
+        for d in directions:
+            axins.plot(x_space[B][dmi][d], magn[B][dmi][d][c], **plot_kwargs_)
+        # ax.indicate_inset_zoom(axins, edgecolor="black", alpha=1.0, linewidth=1.0)
+
+    def place_legend(debug=False):
+        # needs to be called after layout is set (so after tight_layout() for example)
+        x1 = axs_arr[0].get_position().get_points()[1][0]
+        x2 = axs_arr[1].get_position().get_points()[0][0]
+        y = axs_arr[0].get_position().get_points()[0][1]
+        bbox = (0.5 * (x1 + x2), y)
+
+        if debug:
+            fig.text(*bbox, "x", ha="center", va="center", color="violet")
+        legend1 = fig.legend(handles=lines[False], ncols=2,
+                             loc="lower center", bbox_to_anchor=bbox)
+        fig.add_artist(legend1)
+
+    axs[False].set_ylabel(rf"$ \langle \Delta m^{c} \rangle$")
+    axs[False].set_xlim(*xlim)
+    if ylim:
+        axs[False].set_ylim(*ylim)
+
+    create_inset_axes(False, (-4, 1), (-0.0016, -0.0009), [0.03, 0.03, 0.37, 0.33])
+    create_inset_axes(False, (-1, 4), (0.0009, 0.0016), [0.6, 0.64, 0.37, 0.33])
+    create_inset_axes(True, (-4, 1), (-0.0016, -0.0009), [0.6, 0.03, 0.37, 0.33])
+    create_inset_axes(True, (-1, 4), (0.0009, 0.0016), [0.03, 0.64, 0.37, 0.33])
+
+    fig.tight_layout()
+
+    place_legend(debug=False)
+
+    save_path = f"{save_base_path}sse_magn_dmi_B_y.pdf"
+    fig.savefig(save_path)
+
+    plt.show()
+
+    return save_path
+
+
+
+def sse_plot_magn_dmi_z(x_space, magn, xlim=(-86, 86), ylim=(-0.0021, 0.0017)):
+    c = "z"
+    DMI = [False, True]
+    magnetic_fields = [False, True]
+    directions = magn[magnetic_fields[0]][DMI[0]].keys()
+
+    plot_kwargs = dict(linestyle="-", linewidth=0.7, marker="o", markersize=0.8)
+    warnings.warn("Think about using markers here.")
+
+    title_name = sse_plot_magn_dmi_title_names
+
+
+    fig, axs_arr = plt.subplots(figsize=(mpl_config.get_width(1.0), 1.5 * mpl_config.get_height(1.0)),
+                            nrows=2, ncols=2, sharex=True, sharey=True)
+    axs_arr = axs_arr.flatten()
+    axs = { False: { False: axs_arr[0], True: axs_arr[1]}, True: {False: axs_arr[2], True: axs_arr[3]} }
+
+    lines = dict((B, dict((dmi, []) for dmi in DMI)) for B in magnetic_fields)
+
+    for B, dmi in itertools.product(magnetic_fields, DMI):
+        for d in directions:
+            line_, = axs[B][dmi].plot(x_space[B][dmi][d], magn[B][dmi][d][c], **plot_kwargs,
+                             label=fr"\hkl[{d}]")
+            lines[B][dmi].append(line_)
+
+        axs[B][dmi].set_title(title_name(B, dmi))
+
+        # axs[B][dmi].legend()
+
+    def place_legend(debug=False):
+        # needs to be called after layout is set (so after tight_layout() for example)
+        x1 = axs_arr[0].get_position().get_points()[1][0]
+        x2 = axs_arr[1].get_position().get_points()[0][0]
+        y = axs_arr[0].get_position().get_points()[0][1]
+        bbox = (0.5 * (x1 + x2), y)
+
+        if debug:
+            fig.text(*bbox, "x", ha="center", va="center", color="violet")
+        legend1 = fig.legend(handles=lines[False][False], ncols=2,
+                             loc="lower center", bbox_to_anchor=bbox)
+        fig.add_artist(legend1)
+
+
+    axs_arr[0].set_xlim(*xlim)
+    if ylim:
+        axs_arr[0].set_ylim(*ylim)
+
+    axs_arr[0].set_ylabel(rf"$ \langle \Delta m^{c} \rangle$")
+    axs_arr[2].set_ylabel(rf"$ \langle \Delta m^{c} \rangle$")
+    axs_arr[2].set_xlabel("$x / a$")
+    axs_arr[3].set_xlabel("$x / a$")
+
+    fig.tight_layout()
+
+    place_legend(False)
+
+    plt.show()
+
+    save_path = f"{save_base_path}sse_magn_dmi_B_z.pdf"
+    fig.savefig(save_path)
+
+    plt.show()
+
+    return save_path
+
+
+def sse_magnon_accumulation_dmi_B(accumulation=True):
+    if not accumulation:
+        raise NotImplementedError("Plots are only properly implemented for accumulation!")
+
     paths_dmi_B = {
         "100": "/data/scc/marian.gunsch/16/AM_xTstep_DMI_B_T2/",
         "010": "/data/scc/marian.gunsch/16/AM_yTstep_DMI_B_T2/",
@@ -425,6 +588,7 @@ def sse_magnon_accumulation_dmi_B():
     DMI = [False, True]
     magnetic_fields = [False, True]
     directions = paths.keys()
+    components = ["y", "z"]
 
     # paths[B][dmi][direction]
     paths = {
@@ -438,8 +602,88 @@ def sse_magnon_accumulation_dmi_B():
         }
     }
 
+    paths_equi = {
+        False: {
+            False: "/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
+            True: "/data/scc/marian.gunsch/00/AM_tiltedX_ttmstairs_DMI_ferri-2/"
+        },
+        True: {
+            False: "/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100-2/",
+            True: "/data/scc/marian.gunsch/19/AM_Tstairs_x_B100_DMI_T2/"
+        }
+    }
 
-    mag_util.npy_files_from_dict(paths_dmi_B)
+    path_equi_dmi_cold = {
+        False: "/data/scc/marian.gunsch/03/03_AM_tilted_Tstairs_DMI_T0/",
+        True: "/data/scc/marian.gunsch/19/AM_Tstairs_x_B100_DMI_T0/"
+    }
+
+    data = dict()
+    for B in magnetic_fields:
+        data[B] = dict()
+        for dmi in DMI:
+            dataA, dataB = mag_util.npy_files_from_dict(paths[B][dmi])
+            data[B][dmi] = dict(A=dataA, B=dataB)
+
+    real_space = dict()
+    magn = dict()
+    for B in magnetic_fields:   # nested for loops ftw
+        magn[B] = dict()
+        real_space[B] = dict()
+        for dmi in DMI:
+            magn[B][dmi] = dict()
+            real_space[B][dmi] = dict()
+            for d in directions:
+                magn[B][dmi][d] = dict()
+                for c in components:
+                    S_A = mag_util.get_component(data[B][dmi]["A"][d], c)
+                    S_B = mag_util.get_component(data[B][dmi]["B"][d], c)
+                    magn[B][dmi][d][c] = physics.magnetization(S_A, S_B, True)
+
+                N = magn[B][dmi][d]["z"].shape[0]
+                T_step_pos = helper.get_actual_Tstep_pos(0.49, N)
+                real_space[B][dmi][d] = np.arange(N) - T_step_pos
+                real_space[B][dmi][d] *= physics.get_lattice_constant(d)
+
+
+    if accumulation:
+        magn_equi = dict()
+        for B in magnetic_fields:
+            magn_equi[B] = dict()
+            for dmi in DMI:
+                magn_equi[B][dmi] = dict()
+                dataA, dataB = mag_util.npy_files(paths_equi[B][dmi])
+                for c in components:
+                    S_A = np.mean(mag_util.get_component(dataA, c))
+                    S_B = np.mean(mag_util.get_component(dataB, c))
+                    magn_equi[B][dmi][c] = physics.magnetization(S_A, S_B)
+
+
+        data_equi_dmi_cold = mag_util.npy_files_from_dict(path_equi_dmi_cold)
+        magn_equi_dmi_cold = dict()
+        for B in magnetic_fields:
+            magn_equi_dmi_cold[B] = dict()
+            for c in components:
+                S_A = np.mean(mag_util.get_component(data_equi_dmi_cold[0][B], c))
+                S_B = np.mean(mag_util.get_component(data_equi_dmi_cold[1][B], c))
+                magn_equi_dmi_cold[B][c] = physics.magnetization(S_A, S_B)
+
+
+        for B, dmi, d, c in itertools.product(magnetic_fields, DMI, directions, components):
+            N = magn[B][dmi][d][c].shape[0]
+            Tstep = helper.get_absolute_T_step_index(0.49, N)
+            magn[B][dmi][d][c][:Tstep] -= magn_equi[B][dmi][c]
+            if dmi:
+                magn[B][dmi][d][c][Tstep:] -= magn_equi_dmi_cold[B][c]
+
+
+    paths_str = f"{paths=}, {paths_equi=}, {path_equi_dmi_cold=}"
+
+    save_path = sse_plot_magn_dmi_y(real_space, magn)
+    save_util.source_paths(save_path, paths_str)
+
+    save_path = sse_plot_magn_dmi_z(real_space, magn)
+    save_util.source_paths(save_path, paths_str)
 
 
 # %% Main
@@ -447,10 +691,10 @@ def sse_magnon_accumulation_dmi_B():
 def main():
     pass
 
-    # average_spin_components()
+    average_spin_components()
 
-    # dispersion_relation_dmi()
+    dispersion_relation_dmi()
 
     sse_magnon_accumulation_dmi()
 
-    # sse_magnon_accumulation_dmi_B()
+    sse_magnon_accumulation_dmi_B(True)

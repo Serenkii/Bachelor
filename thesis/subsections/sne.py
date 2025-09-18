@@ -659,7 +659,7 @@ def spin_currents_uploABC():
 # %% Magnon spectrum
 
 def sne_spectrum_plot(freq_dict, magnon_density_dict, step_dir, reversed_direct, reverse,
-                      xlim=(-0.45, 0.45), ylim=(0, 0.4), xticks=(-0.3, 0.0, 0.3)):
+                      xlim=(-0.55, 0.55), ylim=(0, 0.37), xticks=(-0.4, 0.0, 0.4)):
     print("Plotting...")
 
     plot_kwargs = dict(linewidth=0.07)
@@ -672,21 +672,21 @@ def sne_spectrum_plot(freq_dict, magnon_density_dict, step_dir, reversed_direct,
 
     axs = dict()
     temp = fig.add_subplot(gs[0, 1])
-    axs["-110"] = (temp, fig.add_subplot(gs[0, 2], sharey=temp, sharex=temp),
+    axs["010"] = (temp, fig.add_subplot(gs[0, 2], sharey=temp, sharex=temp),
                    fig.add_subplot(gs[0, 3], sharey=temp, sharex=temp))
-    axs["110"] = (fig.add_subplot(gs[1, 1], sharey=temp, sharex=temp), fig.add_subplot(gs[1, 2], sharey=temp, sharex=temp),
+    axs["-110"] = (fig.add_subplot(gs[1, 1], sharey=temp, sharex=temp), fig.add_subplot(gs[1, 2], sharey=temp, sharex=temp),
                    fig.add_subplot(gs[1, 3], sharey=temp, sharex=temp))
-    axs["010"] = (fig.add_subplot(gs[2, 1], sharey=temp, sharex=temp), fig.add_subplot(gs[2, 2], sharey=temp, sharex=temp),
+    axs["110"] = (fig.add_subplot(gs[2, 1], sharey=temp, sharex=temp), fig.add_subplot(gs[2, 2], sharey=temp, sharex=temp),
                    fig.add_subplot(gs[2, 3], sharey=temp, sharex=temp))
 
 
-    axs["-110"][0].set_xlim(*xlim)
-    axs["-110"][0].set_ylim(*ylim)
+    axs["010"][0].set_xlim(*xlim)
+    axs["010"][0].set_ylim(*ylim)
 
     def handle_ticks():
         for i in range(3):
+            axs["010"][i].tick_params(bottom=True, labelbottom=False)
             axs["-110"][i].tick_params(bottom=True, labelbottom=False)
-            axs["110"][i].tick_params(bottom=True, labelbottom=False)
         for d in freq_dict.keys():
             axs[d][1].tick_params(left=True, labelleft=False)
             axs[d][2].tick_params(left=True, labelleft=False)
@@ -718,7 +718,7 @@ def sne_spectrum_plot(freq_dict, magnon_density_dict, step_dir, reversed_direct,
                                          pad=9.0)
 
     for i in range(3):
-        axs["010"][i].set_xlabel(rf"$\omega$ ({freq_unit})")
+        axs["110"][i].set_xlabel(rf"$\omega$ ({freq_unit})")
     for d in freq_dict.keys():
         axs[d][0].set_ylabel(fr"magn. density (arb. u.)")
 
@@ -789,8 +789,8 @@ def sne_magnon_spectrum():
 # %% Main
 
 def main():
-    # sne_spin_accumulation(True)
+    sne_spin_accumulation(True)
     spin_currents_open()
     # spin_currents_upperABC()
     # spin_currents_uploABC()
-    # sne_magnon_spectrum()
+    sne_magnon_spectrum()
