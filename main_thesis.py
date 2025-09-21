@@ -11,8 +11,21 @@ import thesis.subsections.sne as sne
 import thesis.subsections.dmi as dmi
 
 
+def run_spectra():
+    print("Running spectra...")
+
+    equilibrium.dispersion_comparison_Bfield_table(2)
+    equilibrium.dispersion_comparison_negB()
+
+    sne.sne_magnon_spectrum()
+
+
+
 def main():
     pass
+
+    # run_spectra()
+
     # miscellaneous.main()
 
     equilibrium.main()

@@ -22,7 +22,7 @@ import src.save_util as save_util
 save_base_path = "out/thesis/sse/"
 
 
-shared_kwargs = dict(markersize=0.5, linewidth=1.0)
+shared_kwargs = dict(markersize=0.5, linewidth=0.8)
 plot_kwargs_dict = {
     "110": dict(**shared_kwargs, marker="", linestyle="-"),     # marker="s"
     "-110": dict(**shared_kwargs, marker="", linestyle="--"),     # marker="D"
@@ -40,7 +40,6 @@ for B in range(50, 100 + 1, 10):        # 50, 60, ..., 90, 100
 
 for B_ in range(50, 90 + 1, 10):       # -50, -60, ..., -90
     B = -B_
-    warnings.warn("Simulations may not have started...")
     paths["110"][B] = f"/data/scc/marian.gunsch/17/AM_tilt_xTstep_T2_B/n{B_}/"
     paths["-110"][B] = f"/data/scc/marian.gunsch/17/AM_tilt_yTstep_T2_B/n{B_}/"
 
@@ -83,7 +82,7 @@ def initialize_data():
 
 # %% INTRODUCTION OF A STATIC MAGNETIC FIELD (MAGNETIZATION)
 
-def plot_magn_Bfield(magn_dict, ylabel=r"magnetization $\langle m \rangle$", xlim=(0, 255),
+def plot_magn_Bfield(magn_dict, ylabel=r"magnetization $\langle S^z \rangle$", xlim=(0, 255),
                      field_strengths_=(-100, 0, 50, 60, 70, 80, 90, 100)):
 
     if len(field_strengths_) > 8:
@@ -125,10 +124,11 @@ def plot_magn_Bfield(magn_dict, ylabel=r"magnetization $\langle m \rangle$", xli
     ax.add_artist(legend1)
     ax.add_artist(legend2)
 
-    dT_pt, = ax.plot(helper.get_actual_Tstep_pos(0.49, 256), min_val - pad * val_range, marker=10,
-                     color="r", linestyle="", label=r"$\Delta T$")
-    ax.plot(helper.get_actual_Tstep_pos(0.49, 256), max_val + pad * val_range, marker=11, color="r",
-            linestyle="", )
+    dT_pt = plot_util.place_Tstep_marking(ax, helper.get_actual_Tstep_pos(0.49, 256))
+    # dT_pt, = ax.plot(helper.get_actual_Tstep_pos(0.49, 256), min_val - pad * val_range, marker=10,
+    #                  color="r", linestyle="", label=r"$\Delta T$")
+    # ax.plot(helper.get_actual_Tstep_pos(0.49, 256), max_val + pad * val_range, marker=11, color="r",
+    #         linestyle="", )
 
     legend_dT = plt.legend(handles=[dT_pt,], loc="lower left")
     ax.add_artist(legend_dT)
@@ -177,11 +177,11 @@ def sse_magnaccum_Bfield():
             magnon_accumulation[direction][B] = np.copy(magnetization[direction][B])
             magnon_accumulation[direction][B][:step_pos] -= equilibrium_magn[B]
 
-    fig, ax = plot_magn_Bfield(magnon_accumulation, r"magnon accum. $\langle \Delta m \rangle$", (60, 215))
+    fig, ax = plot_magn_Bfield(magnon_accumulation, r"magnon accum. $\langle \Delta S^z \rangle$", (60, 215))
     fig.savefig(f"{save_base_path}magnonaccum_Bfield.pdf")
     plt.show()
 
-    fig, ax = plot_magn_Bfield(magnon_accumulation, r"magnon accum. $\langle \Delta m \rangle$", (115, 135))
+    fig, ax = plot_magn_Bfield(magnon_accumulation, r"magnon accum. $\langle \Delta S^z \rangle$", (115, 135))
     fig.savefig(f"{save_base_path}magnonaccum_Bfield_zoom__.pdf")
     plt.show()
 
@@ -224,7 +224,7 @@ def peak_dependence():
     fig, ax = plt.subplots()
 
     ax.set_xlabel(r"$B$ (\si{\tesla})")
-    ax.set_ylabel(r"peak magnon accum. $ \langle \Delta m \rangle_{\max}$")
+    ax.set_ylabel(r"peak magnon accum. $ \langle \Delta S^z \rangle_{\max}$")
 
     sign = + 1
 
@@ -307,31 +307,37 @@ def direction_comparison():
     def plot():
         fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
 
-        ax2.set_xlabel("position $x / a$")
-        ax1.set_ylabel(r"magnetization $m$")
-        ax2.set_ylabel(r"magnon accum. $\Delta m$")
+        ax2.set_xlabel("$x / a$")
+        ax1.set_ylabel(r"$\langle S^z \rangle$")
+        ax2.set_ylabel(r"$\langle \Delta S^z \rangle$")
 
-        actual_step_pos = helper.get_actual_Tstep_pos(0.49, 255)
+        actual_step_pos = helper.get_actual_Tstep_pos(0.49, 256)
         ax1.set_xlim(- 60, + 60)
         ax1.set_ylim(min_magn - pad * magn_range, max_magn + pad * magn_range)
         ax2.set_ylim(min_accu - pad * accu_range, max_accu + pad * accu_range)
 
-        markers = ("o", "s", "D")
+        custom_plot_kwargs = plot_kwargs_dict.copy()
+        custom_plot_kwargs["110"].update(dict(linestyle="-", marker="s", markersize=1.2))
+        custom_plot_kwargs["-110"].update(dict(linestyle="-", marker="D", markersize=1.2))
+        custom_plot_kwargs["100"].update(dict(linestyle="-", marker="o", markersize=1.2))
 
-        for direction, marker in zip(directions_, markers):
+        for direction in directions_:
             x = (np.arange(0, magnetization_[direction].shape[0], dtype=float) - actual_step_pos) * lattice_const[direction]
-            ax1.plot(x, magnetization_[direction], label=fr"\hkl[{direction}]", **plot_kwargs_dict[direction])
+            ax1.plot(x, magnetization_[direction], label=fr"\hkl[{direction}]", **custom_plot_kwargs[direction])
 
-            ax2.plot(x, magn_accumulation[direction], label=fr"\hkl[{direction}]", **plot_kwargs_dict[direction])
+            ax2.plot(x, magn_accumulation[direction], label=fr"\hkl[{direction}]", **custom_plot_kwargs[direction])
 
-        dT_pt = None
-        for ax, min_val, max_val in zip((ax1, ax2), (min_magn, min_accu), (max_magn, max_accu)):
-            val_range = max_val - min_val
-            label = r"$\Delta T$" if ax == ax2 else None
-            dT_pt, = ax.plot(0, min_val - pad * val_range, marker=10,
-                             color="r", linestyle="", label=label)
-            ax.plot(0, max_val + pad * val_range, marker=11, color="r",
-                    linestyle="",)
+        # dT_pt = None
+        # for ax, min_val, max_val in zip((ax1, ax2), (min_magn, min_accu), (max_magn, max_accu)):
+        #     val_range = max_val - min_val
+        #     label = r"$\Delta T$" if ax == ax2 else None
+        #     dT_pt, = ax.plot(0, min_val - pad * val_range, marker=10,
+        #                      color="r", linestyle="", label=label)
+        #     ax.plot(0, max_val + pad * val_range, marker=11, color="r",
+        #             linestyle="",)
+
+        plot_util.place_Tstep_marking(ax1, 0, None)
+        dT_pt = plot_util.place_Tstep_marking(ax2, 0)
 
         legend_dT = plt.legend(handles=[dT_pt,], loc="lower left")
         ax2.add_artist(legend_dT)
@@ -438,7 +444,7 @@ def propagation_lengths():
 
     fig, ax = plt.subplots()
 
-    ax.set_xlabel(r"magnetic field strength $B$ (\si{\tesla})")
+    ax.set_xlabel(r"$B$ (\si{\tesla})")
     ax.set_ylabel(r"propagation length $\lambda / \tilde{a}$")
 
     for direction in directions:
@@ -462,19 +468,18 @@ def propagation_lengths():
 
 
 # %% SPIN CURRENTS
-def sse_spin_currents(from_profile=True):
+def sse_spin_currents(from_profile=True, xlim=(-111.5, 141.5)):
 
     warnings.warn("Use updated paths, once simulations are finished running.")
     paths = {       # if starts running: -2 with 128 z layers to reduce noise
-        "100": "/data/scc/marian.gunsch/16/AM_xTstep_T2_noABC/",        # with or without _noABC? (makes no difference)
-        "010": "/data/scc/marian.gunsch/16/AM_yTstep_T2_noABC/",          # Not sure whether to use at all
+        "100": "/data/scc/marian.gunsch/16/AM_xTstep_T2-2/",        # with or without _noABC? (makes no difference)
+        "010": "/data/scc/marian.gunsch/16/AM_yTstep_T2-2/",          # Not sure whether to use at all
         "110": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_T2-2/",
         "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
     }
 
-    warnings.warn("Temporary slicing.")
     if from_profile:
-        dataA_, dataB_ = mag_util.npy_files_from_dict(paths, slice_index=-5500, force=True)
+        dataA_, dataB_ = mag_util.npy_files_from_dict(paths)
     else:
         curr_dir = { "100": "x", "110": "x", "010": "y", "-110":"y"}
         conf_data = spinconf_util.npy_file_from_dict(paths)
@@ -484,19 +489,22 @@ def sse_spin_currents(from_profile=True):
     directions_ = paths.keys()
 
     currents = dict()
+    N = dict()
 
     for direction in directions_:
         if from_profile:
             currents[direction] = mag_util.spin_current(dataA_[direction], dataB_[direction], direction, normed_units=False)
+            N = mag_util.get_component(dataA_[direction], "x").shape[1]
         else:
             currents[direction] = spinconf_util.spin_current(conf_data[direction], curr_dir[direction], direction, curr_dir[direction],
                                                              normed_units=False)
+            N[direction] = conf_data[direction].shape[0] if curr_dir[direction] == "x" else conf_data[direction].shape[1]
 
     Tstep_pos = dict()
     x_space = dict()
     for direction in directions_:
-        Tstep_pos[direction] = helper.get_actual_Tstep_pos(0.49, currents[direction].shape[0])
-        x = np.arange(len(currents[direction])) + shift
+        Tstep_pos[direction] = helper.get_actual_Tstep_pos(0.49, N[direction])
+        x = np.arange(currents[direction].shape[0]) + shift
         x -= Tstep_pos[direction]
         x = physics.index_to_position(x, direction)
         x_space[direction] = x
@@ -504,7 +512,7 @@ def sse_spin_currents(from_profile=True):
     fig, ax = plt.subplots()
     ax.set_xlabel("position $x/a$")
     ax.set_ylabel(r"spin current $j^{\mathrm{L}}$ (\si{\meter\per\second})")
-    ax.set_xlim(-111.5, 141.5)
+    ax.set_xlim(*xlim)
 
     lines = []
 
@@ -551,6 +559,5 @@ def main():
 
     propagation_lengths()
 
-    sse_spin_currents(True)
     sse_spin_currents(False)
 

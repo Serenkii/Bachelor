@@ -21,6 +21,12 @@ import thesis.mpl_configuration as mpl_conf
 
 save_base_path = "out/thesis/equilibrium/"
 
+# dispersion_data_points = 1_000
+dispersion_data_points = 300_000
+
+if dispersion_data_points < 100_000:
+    warnings.warn("Running with limited amount of data points!")
+
 
 # %% INTRODUCTION OF A STATIC MAGNETIC FIELD
 pass
@@ -44,20 +50,20 @@ def equilibrium_comparison_Bfield_plot(Sx, Sy, Sz, magn):
 
     ax1.axhline(0, color="gray", linewidth=0.8, linestyle="--")
 
-    ax1.set_ylabel(r"$\langle m_{\mathrm{net}} \rangle$")
+    ax1.set_ylabel(r"$\langle S^z_{\mathrm{net}} \rangle$")
     ax1.plot(fields, [magn[B] for B in fields], label=r"$m_{\mathrm{net}}$", **plot_kwargs)
 
-    ax2.set_ylabel(r"$\langle m_{\mathrm{A}} \rangle$")
+    ax2.set_ylabel(r"$\langle S^z_{\mathrm{A}} \rangle$")
     ax2.plot(fields, [Sz["A"][B] for B in fields], label=r"$m_{\mathrm{A}}$", **plot_kwargs)
 
-    ax3.set_ylabel(r"$- \langle m_{\mathrm{B}} \rangle$")
+    ax3.set_ylabel(r"$- \langle S^z_{\mathrm{B}} \rangle$")
     ax3.plot(fields, [-Sz["B"][B] for B in fields], label=r"$-m_{\mathrm{B}}$", **plot_kwargs)
 
     ax1.label_outer()
     ax2.label_outer()
 
     ax3.set_xticks(fields)
-    ax3.set_xlabel("Magnetic field strength $B$ (T)")
+    ax3.set_xlabel("$B$ (T)")
 
     fig.savefig(f"out/thesis/equilibrium/comparison_B_field.pdf")
 
@@ -111,13 +117,15 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ver
     rasterized = True
     j0 = 0 if version == 1 else 1
 
-    fig = plt.figure(figsize=mpl_conf.get_size(1.0, None, False))
+    fig = plt.figure(figsize=(mpl_conf.get_width(1.0), mpl_conf.get_tex_height(0.83)))
+    # fig = plt.figure(figsize=mpl_conf.get_size(1.0, None, False))
 
     if version == 1:
         gs = fig.add_gridspec(nrows=5, ncols=2, height_ratios=[4, 4, 4, 4, 0.2], hspace=0.65, wspace=0.05)
     else:
         gs = fig.add_gridspec(nrows=6, ncols=3, width_ratios=[1.5, 3, 3], height_ratios=[4, 4, 4, 4, 1.2, 0.2],
-                              hspace=0.07, wspace=0.05, left=0.05)
+                              hspace=0.07, wspace=0.05, left=0.05, bottom=0.07, top=0.95, right=0.96
+                              )
 
     axs = np.empty((4, 2), dtype=object)
     for i in range(4):
@@ -215,12 +223,16 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ver
 
     print("-", end="")
     cb = fig.colorbar(im_list[-1], cax=cax, orientation="horizontal")
-    cb.set_label(r"magnon density (arb. unit)")
+    cb.set_label(r"magnon density $n(\omega, k)$ (arb. unit)")
     print("]")
 
     if save_path:
         print("Saving fig...")
         fig.savefig(save_path)
+
+        # from thesis.theoretical_figures import crop_to_size
+        # crop_to_size(save_path)
+
 
     print("Showing fig...")
     plt.show()
@@ -239,8 +251,10 @@ def dispersion_comparison_table_data(paths_no, paths_yes):
 
     directions = paths_yes.keys()
 
-    dataA_no, dataB_no = mag_util.npy_files_from_dict(paths_no)
-    dataA_yes, dataB_yes = mag_util.npy_files_from_dict(paths_yes)
+    dataA_no, dataB_no = mag_util.npy_files_from_dict(paths_no, slice_index=-dispersion_data_points,
+                                                  max_rows=dispersion_data_points + 100)
+    dataA_yes, dataB_yes = mag_util.npy_files_from_dict(paths_yes, slice_index=-dispersion_data_points,
+                                                  max_rows=dispersion_data_points + 100)
 
     data_dict = {
         False: dict(A=dataA_no, B=dataB_no),  # No magnetic field
@@ -265,20 +279,16 @@ def dispersion_comparison_table_data(paths_no, paths_yes):
         True: dict()
     }
 
-    # warnings.warn("Running with limited amount of datapoints!")   # TODO
-    # min_data_points = 10_000
-    min_data_points = 10_000_000
 
     for magnetic_field in data_dict.keys():
         for direction in directions:
             data_A = data_dict[magnetic_field]["A"][direction]
             data_B = data_dict[magnetic_field]["B"][direction]
 
-            data_points = min(data_A.shape[0], data_B.shape[0], min_data_points)
+            data_points = min(data_A.shape[0], data_B.shape[0], dispersion_data_points)
 
-            print(f"{paths[magnetic_field][direction]=}")
-            print(f"{data_A.shape=}")
-            print(f"{data_B.shape=}")
+            if data_points < dispersion_data_points:
+                warnings.warn(f"{magnetic_field}, [{direction}]: Can only run with {data_points} data points.")
 
             Sx = physics.magnetization(mag_util.get_component(data_A[:data_points], "x", 10),
                                        mag_util.get_component(data_B[:data_points], "x", 10))
@@ -316,7 +326,7 @@ def dispersion_comparison_Bfield_table(version=1):
 
     k_dict, freq_dict, magnon_density_dict = dispersion_comparison_Bfield_table_data()
     dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, version=version,
-                                     save_path=f"{save_base_path}dispersion_comparison_Bfield_table_{version}.pdf")
+                                     save_path=f"{save_base_path}dispersion_comparison_Bfield_table.pdf")
 
 
 # %% Comparison of dispersion relation for any direction with positive and negative field
@@ -391,7 +401,7 @@ def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict):
 
     print("-", end="")
     cb = fig.colorbar(im_list[-1], cax=cax, orientation="vertical")
-    cb.set_label(r"Magnon density (arb. unit)")
+    cb.set_label(r"$n(\omega, k)$ (arb. unit)")
     print("]")
 
     print("Saving fig...")
@@ -413,18 +423,18 @@ def dispersion_comparison_negB():
 
     dx = physics.lattice_constant
 
-    data_A, data_B = mag_util.npy_files_from_dict(paths)
+    data_A, data_B = mag_util.npy_files_from_dict(paths, slice_index=-dispersion_data_points,
+                                                  max_rows=dispersion_data_points + 100)
 
     k_dict = dict()
     freq_dict = dict()
     magnon_density_dict = dict()
 
-    # warnings.warn("Running with limited amount of datapoints!")   # TODO
-    # min_data_points = 10_000
-    min_data_points = 10_000_000
-
     for Bstrength in paths.keys():
-        data_points = min(data_A[Bstrength].shape[0], data_B[Bstrength].shape[0], min_data_points)
+        data_points = min(data_A[Bstrength].shape[0], data_B[Bstrength].shape[0], dispersion_data_points)
+
+        if data_points < dispersion_data_points:
+            warnings.warn(f"{Bstrength}: Can only run with {data_points} data points.")
 
         print(f"{paths[Bstrength]=}")
         print(f"{data_A[Bstrength].shape=}")
@@ -807,7 +817,6 @@ def main():
 
     equilibrium_comparison_Bfield()
 
-    dispersion_comparison_Bfield_table(1)
-    dispersion_comparison_Bfield_table(2)
+    # dispersion_comparison_Bfield_table(2)
 
-    dispersion_comparison_negB()
+    # dispersion_comparison_negB()

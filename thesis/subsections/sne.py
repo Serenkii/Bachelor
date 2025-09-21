@@ -24,6 +24,14 @@ from src.save_util import description
 
 save_base_path = "out/thesis/sne/"
 
+# spectrum_data_points = 1_000
+spectrum_data_points = 1_000_000
+
+if spectrum_data_points < 100_000:
+    warnings.warn("Running with limited amount of data points!")
+
+
+# %%
 
 # See here e.g. for T-dependence: /data/scc/marian.gunsch/00/AM_tiltedX_Tstep_nernst/
 
@@ -555,7 +563,7 @@ def sne_spin_accumulation(plot_config=True):
 
 # %% Spin currents (transversal)
 
-def transversal_spin_currents(paths, xlim=(-81.5, 1.269 * 81.5), ypad=0.05, **kwargs):
+def transversal_spin_currents(paths, xlim=(-81.5, 1.269 * 81.5), ypad=0.05, save_name=None, **kwargs):
     plot_kwargs = dict(marker="", linestyle="-", linewidth=1)
     plot_kwargs.update(kwargs)
 
@@ -621,7 +629,13 @@ def transversal_spin_currents(paths, xlim=(-81.5, 1.269 * 81.5), ypad=0.05, **kw
     pad = (max_ - min_) * ypad
     ax.set_ylim(min_ - pad, max_ + pad)
 
+    save_path = f"{save_base_path}{save_name}.pdf"
+    if save_name:
+        fig.savefig(save_path)
+
     plt.show()
+
+    return save_path
 
 
 
@@ -634,8 +648,8 @@ def spin_currents_open():
         "-110": "/data/scc/marian.gunsch/11/AM_tilt_yTstep_x/"
     }
     
-    transversal_spin_currents(paths)
-
+    save_path = transversal_spin_currents(paths, save_name="sne_spincurrent_periodic")
+    save_util.source_paths(save_path, paths)
     
     
 
@@ -760,17 +774,17 @@ def sne_magnon_spectrum():
         "010": False
     }
 
-    data_A, data_B = mag_util.npy_files_from_dict(paths)
+    data_A, data_B = mag_util.npy_files_from_dict(paths, slice_index=-spectrum_data_points,
+                                                  max_rows=spectrum_data_points + 100)
 
     freq_dict = dict()
     magnon_density_dict = dict()
 
-    warnings.warn("Running with limited amount of datapoints!")  # TODO
-    min_data_points = 10_000
-    # min_data_points = 10_000_000
-
     for direction in paths.keys():
-        data_points = min(data_A[direction].shape[0], data_B[direction].shape[0], min_data_points)
+        data_points = min(data_A[direction].shape[0], data_B[direction].shape[0], spectrum_data_points)
+
+        if data_points < spectrum_data_points:
+            warnings.warn(f"T in [{step_dir[direction]}]: Can only run with {data_points} data points.")
 
         Sx = physics.magnetization(mag_util.get_component(data_A[direction][:data_points], "x", 0),
                                    mag_util.get_component(data_B[direction][:data_points], "x", 0))
@@ -793,4 +807,4 @@ def main():
     spin_currents_open()
     # spin_currents_upperABC()
     # spin_currents_uploABC()
-    sne_magnon_spectrum()
+    # sne_magnon_spectrum()

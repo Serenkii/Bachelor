@@ -261,18 +261,23 @@ def plot_sse(x_space, magn_dict, xlim=(-76, 76), ylim=(-0.0024, 0.0014), save_na
     colors = mpl.rcParams['axes.prop_cycle'].by_key()['color']
 
     lines = dict((c, dict((dmi, []) for dmi in DMI)) for c in components)
+    T_step_markings = dict((c, []) for c in components)
 
-    for dmi in DMI:
-        for d in directions:
-            for c in components:
+    for c in components:
+        for dmi in DMI:
+            for d in directions:
                 _line, = axs[c].plot(x_space[dmi][d], magn_dict[dmi][d][c], label=rf"\hkl[{d}]",
                                        **plot_kwargs_dict[dmi])
                 lines[c][dmi].append(_line)
 
+        Tm = plot_util.place_Tstep_marking(axs[c], 0.0)
+        T_step_markings[c].append(Tm)
+
+
     for c in components:
         axs[c].set_xlim(*xlim)
         axs[c].set_ylim(*ylim)
-        axs[c].set_ylabel(rf"$\langle \Delta m^{c} \rangle$")
+        axs[c].set_ylabel(rf"$\langle \Delta S^{c} \rangle$")
         axs[c].set_xlabel(r"$x / a$")
 
     def create_inset_axes(ax, region_x, region_y, bounds):
@@ -288,6 +293,8 @@ def plot_sse(x_space, magn_dict, xlim=(-76, 76), ylim=(-0.0024, 0.0014), save_na
             for d in directions:
                 axins.plot(x_space[dmi][d], magn_dict[dmi][d]["y"], **plot_kwargs_dict[dmi],
                            marker="o", markersize=1.5)
+                plot_util.place_Tstep_marking(axins, 0.0)
+
         # ax.indicate_inset_zoom(axins, edgecolor="black", alpha=1.0, linewidth=1.0)
 
 
@@ -301,6 +308,9 @@ def plot_sse(x_space, magn_dict, xlim=(-76, 76), ylim=(-0.0024, 0.0014), save_na
     legend2 = axs["z"].legend(handles=lines["z"][True], ncols=2, title="DMI", fontsize="small",
                               loc="lower center")
     axs["z"].add_artist(legend2)
+
+    T_legend = axs['z'].legend(handles=T_step_markings['z'], loc="upper left")
+    axs['z'].add_artist(T_legend)
 
     fig.tight_layout()
 
@@ -424,12 +434,16 @@ def sse_plot_magn_dmi_y(x_space, magn, xlim=(-86, 86), ylim=(-0.0019, 0.0019)):
     axs = { False: axs_arr[0], True: axs_arr[1] }
 
     lines = dict((B, []) for B in magnetic_fields)
+    T_step_markings = dict((B, []) for B in magnetic_fields)
 
     for B in magnetic_fields:
         for d in directions:
             line_, = axs[B].plot(x_space[B][dmi][d], magn[B][dmi][d][c], **plot_kwargs,
                            label=fr"\hkl[{d}]")
             lines[B].append(line_)
+
+        Tm = plot_util.place_Tstep_marking(axs[B], 0.0)
+        T_step_markings[B].append(Tm)
 
         axs[B].set_title(title_name(B, dmi))
         axs[B].set_xlabel("$x / a$")
@@ -448,6 +462,8 @@ def sse_plot_magn_dmi_y(x_space, magn, xlim=(-86, 86), ylim=(-0.0019, 0.0019)):
         axins.set_ylim(*region_y)
         for d in directions:
             axins.plot(x_space[B][dmi][d], magn[B][dmi][d][c], **plot_kwargs_)
+            plot_util.place_Tstep_marking(axins, 0.0)
+
         # ax.indicate_inset_zoom(axins, edgecolor="black", alpha=1.0, linewidth=1.0)
 
     def place_legend(debug=False):
@@ -463,7 +479,10 @@ def sse_plot_magn_dmi_y(x_space, magn, xlim=(-86, 86), ylim=(-0.0019, 0.0019)):
                              loc="lower center", bbox_to_anchor=bbox)
         fig.add_artist(legend1)
 
-    axs[False].set_ylabel(rf"$ \langle \Delta m^{c} \rangle$")
+        T_legend = axs[False].legend(handles=T_step_markings[False], loc="upper left")
+        axs[False].add_artist(T_legend)
+
+    axs[False].set_ylabel(rf"$ \langle \Delta S^{c} \rangle$")
     axs[False].set_xlim(*xlim)
     if ylim:
         axs[False].set_ylim(*ylim)
@@ -504,12 +523,16 @@ def sse_plot_magn_dmi_z(x_space, magn, xlim=(-86, 86), ylim=(-0.0021, 0.0017)):
     axs = { False: { False: axs_arr[0], True: axs_arr[1]}, True: {False: axs_arr[2], True: axs_arr[3]} }
 
     lines = dict((B, dict((dmi, []) for dmi in DMI)) for B in magnetic_fields)
+    T_step_markings = dict((B, dict((dmi, []) for dmi in DMI)) for B in magnetic_fields)
 
     for B, dmi in itertools.product(magnetic_fields, DMI):
         for d in directions:
             line_, = axs[B][dmi].plot(x_space[B][dmi][d], magn[B][dmi][d][c], **plot_kwargs,
                              label=fr"\hkl[{d}]")
             lines[B][dmi].append(line_)
+
+        Tm = plot_util.place_Tstep_marking(axs[B][dmi], 0.0)
+        T_step_markings[B][dmi].append(Tm)
 
         axs[B][dmi].set_title(title_name(B, dmi))
 
@@ -528,13 +551,16 @@ def sse_plot_magn_dmi_z(x_space, magn, xlim=(-86, 86), ylim=(-0.0021, 0.0017)):
                              loc="lower center", bbox_to_anchor=bbox)
         fig.add_artist(legend1)
 
+        T_legend = axs[True][False].legend(handles=T_step_markings[True][False], loc="lower left")
+        axs[True][False].add_artist(T_legend)
+
 
     axs_arr[0].set_xlim(*xlim)
     if ylim:
         axs_arr[0].set_ylim(*ylim)
 
-    axs_arr[0].set_ylabel(rf"$ \langle \Delta m^{c} \rangle$")
-    axs_arr[2].set_ylabel(rf"$ \langle \Delta m^{c} \rangle$")
+    axs_arr[0].set_ylabel(rf"$ \langle \Delta S^{c} \rangle$")
+    axs_arr[2].set_ylabel(rf"$ \langle \Delta S^{c} \rangle$")
     axs_arr[2].set_xlabel("$x / a$")
     axs_arr[3].set_xlabel("$x / a$")
 
@@ -583,7 +609,6 @@ def sse_magnon_accumulation_dmi_B(accumulation=True):
         "110": "/data/scc/marian.gunsch/05/05_AM_tilted_xTstep_T2_B100/",
         "-110": "/data/scc/marian.gunsch/05/05_AM_tilted_yTstep_T2_B100/"
     }
-    warnings.warn("Not all simulations are finished!")
 
     DMI = [False, True]
     magnetic_fields = [False, True]
@@ -693,7 +718,7 @@ def main():
 
     average_spin_components()
 
-    dispersion_relation_dmi()
+    # dispersion_relation_dmi()
 
     sse_magnon_accumulation_dmi()
 
