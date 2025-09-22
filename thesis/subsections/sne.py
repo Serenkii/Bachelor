@@ -475,9 +475,13 @@ def sne_accumulation_profile_plot(x_space, magnetization, profile_dirs, a_labels
 
 
 
-def sne_spin_accumulation(plot_config=True):
+def sne_spin_accumulation(plot_config=True, component="z"):
     temperature = 2     # available: 1..10
     T = temperature
+
+    if component != "z":
+        plot_config = False
+        warnings.warn("Will not plot configurations for component other than 'z'")
 
     paths = {
         "100": f"/data/scc/marian.gunsch/08/08_xTstep/T{T}/",
@@ -528,12 +532,13 @@ def sne_spin_accumulation(plot_config=True):
 
     magn_profiles = dict()
     for direction in directions:
-        magn_profiles[direction] = physics.magnetization(mag_util.get_component(profilesA[direction]),
-                                                         mag_util.get_component(profilesB[direction]), True)
+        magn_profiles[direction] = physics.magnetization(mag_util.get_component(profilesA[direction], component),
+                                                         mag_util.get_component(profilesB[direction], component),
+                                                         True)
         if reverse_profile[direction]:
             magn_profiles[direction] = magn_profiles[direction][::-1]
 
-    save_name = "sne_accum_fromprofil.pdf"
+    save_name = f"sne_accum_fromprofil_{component}.pdf"
     sne_accumulation_profile_plot({d: np.arange(256) for d in directions}, magn_profiles, profile_direction_cryst,
                                   save_name=save_name)
 
@@ -546,12 +551,12 @@ def sne_spin_accumulation(plot_config=True):
     # slice_ = slice(None)
     magn_conprofiles = dict()
     for direction in directions:
-        tempA, tempB = spinconf_util.create_profile(conf_data[direction], profile_direction[direction], slice_, "z")
+        tempA, tempB = spinconf_util.create_profile(conf_data[direction], profile_direction[direction], slice_, component)
         magn_conprofiles[direction] = physics.magnetization(tempA, tempB)
         if reverse_profile[direction]:
             magn_conprofiles[direction] = magn_conprofiles[direction][::-1]
 
-    save_name = "sne_accum_fromconf.pdf"
+    save_name = f"sne_accum_fromconf_{component}.pdf"
     sne_accumulation_profile_plot({d: np.arange(256) for d in directions}, magn_conprofiles, profile_direction_cryst,
                                   save_name=save_name)
 
@@ -804,7 +809,9 @@ def sne_magnon_spectrum():
 
 def main():
     sne_spin_accumulation(True)
-    spin_currents_open()
+    sne_spin_accumulation(False, "x")
+    sne_spin_accumulation(False, "y")
+    # spin_currents_open()
     # spin_currents_upperABC()
     # spin_currents_uploABC()
     # sne_magnon_spectrum()

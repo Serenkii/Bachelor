@@ -108,7 +108,7 @@ def equilibrium_comparison_Bfield():
 
 def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, version=1,
                                      left_title=r"$B = 0$", right_title=r"$B > 0$",
-                                     save_path=None):
+                                     save_path=None, shading="gouraud"):
     if not version in [1, 2]:
         raise ValueError("version must be 1 or 2")
 
@@ -186,10 +186,10 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ver
                 ax.set_ylabel(r"$\omega$ (\SI{e15}{\radian\per\second})")
 
             magnon_density = magnon_density_dict[field][direction]
-            im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading='gouraud',
+            im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading=shading,
                                norm=colors.LogNorm(vmin=min_magn_dens, vmax=max_magn_dens),
                                rasterized=rasterized)
-            print("Using shading='gouraud'")
+            # print("Using shading='gouraud'")
 
             im_list.append(im)
 
@@ -228,14 +228,14 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ver
 
     if save_path:
         print("Saving fig...")
-        fig.savefig(save_path)
+        fig.savefig(f"{save_path[:-4]}_{shading[:4]}.pdf")
 
         # from thesis.theoretical_figures import crop_to_size
         # crop_to_size(save_path)
 
 
-    print("Showing fig...")
-    plt.show()
+    # print("Showing fig...")
+    # plt.show()
 
 
 
@@ -252,9 +252,9 @@ def dispersion_comparison_table_data(paths_no, paths_yes):
     directions = paths_yes.keys()
 
     dataA_no, dataB_no = mag_util.npy_files_from_dict(paths_no, slice_index=-dispersion_data_points,
-                                                  max_rows=dispersion_data_points + 100)
+                                                  max_rows=dispersion_data_points + 1000)
     dataA_yes, dataB_yes = mag_util.npy_files_from_dict(paths_yes, slice_index=-dispersion_data_points,
-                                                  max_rows=dispersion_data_points + 100)
+                                                  max_rows=dispersion_data_points + 1000)
 
     data_dict = {
         False: dict(A=dataA_no, B=dataB_no),  # No magnetic field
@@ -290,10 +290,10 @@ def dispersion_comparison_table_data(paths_no, paths_yes):
             if data_points < dispersion_data_points:
                 warnings.warn(f"{magnetic_field}, [{direction}]: Can only run with {data_points} data points.")
 
-            Sx = physics.magnetization(mag_util.get_component(data_A[:data_points], "x", 10),
-                                       mag_util.get_component(data_B[:data_points], "x", 10))
-            Sy = physics.magnetization(mag_util.get_component(data_A[:data_points], "y", 10),
-                                       mag_util.get_component(data_B[:data_points], "y", 10))
+            Sx = physics.magnetization(mag_util.get_component(data_A[:data_points], "x",),
+                                       mag_util.get_component(data_B[:data_points], "x"))
+            Sy = physics.magnetization(mag_util.get_component(data_A[:data_points], "y"),
+                                       mag_util.get_component(data_B[:data_points], "y"))
             dx = delta_x[direction]
             dt = util.get_time_step(paths[magnetic_field][direction])
             k, f, m = physics.dispersion(Sx, Sy, dx, dt)
@@ -321,17 +321,18 @@ def dispersion_comparison_Bfield_table_data():
     return dispersion_comparison_table_data(paths_noB, paths_B)
 
 
-def dispersion_comparison_Bfield_table(version=1):
+def dispersion_comparison_Bfield_table(version=1, shading='gouraud'):
     print("\n\nDISPERSION RELATION COMPARISON: MAGNETIC FIELD")
 
     k_dict, freq_dict, magnon_density_dict = dispersion_comparison_Bfield_table_data()
     dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, version=version,
-                                     save_path=f"{save_base_path}dispersion_comparison_Bfield_table.pdf")
+                                     save_path=f"{save_base_path}dispersion_comparison_Bfield_table.pdf",
+                                     shading=shading)
 
 
 # %% Comparison of dispersion relation for any direction with positive and negative field
 
-def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict):
+def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict, shading='gouraud'):
     print("Plotting...")
 
     rasterized = True
@@ -388,10 +389,9 @@ def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict):
             ax.set_ylabel(r"$\omega$ (\SI{e15}{\radian\per\second})")
 
         magnon_density = magnon_density_dict[field]
-        im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading='gouraud',
+        im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading=shading,
                            norm=colors.LogNorm(vmin=min_magn_dens, vmax=max_magn_dens),
                            rasterized=rasterized)
-        print("Using shading='gouraud'")
         im_list.append(im)
 
         ax.axhline(0, color="gray", linewidth=0.8, linestyle="--")
@@ -405,14 +405,14 @@ def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict):
     print("]")
 
     print("Saving fig...")
-    fig.savefig(f"{save_base_path}dispersion_comparison_negBfield.pdf")
+    fig.savefig(f"{save_base_path}dispersion_comparison_negBfield_{shading[:4]}.pdf")
 
-    print("Showing fig...")
-    plt.show()
+    # print("Showing fig...")
+    # plt.show()
 
 
 
-def dispersion_comparison_negB():
+def dispersion_comparison_negB(shading='gouraud'):
     print("\n\nDISPERSION RELATION COMPARISON: POSITIVE AND NEGATIVE MAGNETIC FIELD FIELD")
 
     paths = {
@@ -424,7 +424,7 @@ def dispersion_comparison_negB():
     dx = physics.lattice_constant
 
     data_A, data_B = mag_util.npy_files_from_dict(paths, slice_index=-dispersion_data_points,
-                                                  max_rows=dispersion_data_points + 100)
+                                                  max_rows=dispersion_data_points + 1000)
 
     k_dict = dict()
     freq_dict = dict()
@@ -450,7 +450,7 @@ def dispersion_comparison_negB():
         freq_dict[Bstrength] = f
         magnon_density_dict[Bstrength] = m
 
-    dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict)
+    dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict, shading)
 
 
 # %% BOUNDARY EFFECTS

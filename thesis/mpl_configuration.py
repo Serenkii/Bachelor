@@ -93,5 +93,6 @@ def alt_configure():
 
 
 def default_configure():
-    configure_backends("module://backend_interagg", ssh=False)  # "Qt5Agg"
+    # configure_backends("module://backend_interagg", ssh=False)  # "Qt5Agg"
+    configure_backends("PDF", ssh=False)  # "Qt5Agg"
     configure()

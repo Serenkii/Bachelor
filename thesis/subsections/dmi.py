@@ -215,7 +215,7 @@ def average_spin_components():
     # Think about what exactly to compare? Dmi/no DMI for different temperatures? Or just one temperature?
 
 
-def dispersion_relation_dmi():
+def dispersion_relation_dmi(shading='gouraud'):
     # TODO!
     paths = {
         "100": "/data/scc/marian.gunsch/15/AM_DMI_Tstairs_T2_x/",     # not sure whether to use
@@ -240,7 +240,8 @@ def dispersion_relation_dmi():
     k_dict, freq_dict, magnon_density_dict = dispersion_comparison_table_data(paths_nodmi, paths)
     dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, version=2,
                                      left_title="no DMI", right_title="DMI",
-                                     save_path=f"{save_base_path}dispersion_comparison_dmi_table.pdf")
+                                     save_path=f"{save_base_path}dispersion_comparison_dmi_table.pdf",
+                                     shading=shading)
 
 
 # %% SPIN SEEBECK EFFECT

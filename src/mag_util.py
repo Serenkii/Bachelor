@@ -15,7 +15,7 @@ import src.physics as physics
 
 default_slice_dict = {'t': 0, 'x': 1, 'y': 2, 'z': 3, '1': 1, '2': 2, '3': 3}
 
-default_force_overwrite = True
+default_force_overwrite = False
 read_fewer_lines = False
 
 if default_force_overwrite:
@@ -537,10 +537,10 @@ def infer_data_path(path, also_return_path_B=False):
 
 
 # Untested
-def npy_files(dat_path: str, npy_path=None, slice_index=-100000, force=default_force_overwrite, return_data=True,
+def npy_files(dat_path: str, npy_path=None, slice_index=-100_000, force=default_force_overwrite, return_data=True,
               **load_kwargs):
     if "max_rows" not in load_kwargs.keys():
-        load_kwargs["max_rows"] = 1_000_000
+        load_kwargs["max_rows"] = 101_000
         if read_fewer_lines:
             warnings.warn("Only read 1000 lines!")
             load_kwargs["max_rows"] = 1_000
