@@ -25,7 +25,7 @@ seperator = "-------------------------------------------------------------\n"
 plot_paths = True
 
 # %% configure matplotlib
-mpl.use('Agg')
+# mpl.use('Agg')
 # mpl.use('Qt5Agg')   # for interactive plots https://stackoverflow.com/questions/49844189/how-to-get-interactive-plot-of-pyplot-when-using-pycharm
 # See here: https://matplotlib.org/stable/users/explain/figure/backends.html
 
@@ -2085,6 +2085,130 @@ def presenting_data_08():
     )
 
 
+# %% Testing regarding DMI
+
+def testing_dmi(sublattice, time_steps=1000):
+    if sublattice is None:
+        testing_dmi("A", 200)
+        testing_dmi("A", 500)
+        testing_dmi("A", 1000)
+        testing_dmi("B", 200)
+        testing_dmi("B", 500)
+        testing_dmi("B", 1000)
+
+    print("Sx and Sy circle")
+
+    # directions refer to Tstep positions
+    paths = {
+        "100": "/data/scc/marian.gunsch/14/AM_xTstep_y_hightres/",
+        "110": "/data/scc/marian.gunsch/02/02_AM_tilted_Tstep_hightres/",
+        "-110": "/data/scc/marian.gunsch/14/AM_tilt_yTstep_x_hightres/"
+    }
+    measure_dir = {
+        "100" : "010",
+        "110" : "-110",
+        "-110" : "110"
+    }
+
+    dataA, dataB = mag_util.npy_files_from_dict(paths)
+
+    if sublattice == "A":
+        data = dataA
+    elif sublattice == "B":
+        data = dataB
+    else:
+        raise ValueError()
+
+    directions = paths.keys()
+
+    Sx = dict((d, mag_util.get_component(data[d], "x", 30000)) for d in directions)
+    Sy = dict((d, mag_util.get_component(data[d], "y", 30000)) for d in directions)
+
+    sample_positions = dict()
+    sample_positions["100"] = [0, int(Sx["100"].shape[1] / 2), Sx["100"].shape[1] - 1]
+    sample_positions["110"] = [0, int(Sx["110"].shape[1] / 2), Sx["110"].shape[1] - 1]
+    sample_positions["-110"] = [Sx["110"].shape[1] - 1, int(Sx["110"].shape[1] / 2), 0]
+
+    fig, axs = plt.subplots(nrows=3, ncols=3, figsize=(8, 8), sharex=True, sharey=True)
+    axs[0, 0].set_xlim(-0.0065, 0.0065)
+    axs[0, 0].set_ylim(-0.0065, 0.0065)
+
+    for j, d in enumerate(directions):
+        for i, pos in enumerate(sample_positions[d]):
+            t = min(Sx[d].shape[0], Sy[d].shape[0], time_steps)
+            print(f"{Sx[d].shape[0]=}, {Sy[d].shape[0]=}")
+
+            axs[j, i].plot(Sx[d][:t,pos], Sy[d][:t,pos],
+                           label=rf"$x_{{{measure_dir[d]}}}={pos}$,  $- \nabla T \parallel {d}$",
+                           linewidth=0.4,
+                           marker="", linestyle="-")
+            axs[j, i].legend(loc="upper center")
+            axs[j, i].set_xlabel("x")
+            axs[j, i].set_ylabel("y")
+            axs[j, i].set_aspect('equal', adjustable="box")
+
+    fig.suptitle(f"sublattice {sublattice}, {time_steps} time steps")
+    fig.tight_layout()
+
+    fig.savefig(f"out/SxSy_{sublattice}_{time_steps}.pdf")
+    plt.show()
+
+
+def SL_magnetization_comparison():
+
+    paths = {
+        "110": "/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
+        "-110": "/data/scc/marian.gunsch/10/AM__tilt_Tstairs_T2_y-2/"   # annoying typo: __
+    }
+    directions = paths.keys()
+
+    dataA, dataB = mag_util.npy_files_from_dict(paths)
+
+    data = dict(A=dataA, B=dataB)
+
+    fig, axs = plt.subplots(nrows=2, ncols=2, sharex=True, sharey='col')
+
+    for i, d in enumerate(directions):
+        for j, sl in enumerate(data.keys()):
+            Sz = mag_util.time_avg(mag_util.get_component(data[sl][d], "z"))
+            Sz_mean = np.full_like(Sz, np.mean(Sz))
+
+            axs[i, j].plot(Sz, label=f"SL {sl}, [{d}]", linewidth=1.0)
+            axs[i, j].plot(Sz_mean, label=f"mean: {Sz_mean[0]:.7f}", color="k")
+            axs[i, j].legend(loc="lower right")
+
+    fig.savefig("out/Sz_component_along_diff_dirs.pdf")
+
+    plt.show()
+
+
+def SL_magnetization_comparison_fromconf():
+    path = "/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/spin-configs-99-999/spin-config-99-999-050000.dat"
+    config_dat = spinconf_util.npy_file(path)
+
+    SA_x, SB_x = spinconf_util.create_profile(config_dat, "x", which="z")
+    SA_y, SB_y = spinconf_util.create_profile(config_dat, "y", which="z")
+
+    S = dict(A=dict(x=SA_x, y=SA_y), B=dict(x=SB_x, y=SB_y))
+
+    cryst = dict(x="110", y="-110")
+
+    fig, axs = plt.subplots(nrows=2, ncols=2, sharex=True, sharey='col')
+
+    for i, d in enumerate(S["A"].keys()):
+        for j, sl in enumerate(S.keys()):
+            Sz = S[sl][d]
+            Sz_mean = np.full_like(Sz, np.mean(Sz))
+
+            axs[i, j].plot(Sz, label=f"SL {sl}, [{cryst[d]}] ({d})", linewidth=1.0)
+            axs[i, j].plot(Sz_mean, label=f"mean: {Sz_mean[0]:.12f}", color="k")
+            axs[i, j].legend(loc="lower right")
+
+
+    fig.savefig("out/Sz_component_along_diff_dirs_fromconf.pdf")
+
+    plt.show()
+
 
 # %% Main
 
@@ -2103,9 +2227,14 @@ def main():
     # compare_nernst_with_equilibrium((False, True))
 
 
-    presenting_data_07()
+    # presenting_data_07()
 
     # presenting_data_08()
+
+
+    # testing_dmi(None)
+    # SL_magnetization_comparison()
+    SL_magnetization_comparison_fromconf()
 
     pass
 

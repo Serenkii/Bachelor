@@ -540,7 +540,7 @@ def infer_data_path(path, also_return_path_B=False):
 def npy_files(dat_path: str, npy_path=None, slice_index=-100_000, force=default_force_overwrite, return_data=True,
               **load_kwargs):
     if "max_rows" not in load_kwargs.keys():
-        load_kwargs["max_rows"] = 101_000
+        load_kwargs["max_rows"] = 110_000
         if read_fewer_lines:
             warnings.warn("Only read 1000 lines!")
             load_kwargs["max_rows"] = 1_000
@@ -573,7 +573,12 @@ def npy_files(dat_path: str, npy_path=None, slice_index=-100_000, force=default_
             print(f"File {npy_path} already exists. Nothing will be overwritten.")
         else:
             print(f"Reading data from {dat_path}...")
-            data = np.loadtxt(dat_path, **load_kwargs)[slice_index:]
+            temp = np.loadtxt(dat_path, **load_kwargs)
+            data = temp[slice_index:]
+            if temp.shape[0] - data.shape[0] < 200:
+                warnings.warn("Slicing did not cut off time steps to equilibriate. Therefore, automatically cutting "
+                              "off the first 200 time steps...")
+                data = data[200:]
             print(f"Saving data to {npy_path}...")
             np.save(npy_path, data)
             if return_data:
@@ -590,6 +595,12 @@ def npy_files(dat_path: str, npy_path=None, slice_index=-100_000, force=default_
     if data_dict["A"].shape[0] < 300 or data_dict["B"].shape[0] < 300:
         warnings.warn("Very few time steps might skew data. Proceed with care!"
                       "Consider using force=True once.")
+    elif (data_dict["A"].shape[0] < 10000 or data_dict["B"].shape[0] < 10000) and not read_fewer_lines:
+        warnings.warn(f"The simulation appears to have less than 10000 time steps. Proceed with care!."
+                      "Check simulation!\n"
+                      f"{data_dict["A"].shape[0]=}, {data_dict["B"].shape[0]=}\n"
+                      f"{dat_path=}")
+
 
     print("\n")
 

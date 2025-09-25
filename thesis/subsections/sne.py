@@ -457,10 +457,10 @@ def sne_accumulation_profile_plot(x_space, magnetization, profile_dirs, a_labels
 
     for d in Tdirections:
         pad = 0.03
-        y = axs[d][0].get_position().get_points()[1][1]
+        y = axs[d][0].get_position().get_points()[0][1]
         x1 = axs[d][0].get_position().get_points()[1][0]
         x2 = axs[d][1].get_position().get_points()[0][0]
-        fig.text(0.5 * (x1 + x2), y - pad, rf"$- \nabla T \parallel \hkl[{d}]$", va="top", ha="center")
+        fig.text(0.5 * (x1 + x2), y + pad, rf"$- \nabla T \parallel \hkl[{d}]$", va="bottom", ha="center")
 
         axs[d][0].plot(x_space[d], magnetization[d], **plot_kwargs)
         axs[d][1].plot(x_space[d], magnetization[d], **plot_kwargs)
@@ -470,6 +470,89 @@ def sne_accumulation_profile_plot(x_space, magnetization, profile_dirs, a_labels
         fig.savefig(f"{save_base_path}{save_name}")
 
     plt.show()
+
+
+
+def sne_spin_accumulation_profilsubtract():
+
+    boundary_region_size = 40
+
+    temperature = 2     # available: 1..10
+    T = temperature
+    paths = {
+        "100": f"/data/scc/marian.gunsch/08/08_xTstep/T{T}/",
+        "010": f"/data/scc/marian.gunsch/08/08_yTstep/T{T}/",
+        "110": f"/data/scc/marian.gunsch/00/AM_tiltedX_Tstep_nernst/AM_tiltedX_Tstep_nernst_T{T}/",
+        "-110": f"/data/scc/marian.gunsch/08/08_tilted_yTstep/T{T}/",
+    }
+
+    # equi_paths_middle = {
+    #     "100": "/data/scc/marian.gunsch/11/AM_xTstep_y/",
+    #     "010": "/data/scc/marian.gunsch/11/AM_yTstep_x/",
+    #     "110": "/data/scc/marian.gunsch/11/AM_tilt_xTstep_y/",
+    #     "-110": "/data/scc/marian.gunsch/11/AM_tilt_yTstep_x/"
+    # }
+
+    equi_paths_bound = {
+        "010": "/data/scc/marian.gunsch/12/AM_Tstairs_x_T2_openbou/",
+        "100": "/data/scc/marian.gunsch/12/AM_Tstairs_y_T2_openbou/",
+        "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_Tstairs_T2_openbou/",
+        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstairs_T2_openbou/"
+    }
+
+    directions = paths.keys()
+    profile_direction_cryst = { "100": "010", "110": "-110", "-110": "-1-10", "010": "-100" }
+    reverse_profile = {"100": False, "110": False, "-110": True, "010": True}
+    temp_direction = { "100" : "x", "110" : "x", "-110" : "y", "010" : "y" }
+    temp_shape_index = { "x":0, "y":1 }
+
+    dataA, dataB = mag_util.npy_files_from_dict(paths)
+    eqbound_dataA, eqbound_dataB = mag_util.npy_files_from_dict(equi_paths_bound)
+    # eqmiddl_dataA, eqmiddl_dataB = mag_util.npy_files_from_dict(equi_paths_middle)
+
+    conf_data = spinconf_util.npy_file_from_dict(paths)
+
+    x_space = dict()
+    magn_profiles = dict()
+    for direction in directions:
+        magn_profiles[direction] = physics.magnetization(mag_util.get_component(dataA[direction], "z"),
+                                                         mag_util.get_component(dataB[direction], "z"),
+                                                         True)
+        N = conf_data[direction].shape[temp_shape_index[temp_direction[direction]]]
+
+        x_space[direction] = np.arange(N)
+
+        warm_proportion = (helper.get_index_last_warm(0.49, N) + 1) / N     # approx 0.49
+        magn_eqbound = physics.magnetization(mag_util.get_component(eqbound_dataA[direction], "z"),
+                                             mag_util.get_component(eqbound_dataB[direction], "z"), True)
+        # magn_eqmiddl = physics.magnetization(mag_util.get_component(eqmiddl_dataA[direction], "z"),
+        #                                      mag_util.get_component(eqmiddl_dataB[direction], "z"), True)
+        #
+        # print(np.mean(magn_eqmiddl))
+        # magn_eqbound -= np.mean(magn_eqmiddl) # subtract average because boundaries?
+
+        fig, ax = plt.subplots()
+        # ax.plot(magn_eqbound, label=rf"magn eq: $-\nabla T \parallel {direction}$")
+        ax.plot(magn_eqbound * 0.49, label=rf"$-\nabla T \parallel {direction}$, * 0.49", marker=".")
+        ax.plot(magn_profiles[direction], marker=".", label=rf"magn profile")
+        ax.legend()
+        plt.show()
+
+        magn_profiles[direction][:boundary_region_size] -= magn_eqbound[:boundary_region_size] * warm_proportion
+        magn_profiles[direction][-boundary_region_size:] -= magn_eqbound[-boundary_region_size:] * warm_proportion
+
+        if reverse_profile[direction]:
+            magn_profiles[direction] = magn_profiles[direction][::-1]
+
+    save_name = f"sne_accum_profile_subtr.pdf"
+    sne_accumulation_profile_plot(x_space, magn_profiles, profile_direction_cryst,
+                                  save_name=save_name)
+
+    save_util.source_paths(f"{save_base_path}{save_name}", f"{paths=}, {equi_paths_bound=}")
+    save_util.description(f"{save_base_path}{save_name}",
+                          "The profiles in the orthogonal directions of the temperature step directions."
+                          "The boundary effects are subtracted, by taking their profiles and subtracting with a factor"
+                          "~ 0.49.")
 
 
 
@@ -547,7 +630,7 @@ def sne_spin_accumulation(plot_config=True, component="z"):
                           "The profiles in the orthogonal directions of the temperature step directions.")
 
     # from configs
-    slice_ = slice(135, 185)
+    slice_ = slice(127, None)
     # slice_ = slice(None)
     magn_conprofiles = dict()
     for direction in directions:
@@ -678,7 +761,7 @@ def spin_currents_uploABC():
 # %% Magnon spectrum
 
 def sne_spectrum_plot(freq_dict, magnon_density_dict, step_dir, reversed_direct, reverse,
-                      xlim=(-0.55, 0.55), ylim=(0, 0.37), xticks=(-0.4, 0.0, 0.4)):
+                      xlim=(-0.55, 0.55), yfactor=1.0, xticks=(-0.4, 0.0, 0.4)):
     print("Plotting...")
 
     plot_kwargs = dict(linewidth=0.07)
@@ -700,7 +783,6 @@ def sne_spectrum_plot(freq_dict, magnon_density_dict, step_dir, reversed_direct,
 
 
     axs["010"][0].set_xlim(*xlim)
-    axs["010"][0].set_ylim(*ylim)
 
     def handle_ticks():
         for i in range(3):
@@ -723,6 +805,7 @@ def sne_spectrum_plot(freq_dict, magnon_density_dict, step_dir, reversed_direct,
             fig.text(x - pad, 0.5 * (y1 + y2), rf"$ - \nabla T \parallel \hkl[{step_dir[direction]}]$", rotation=90,
                      ha="right", va="center", size=mpl.rcParams["axes.titlesize"])
 
+    max_magn_density = - np.inf
     for direction in axs.keys():
         for i_, index in enumerate([0, int(magnon_density_dict[direction].shape[1] * 0.5),
                                    magnon_density_dict[direction].shape[1] - 1]):
@@ -731,10 +814,13 @@ def sne_spectrum_plot(freq_dict, magnon_density_dict, step_dir, reversed_direct,
 
             freq = freq_dict[direction] / freq_unit_factor
             magnon_density = magnon_density_dict[direction][:, index]
+            max_magn_density = max(max_magn_density, np.max(magnon_density))
             axs[direction][i].plot(freq, magnon_density, **plot_kwargs)
             a = r"\tilde{a}" if direction in ["-110", "110"] else "a"
             axs[direction][i_].set_title(fr"$x_{{\hkl[{reversed_direct[direction]}]}}" + f"= {index}{a}" + r"$",
                                          pad=9.0)
+
+    axs["010"][0].set_ylim((0.0, max_magn_density * yfactor))
 
     for i in range(3):
         axs["110"][i].set_xlabel(rf"$\omega$ ({freq_unit})")
@@ -780,7 +866,7 @@ def sne_magnon_spectrum():
     }
 
     data_A, data_B = mag_util.npy_files_from_dict(paths, slice_index=-spectrum_data_points,
-                                                  max_rows=spectrum_data_points + 100)
+                                                  max_rows=spectrum_data_points + 10000)
 
     freq_dict = dict()
     magnon_density_dict = dict()
@@ -808,10 +894,12 @@ def sne_magnon_spectrum():
 # %% Main
 
 def main():
-    sne_spin_accumulation(True)
-    sne_spin_accumulation(False, "x")
-    sne_spin_accumulation(False, "y")
+    # sne_spin_accumulation(True)
+    # sne_spin_accumulation(False, "x")
+    # sne_spin_accumulation(False, "y")
+    # sne_spin_accumulation_profilsubtract()
+
     # spin_currents_open()
     # spin_currents_upperABC()
     # spin_currents_uploABC()
-    # sne_magnon_spectrum()
+    sne_magnon_spectrum()

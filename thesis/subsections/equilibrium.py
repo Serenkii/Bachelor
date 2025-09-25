@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import scipy.constants
 from mpl_toolkits.axes_grid1 import ImageGrid
 import matplotlib.colors as colors
 from matplotlib.collections import PolyCollection
@@ -106,9 +107,9 @@ def equilibrium_comparison_Bfield():
 
 # %% Dispersion relation comparison for B=100T
 
-def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, version=1,
+def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, omega1=None, omega2=None, version=2,
                                      left_title=r"$B = 0$", right_title=r"$B > 0$",
-                                     save_path=None, shading="gouraud"):
+                                     save_path=None, shading="gouraud", vmin_=None, vmax_=None):
     if not version in [1, 2]:
         raise ValueError("version must be 1 or 2")
 
@@ -171,6 +172,11 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ver
             min_magn_dens = min(magnon_density.min(), min_magn_dens)
             max_magn_dens = max(magnon_density.max(), max_magn_dens)
 
+    if vmin_:
+        min_magn_dens = vmin_
+    if vmax_:
+        max_magn_dens = vmax_
+
     im_list = []
 
     print("[", end="")
@@ -192,6 +198,14 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ver
             # print("Using shading='gouraud'")
 
             im_list.append(im)
+
+            if omega1 and omega2:
+                l = rf"$\omega^{{\hkl[{direction}]}}"
+                w1 = omega1[field][direction]
+                w2 = omega2[field][direction]
+                ax.plot(k_vectors, w1, label=fr"{l}_\mathrm{{A}}$", color="blue", linewidth=0.5)
+                ax.plot(k_vectors, w2, label=fr"{l}_\mathrm{{A}}$", color="red", linewidth=0.5)
+                ax.legend(loc="upper right")
 
             ax.axhline(0, color="gray", linewidth=0.8, linestyle="--")
             ax.axvline(0, color="gray", linewidth=0.8, linestyle="--")
@@ -238,6 +252,70 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ver
     # plt.show()
 
 
+def get_band_gap(omega1, omega2):
+    return np.min(np.abs(omega1)) + np.min(np.abs(omega2))
+
+
+def get_omega_k(f, m):
+    h = int(m.shape[0] * 0.5)
+    imax1 = np.argmax(m[:h], axis=0)
+    imax2 = np.argmax(m[-h:], axis=0)
+    omega1 = f[imax1]
+    omega2 = f[-h:][imax2]
+
+    return omega1, omega2
+
+def get_spectral_power(m, min_=1e4):
+    h = int(m.shape[0] * 0.5)
+    return np.sum(m[m>min_][:h]), np.sum(m[m>min_][-h:])
+
+def get_magnon_number_from_rayleighjeans(k, omega_k, TmeV):
+    T = TmeV * scipy.constants.eV * scipy.constants.milli
+    kB = scipy.constants.k
+    hbar = scipy.constants.hbar
+    def rayleigh_jeans(omega_k):
+        return kB * T / (hbar * omega_k)
+
+    n_k = rayleigh_jeans(omega_k)
+    return np.sum(n_k)
+
+
+def band_gap_plot(band_gap):
+    fig, ax = plt.subplots()
+    for field in band_gap.keys():
+        gaps = band_gap[field]
+        ax.plot(list(gaps.keys()), [gaps[d] for d in gaps.keys()], label=f"{field=}")
+    ax.legend()
+    plt.show()
+
+
+def temp_ana(k, f, m):
+    print(f"{m.shape}")
+    h = int(m.shape[0] * 0.5)
+    print(f"{np.sum(m[:h])=}")
+    print(f"{np.sum(m[m>1e4][:h])=}")
+    print(f"{np.sum(m[-h:])=}")
+    print(f"{np.sum(m[m>1e4][-h:])=}")
+
+    imax1 = np.argmax(m[:h], axis=0)
+    imax2 = np.argmax(m[-h:], axis=0)
+    omega1 = f[imax1]
+    omega2 = f[-h:][imax2]
+    # fig, ax = plt.subplots()
+    # ax.plot(k, omega1)
+    # ax.plot(k, omega2)
+    # plt.show()
+
+    Sk1 = m[imax1]
+    Sk2 = m[-h:][imax2]
+
+    nk1 = Sk1 / omega1
+    print(np.sum(nk1))
+    nk2 = Sk2 / omega2
+    print(np.sum(nk2))
+
+
+
 
 def dispersion_comparison_table_data(paths_no, paths_yes):
 
@@ -248,13 +326,14 @@ def dispersion_comparison_table_data(paths_no, paths_yes):
         "-110": physics.lattice_constant
     }
 
-
     directions = paths_yes.keys()
 
     dataA_no, dataB_no = mag_util.npy_files_from_dict(paths_no, slice_index=-dispersion_data_points,
-                                                  max_rows=dispersion_data_points + 1000)
+                                                  max_rows=dispersion_data_points + 10000)
     dataA_yes, dataB_yes = mag_util.npy_files_from_dict(paths_yes, slice_index=-dispersion_data_points,
-                                                  max_rows=dispersion_data_points + 1000)
+                                                  max_rows=dispersion_data_points + 10000)
+
+    print("Finished loading data. Processing...")
 
     data_dict = {
         False: dict(A=dataA_no, B=dataB_no),  # No magnetic field
@@ -279,9 +358,13 @@ def dispersion_comparison_table_data(paths_no, paths_yes):
         True: dict()
     }
 
+    omega1 = { False: dict(), True: dict()}
+    omega2 = { False: dict(), True: dict()}
+    band_gap = { False: dict(), True: dict()}
 
     for magnetic_field in data_dict.keys():
         for direction in directions:
+            print(f"{magnetic_field=}, {direction=}")
             data_A = data_dict[magnetic_field]["A"][direction]
             data_B = data_dict[magnetic_field]["B"][direction]
 
@@ -290,18 +373,29 @@ def dispersion_comparison_table_data(paths_no, paths_yes):
             if data_points < dispersion_data_points:
                 warnings.warn(f"{magnetic_field}, [{direction}]: Can only run with {data_points} data points.")
 
-            Sx = physics.magnetization(mag_util.get_component(data_A[:data_points], "x",),
+            Sx = physics.magnetization(mag_util.get_component(data_A[:data_points], "x"),
                                        mag_util.get_component(data_B[:data_points], "x"))
             Sy = physics.magnetization(mag_util.get_component(data_A[:data_points], "y"),
                                        mag_util.get_component(data_B[:data_points], "y"))
             dx = delta_x[direction]
             dt = util.get_time_step(paths[magnetic_field][direction])
             k, f, m = physics.dispersion(Sx, Sy, dx, dt)
+
+            temp_ana(k, f, m)
+
+            omega1[magnetic_field][direction], omega2[magnetic_field][direction] = get_omega_k(f, m)
+            band_gap[magnetic_field][direction] = get_band_gap(omega1[magnetic_field][direction],
+                                                               omega2[magnetic_field][direction])
+            print(f"{get_magnon_number_from_rayleighjeans(k, omega1[magnetic_field][direction], 2)=}")
+            print(f"{get_magnon_number_from_rayleighjeans(k, omega2[magnetic_field][direction], 2)=}")
+            print(f"{get_spectral_power(m, 1e4)=}")
+            print(f"{get_spectral_power(m, 0)=}")
+
             k_dict[magnetic_field][direction] = k
             freq_dict[magnetic_field][direction] = f
             magnon_density_dict[magnetic_field][direction] = m
 
-    return k_dict, freq_dict, magnon_density_dict
+    return k_dict, freq_dict, magnon_density_dict, omega1, omega2, band_gap
 
 
 
@@ -324,11 +418,11 @@ def dispersion_comparison_Bfield_table_data():
 def dispersion_comparison_Bfield_table(version=1, shading='gouraud'):
     print("\n\nDISPERSION RELATION COMPARISON: MAGNETIC FIELD")
 
-    k_dict, freq_dict, magnon_density_dict = dispersion_comparison_Bfield_table_data()
-    dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, version=version,
+    k_dict, freq_dict, magnon_density_dict, omega1, omega2, band_gap = dispersion_comparison_Bfield_table_data()
+    dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, omega1, omega2, version=version,
                                      save_path=f"{save_base_path}dispersion_comparison_Bfield_table.pdf",
-                                     shading=shading)
-
+                                     shading=shading, vmin_=1e-3)
+    band_gap_plot(band_gap)
 
 # %% Comparison of dispersion relation for any direction with positive and negative field
 
@@ -424,7 +518,7 @@ def dispersion_comparison_negB(shading='gouraud'):
     dx = physics.lattice_constant
 
     data_A, data_B = mag_util.npy_files_from_dict(paths, slice_index=-dispersion_data_points,
-                                                  max_rows=dispersion_data_points + 1000)
+                                                  max_rows=dispersion_data_points + 10000)
 
     k_dict = dict()
     freq_dict = dict()

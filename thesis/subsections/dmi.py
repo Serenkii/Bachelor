@@ -171,13 +171,14 @@ def fancy_equilibrium_comparison_plot(S, magn, titles):
 def average_spin_components():
     paths = {
         False: "/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
-        True: "/data/scc/marian.gunsch/00/AM_tiltedX_ttmstairs_DMI_ferri-2/"
+        True: "/data/scc/marian.gunsch/20/AM_Tstairs_DMI2_T2_x/"
     }
+
     labels = {
         False: "$D = 0$, $B = 0$",
         True: "$D > 0$, $B = 0$"
     }
-    path_B_dmi = "/data/scc/marian.gunsch/19/AM_Tstairs_x_B100_DMI_T2/"
+    path_B_dmi = "/data/scc/marian.gunsch/20/AM_Tstairs_x_B100_DMI_T2/"        
     paths["DMI+B"] = path_B_dmi
     labels["DMI+B"] = "$D > 0$, $B > 0$"
 
@@ -218,10 +219,10 @@ def average_spin_components():
 def dispersion_relation_dmi(shading='gouraud'):
     # TODO!
     paths = {
-        "100": "/data/scc/marian.gunsch/15/AM_DMI_Tstairs_T2_x/",     # not sure whether to use
-        "010": "/data/scc/marian.gunsch/15/AM_DMI_Tstairs_T2_y/",     # not sure whether to use
-        "110": "/data/scc/marian.gunsch/15/AM_tilt_DMI_Tstairs_T2_x/",
-        "-110": "/data/scc/marian.gunsch/15/AM_tilt_DMI_Tstairs_T2_y/"
+        "100": "/data/scc/marian.gunsch/20/AM_Tstairs_DMI2_T2_x/",     # not sure whether to use        
+        "010": "/data/scc/marian.gunsch/20/AM_Tstairs_DMI2_T2_y/",     # not sure whether to use        
+        "110": "/data/scc/marian.gunsch/20/AM_tilt_Tstairs_DMI2_T2_x/",        
+        "-110": "/data/scc/marian.gunsch/20/AM_tilt_Tstairs_DMI2_T2_y/"        
     }
 
     paths_nodmi = {
@@ -328,10 +329,10 @@ def plot_sse(x_space, magn_dict, xlim=(-76, 76), ylim=(-0.0024, 0.0014), save_na
 def sse_magnon_accumulation_dmi(accumulation=True):
 
     paths_dmi = {
-        "100": "/data/scc/marian.gunsch/16/AM_xTstep_DMI_T2/",
-        "010": "/data/scc/marian.gunsch/16/AM_yTstep_DMI_T2/",
-        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_DMI_T2-2/",
-        "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_DMI_T2-2/"
+        "100": "/data/scc/marian.gunsch/20/AM_xTstep_DMI2_T2/",        
+        "010": "/data/scc/marian.gunsch/20/AM_yTstep_DMI2_T2/",        
+        "110": "/data/scc/marian.gunsch/20/AM_tilt_xTstep_DMI2_T2-2/",        
+        "-110": "/data/scc/marian.gunsch/20/AM_tilt_yTstep_DMI2_T2-2/"        
     }
 
     paths_nodmi = {
@@ -343,10 +344,10 @@ def sse_magnon_accumulation_dmi(accumulation=True):
 
     paths_equi_w = {
         False: "/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
-        True: "/data/scc/marian.gunsch/00/AM_tiltedX_ttmstairs_DMI_ferri-2/"
+        True: "/data/scc/marian.gunsch/20/AM_Tstairs_DMI2_T2_x/"
     }
 
-    path_equi_c_dmi = "/data/scc/marian.gunsch/03/03_AM_tilted_Tstairs_DMI_T0/"
+    path_equi_c_dmi = "/data/scc/marian.gunsch/20/AM_tilt_Tstairs_DMI2_T0/"        
 
     directions = paths_nodmi.keys()
     DMI = [False, True]
@@ -390,7 +391,7 @@ def sse_magnon_accumulation_dmi(accumulation=True):
                 if not accumulation:
                     continue
 
-                N = len(magn[dmi][d][c])
+                N = magn[dmi][d][c].shape[0]
                 i = helper.get_absolute_T_step_index(0.49, N)
                 magn[dmi][d][c][:i] -= magn_equi[dmi][c]
 
@@ -584,17 +585,17 @@ def sse_magnon_accumulation_dmi_B(accumulation=True):
         raise NotImplementedError("Plots are only properly implemented for accumulation!")
 
     paths_dmi_B = {
-        "100": "/data/scc/marian.gunsch/16/AM_xTstep_DMI_B_T2/",
-        "010": "/data/scc/marian.gunsch/16/AM_yTstep_DMI_B_T2/",
-        "110": "/data/scc/marian.gunsch/05/05_AM_tilted_xTstep_DMI_T2_staticB/",
-        "-110": "/data/scc/marian.gunsch/05/05_AM_tilted_yTstep_DMI_T2_staticB/"
+        "100": "/data/scc/marian.gunsch/20/AM_xTstep_DMI2_B_T2/",        
+        "010": "/data/scc/marian.gunsch/20/AM_yTstep_DMI2_B_T2/",        
+        "110": "/data/scc/marian.gunsch/20/AM_tilt_xTstep_DMI2_T2_B/",        
+        "-110": "/data/scc/marian.gunsch/20/AM_tilt_yTstep_DMI2_T2_B/"        
     }
 
     paths_dmi = {
-        "100": "/data/scc/marian.gunsch/16/AM_xTstep_DMI_T2/",
-        "010": "/data/scc/marian.gunsch/16/AM_yTstep_DMI_T2/",
-        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_DMI_T2-2/",
-        "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_DMI_T2-2/"
+        "100": "/data/scc/marian.gunsch/20/AM_xTstep_DMI2_T2/",        
+        "010": "/data/scc/marian.gunsch/20/AM_yTstep_DMI2_T2/",        
+        "110": "/data/scc/marian.gunsch/20/AM_tilt_xTstep_DMI2_T2-2/",        
+        "-110": "/data/scc/marian.gunsch/20/AM_tilt_yTstep_DMI2_T2-2/"        
     }
 
     paths = {
@@ -631,17 +632,17 @@ def sse_magnon_accumulation_dmi_B(accumulation=True):
     paths_equi = {
         False: {
             False: "/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
-            True: "/data/scc/marian.gunsch/00/AM_tiltedX_ttmstairs_DMI_ferri-2/"
+            True: "/data/scc/marian.gunsch/20/AM_Tstairs_DMI2_T2_x/"
         },
         True: {
             False: "/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100-2/",
-            True: "/data/scc/marian.gunsch/19/AM_Tstairs_x_B100_DMI_T2/"
+            True: "/data/scc/marian.gunsch/20/AM_Tstairs_x_B100_DMI_T2/"        
         }
     }
 
     path_equi_dmi_cold = {
-        False: "/data/scc/marian.gunsch/03/03_AM_tilted_Tstairs_DMI_T0/",
-        True: "/data/scc/marian.gunsch/19/AM_Tstairs_x_B100_DMI_T0/"
+        False: "/data/scc/marian.gunsch/20/AM_tilt_Tstairs_DMI2_T0/",        
+        True: "/data/scc/marian.gunsch/20/AM_Tstairs_x_B100_DMI_T0/"        
     }
 
     data = dict()
@@ -719,8 +720,9 @@ def main():
 
     average_spin_components()
 
-    # dispersion_relation_dmi()
-
     sse_magnon_accumulation_dmi()
 
     sse_magnon_accumulation_dmi_B(True)
+
+
+    dispersion_relation_dmi()

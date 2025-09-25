@@ -36,7 +36,7 @@ def run_spectra(shading):
 def main():
     pass
 
-    # run_spectra('auto')
+    run_spectra('auto')
     # run_spectra('gouraud')
 
     # miscellaneous.main()
@@ -47,8 +47,8 @@ def main():
     # sse.main()
     # close_figs()
 
-    sne.main()
-    close_figs()
+    # sne.main()
+    # close_figs()
 
     # dmi.main()
     # close_figs()

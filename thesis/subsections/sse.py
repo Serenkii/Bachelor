@@ -254,8 +254,8 @@ def direction_comparison():
     # eq_path = "/data/scc/marian.gunsch/06/06_AM_tilted_xTstep_T2_Bn100/"
     tempA, tempB = mag_util.npy_files(eq_path)
     eq_magn = np.mean(physics.magnetization(
-        mag_util.get_component(tempA, "z", 15),
-        mag_util.get_component(tempB, "z", 15), True)
+        mag_util.get_component(tempA, "z", ),
+        mag_util.get_component(tempB, "z", ), True)
     )
 
     step_pos = helper.get_absolute_T_step_index(0.49, 256)
@@ -289,8 +289,8 @@ def direction_comparison():
 
     for direction in directions_:
         magnetization_[direction] = physics.magnetization(
-            mag_util.get_component(data_A_[direction], "z", 15),
-            mag_util.get_component(data_B_[direction], "z", 15), True)
+            mag_util.get_component(data_A_[direction], "z", ),
+            mag_util.get_component(data_B_[direction], "z", ), True)
 
         magn_accumulation[direction] = np.copy(magnetization_[direction])
         magn_accumulation[direction][:step_pos] -= eq_magn
@@ -310,6 +310,8 @@ def direction_comparison():
         ax2.set_xlabel("$x / a$")
         ax1.set_ylabel(r"$\langle S^z \rangle$")
         ax2.set_ylabel(r"$\langle \Delta S^z \rangle$")
+
+        ax2.axhline(0, color="gray", linestyle="-", marker="", linewidth=0.5)
 
         actual_step_pos = helper.get_actual_Tstep_pos(0.49, 256)
         ax1.set_xlim(- 60, + 60)
@@ -335,6 +337,7 @@ def direction_comparison():
         #                      color="r", linestyle="", label=label)
         #     ax.plot(0, max_val + pad * val_range, marker=11, color="r",
         #             linestyle="",)
+
 
         plot_util.place_Tstep_marking(ax1, 0, None)
         dT_pt = plot_util.place_Tstep_marking(ax2, 0)
@@ -544,20 +547,103 @@ def sse_spin_currents(from_profile=True, xlim=(-111.5, 141.5)):
     plt.show()
 
 
+def sse_spin_currents_comparison(xlim=(-101.5, 126.5)):
+    paths = {
+        False : {
+            "100": "/data/scc/marian.gunsch/16/AM_xTstep_T2-2/",
+            "010": "/data/scc/marian.gunsch/16/AM_yTstep_T2-2/",
+            "110": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_T2-2/",
+            "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
+        },
+        True : {
+            "100": "/data/scc/marian.gunsch/13/13_AM_xTstep_T2_B100/",
+            "010": "/data/scc/marian.gunsch/13/13_AM_yTstep_T2_B100/",
+            "110": "/data/scc/marian.gunsch/05/05_AM_tilted_xTstep_T2_B100/",
+            "-110": "/data/scc/marian.gunsch/05/05_AM_tilted_yTstep_T2_B100/"
+        }
+    }
+
+    shift = 0.5
+
+    field_strengths = paths.keys()
+    directions = paths[False].keys()
+    curr_dir = {"100": "x", "110": "x", "010": "y", "-110": "y"}
+
+    conf_data = {B: spinconf_util.npy_file_from_dict(paths[B]) for B in field_strengths}
+
+    currents = dict()
+    x_space = dict()
+
+    for B in field_strengths:
+        currents[B] = dict()
+        x_space[B] = dict()
+        for d in directions:
+            currents[B][d] = spinconf_util.spin_current(conf_data[B][d] , curr_dir[d], d,
+                                                             curr_dir[d],
+                                                             normed_units=False)
+            N = conf_data[B][d].shape[0] if curr_dir[d] == "x" else conf_data[B][d] .shape[1]
+
+            Tstep_pos = helper.get_actual_Tstep_pos(0.49, N)
+            x = np.arange(currents[B][d].shape[0]) + shift
+            x -= Tstep_pos
+            x = physics.index_to_position(x, d)
+            x_space[B][d] = x
+
+
+    # Plotting
+
+    fig, axs = plt.subplots(ncols=2, sharex=True, sharey=True)
+    axs.flatten()
+    axs_dict = { False: axs[0], True: axs[1] }
+    axs[0].set_xlabel("$x/a$")
+    axs[1].set_xlabel("$x/a$")
+    axs[0].set_ylabel(r"spin current $j^{\mathrm{L}}$ (\si{\meter\per\second})")
+    axs[0].set_xlim(*xlim)
+
+    axs_dict[False].set_title(r"$B = 0$")
+    axs_dict[True].set_title(r"$B > 0$")
+
+    lines = { False: [], True: []}
+
+    for B in field_strengths:
+        for d in directions:
+            line, = axs_dict[B].plot(x_space[B][d], currents[B][d], label=fr"\hkl[{d}]")
+            lines[B].append(line)
+
+    legend = axs_dict[True].legend(handles=lines[True], loc="upper right")
+    axs_dict[True].add_artist(legend)
+
+    plot_util.place_Tstep_marking(axs[1], 0.0)
+    handle = plot_util.place_Tstep_marking(axs[0], 0.0)
+    legend_dT = axs[0].legend(handles=[handle, ], loc="lower left")
+    axs[0].add_artist(legend_dT)
+
+    fig.tight_layout()
+
+    save_path = f"{save_base_path}sse_spin_currents_comparison.pdf"
+    fig.savefig(save_path)
+    save_util.source_paths(save_path, paths)
+    shared_description = ("Longitudinal spin current for crystallographic directions. x values for 110 and -110 have "
+                          "been corrected for the appropriate lattice constant.")
+    save_util.description(save_path, f"Used config data to calculate spin current. {shared_description}")
+
+    plt.show()
+
 
 # %% Main
 
 def main():
     initialize_data()
 
-    sse_magnetization_Bfield()
-    sse_magnaccum_Bfield()
+    # sse_magnetization_Bfield()
+    # sse_magnaccum_Bfield()
+    #
+    # peak_dependence()
 
-    peak_dependence()
+    # direction_comparison()
 
-    direction_comparison()
-
-    propagation_lengths()
-
-    sse_spin_currents(False)
+    # propagation_lengths()
+    #
+    # sse_spin_currents(False)
+    sse_spin_currents_comparison()
 
