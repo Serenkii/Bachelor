@@ -221,15 +221,15 @@ def dispersion_relation_dmi(shading='gouraud'):
     paths = {
         "100": "/data/scc/marian.gunsch/20/AM_Tstairs_DMI2_T2_x/",     # not sure whether to use        
         "010": "/data/scc/marian.gunsch/20/AM_Tstairs_DMI2_T2_y/",     # not sure whether to use        
-        "110": "/data/scc/marian.gunsch/20/AM_tilt_Tstairs_DMI2_T2_x/",        
-        "-110": "/data/scc/marian.gunsch/20/AM_tilt_Tstairs_DMI2_T2_y/"        
+        "1-10": "/data/scc/marian.gunsch/20/AM_tilt_Tstairs_DMI2_T2_x/",
+        "110": "/data/scc/marian.gunsch/20/AM_tilt_Tstairs_DMI2_T2_y/"
     }
 
     paths_nodmi = {
         "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x-2/",      # not sure whether to use
         "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y-2/",      # not sure whether to use
-        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
-        "-110": f"/data/scc/marian.gunsch/10/AM__tilt_Tstairs_T2_y-2/"  # oups: '__'
+        "1-10": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
+        "110": f"/data/scc/marian.gunsch/10/AM__tilt_Tstairs_T2_y-2/"  # oups: '__'
     }
 
     directions = paths.keys()
@@ -331,15 +331,15 @@ def sse_magnon_accumulation_dmi(accumulation=True):
     paths_dmi = {
         "100": "/data/scc/marian.gunsch/20/AM_xTstep_DMI2_T2/",        
         "010": "/data/scc/marian.gunsch/20/AM_yTstep_DMI2_T2/",        
-        "110": "/data/scc/marian.gunsch/20/AM_tilt_xTstep_DMI2_T2-2/",        
-        "-110": "/data/scc/marian.gunsch/20/AM_tilt_yTstep_DMI2_T2-2/"        
+        "1-10": "/data/scc/marian.gunsch/20/AM_tilt_xTstep_DMI2_T2-2/",
+        "110": "/data/scc/marian.gunsch/20/AM_tilt_yTstep_DMI2_T2-2/"
     }
 
     paths_nodmi = {
         "100": "/data/scc/marian.gunsch/16/AM_xTstep_T2/",
         "010": "/data/scc/marian.gunsch/16/AM_yTstep_T2/",
-        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_T2-2/",
-        "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
+        "1-10": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_T2-2/",
+        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
     }
 
     paths_equi_w = {
@@ -587,29 +587,29 @@ def sse_magnon_accumulation_dmi_B(accumulation=True):
     paths_dmi_B = {
         "100": "/data/scc/marian.gunsch/20/AM_xTstep_DMI2_B_T2/",        
         "010": "/data/scc/marian.gunsch/20/AM_yTstep_DMI2_B_T2/",        
-        "110": "/data/scc/marian.gunsch/20/AM_tilt_xTstep_DMI2_T2_B/",        
-        "-110": "/data/scc/marian.gunsch/20/AM_tilt_yTstep_DMI2_T2_B/"        
+        "1-10": "/data/scc/marian.gunsch/20/AM_tilt_xTstep_DMI2_T2_B/",
+        "110": "/data/scc/marian.gunsch/20/AM_tilt_yTstep_DMI2_T2_B/"
     }
 
     paths_dmi = {
         "100": "/data/scc/marian.gunsch/20/AM_xTstep_DMI2_T2/",        
         "010": "/data/scc/marian.gunsch/20/AM_yTstep_DMI2_T2/",        
-        "110": "/data/scc/marian.gunsch/20/AM_tilt_xTstep_DMI2_T2-2/",        
-        "-110": "/data/scc/marian.gunsch/20/AM_tilt_yTstep_DMI2_T2-2/"        
+        "1-10": "/data/scc/marian.gunsch/20/AM_tilt_xTstep_DMI2_T2-2/",
+        "110": "/data/scc/marian.gunsch/20/AM_tilt_yTstep_DMI2_T2-2/"
     }
 
     paths = {
         "100": "/data/scc/marian.gunsch/16/AM_xTstep_T2/",
         "010": "/data/scc/marian.gunsch/16/AM_yTstep_T2/",
-        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_T2-2/",
-        "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
+        "1-10": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_T2-2/",
+        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
     }
 
     paths_B = {
         "100": "/data/scc/marian.gunsch/13/13_AM_xTstep_T2_B100/",
         "010": "/data/scc/marian.gunsch/13/13_AM_yTstep_T2_B100/",  # simulation not started
-        "110": "/data/scc/marian.gunsch/05/05_AM_tilted_xTstep_T2_B100/",
-        "-110": "/data/scc/marian.gunsch/05/05_AM_tilted_yTstep_T2_B100/"
+        "1-10": "/data/scc/marian.gunsch/05/05_AM_tilted_xTstep_T2_B100/",
+        "110": "/data/scc/marian.gunsch/05/05_AM_tilted_yTstep_T2_B100/"
     }
 
     DMI = [False, True]
@@ -725,4 +725,4 @@ def main():
     sse_magnon_accumulation_dmi_B(True)
 
 
-    dispersion_relation_dmi()
+    # dispersion_relation_dmi()

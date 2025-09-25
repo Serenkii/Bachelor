@@ -215,12 +215,12 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ome
         for field in fields:
             for direction in directions:
                 ax = axs_dict[field][direction]
-                a = r"\tilde{a}" if direction in ["110", "-110"] else r"a"
+                a = r"\tilde{a}" if direction in ["1-10", "110"] else r"a"
                 ax.set_xlabel(rf"$k \cdot {a}$ in \hkl[{direction}]")
 
     def set_xlabels_2():
         for field in fields:
-            ax = axs_dict[field]["-110"]
+            ax = axs_dict[field]["110"]
             ax.set_xlabel(r"$k \cdot a_{\mathrm{d}}$")
         gs_dict = dict((direction, gs[i, 0]) for direction, i in zip(directions, range(4)))
         for direction in directions:
@@ -322,8 +322,8 @@ def dispersion_comparison_table_data(paths_no, paths_yes):
     delta_x = {
         "100": physics.lattice_constant,
         "010": physics.lattice_constant,
-        "110": physics.lattice_constant,
-        "-110": physics.lattice_constant
+        "1-10": physics.lattice_constant,
+        "110": physics.lattice_constant
     }
 
     directions = paths_yes.keys()
@@ -403,14 +403,14 @@ def dispersion_comparison_Bfield_table_data():
     paths_noB = {
         "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x-2/",
         "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y-2/",
-        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
-        "-110": f"/data/scc/marian.gunsch/10/AM__tilt_Tstairs_T2_y-2/"  # oups
+        "1-10": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
+        "110": f"/data/scc/marian.gunsch/10/AM__tilt_Tstairs_T2_y-2/"  # oups
     }
     paths_B = {
         "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100-2/",
         "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y_B100-2/",
-        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_B100-2/",
-        "-110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_y_B100-2/"
+        "1-10": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_B100-2/",
+        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_y_B100-2/"
     }
     return dispersion_comparison_table_data(paths_noB, paths_B)
 
@@ -813,14 +813,14 @@ def boundary_effects(temperature=2):
     paths_T2 = {
         "100": "/data/scc/marian.gunsch/12/AM_Tstairs_x_T2_openbou/",
         "010": "/data/scc/marian.gunsch/12/AM_Tstairs_y_T2_openbou/",
-        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_Tstairs_T2_openbou/",
-        "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstairs_T2_openbou/"
+        "1-10": "/data/scc/marian.gunsch/04/04_AM_tilted_Tstairs_T2_openbou/",
+        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstairs_T2_openbou/"
     }
     paths_T0 = {
         "100": "/data/scc/marian.gunsch/12/AM_Tstairs_x_T0_openbou/",
         "010": "/data/scc/marian.gunsch/12/AM_Tstairs_y_T0_openbou/",
-        "110": "/data/scc/marian.gunsch/12/AM_tilt_Tstairs_x_T0_openbou/",
-        "-110": "/data/scc/marian.gunsch/12/AM_tilt_Tstairs_y_T0_openbou/"
+        "1-10": "/data/scc/marian.gunsch/12/AM_tilt_Tstairs_x_T0_openbou/",
+        "110": "/data/scc/marian.gunsch/12/AM_tilt_Tstairs_y_T0_openbou/"
     }
     if temperature == 2:
         paths = paths_T2
@@ -832,8 +832,8 @@ def boundary_effects(temperature=2):
     tilted_dict = {
         "100": False,
         "010": False,
-        "110": True,
-        "-110": True
+        "1-10": True,
+        "110": True
     }
 
     # Profile data
@@ -860,19 +860,19 @@ def boundary_effects(temperature=2):
 
     # TILTED
     print("Plotting tilted...")
-    magn_config = handle_config_data_tilted(config_data["110"], config_data["-110"])
+    magn_config = handle_config_data_tilted(config_data["1-10"], config_data["110"])
 
     fig_tilted, *axs_tilted = broken_axes_boundary_plot(
+        real_space["1-10"], magnetization_profile["1-10"],
         real_space["110"], magnetization_profile["110"],
-        real_space["-110"], magnetization_profile["-110"],
         0, real_space["110"][-1] + physics.index_to_position(0.5, True),
         physics.index_to_position(8.2, True),
-        r"position $x/a$ in direction \hkl[110]",
-        r"position $y/a$ in direction \hkl[-110]",
+        r"position $x/a$ in direction \hkl[1-10]",
+        r"position $y/a$ in direction \hkl[110]",
         r"$\langle S^z \rangle$"
     )
 
-    plot_colormap_tilted(fig_tilted, axs_tilted, real_space["110"], real_space["-110"], magn_config,
+    plot_colormap_tilted(fig_tilted, axs_tilted, real_space["1-10"], real_space["110"], magn_config,
                          r"$\langle S^z \rangle$")
 
     fig_tilted.savefig(f"out/thesis/equilibrium/boundary_tilted_T{temperature}.pdf")

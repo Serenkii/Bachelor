@@ -24,60 +24,60 @@ save_base_path = "out/thesis/sse/"
 
 shared_kwargs = dict(markersize=0.5, linewidth=0.8)
 plot_kwargs_dict = {
-    "110": dict(**shared_kwargs, marker="", linestyle="-"),     # marker="s"
-    "-110": dict(**shared_kwargs, marker="", linestyle="--"),     # marker="D"
+    "1-10": dict(**shared_kwargs, marker="", linestyle="-"),     # marker="s"
+    "110": dict(**shared_kwargs, marker="", linestyle="--"),     # marker="D"
     "100": dict(**shared_kwargs, marker="", linestyle=":")
 }
 
 paths = {
-    "110": dict(),
-    "-110": dict()
+    "1-10": dict(),
+    "110": dict()
 }
 
 for B in range(50, 100 + 1, 10):        # 50, 60, ..., 90, 100
-    paths["110"][B] = f"/data/scc/marian.gunsch/05/05_AM_tilted_xTstep_T2_B{B}/"
-    paths["-110"][B] = f"/data/scc/marian.gunsch/05/05_AM_tilted_yTstep_T2_B{B}/"
+    paths["1-10"][B] = f"/data/scc/marian.gunsch/05/05_AM_tilted_xTstep_T2_B{B}/"
+    paths["110"][B] = f"/data/scc/marian.gunsch/05/05_AM_tilted_yTstep_T2_B{B}/"
 
 for B_ in range(50, 90 + 1, 10):       # -50, -60, ..., -90
     B = -B_
-    paths["110"][B] = f"/data/scc/marian.gunsch/17/AM_tilt_xTstep_T2_B/n{B_}/"
-    paths["-110"][B] = f"/data/scc/marian.gunsch/17/AM_tilt_yTstep_T2_B/n{B_}/"
+    paths["1-10"][B] = f"/data/scc/marian.gunsch/17/AM_tilt_xTstep_T2_B/n{B_}/"
+    paths["110"][B] = f"/data/scc/marian.gunsch/17/AM_tilt_yTstep_T2_B/n{B_}/"
 
-paths["110"][0] = "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_T2-2/"
-paths["-110"][0] = "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
-paths["110"][-100] = "/data/scc/marian.gunsch/06/06_AM_tilted_xTstep_T2_Bn100/"
-paths["-110"][-100] = "/data/scc/marian.gunsch/06/06_AM_tilted_yTstep_T2_Bn100/"
+paths["1-10"][0] = "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_T2-2/"
+paths["110"][0] = "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
+paths["1-10"][-100] = "/data/scc/marian.gunsch/06/06_AM_tilted_xTstep_T2_Bn100/"
+paths["110"][-100] = "/data/scc/marian.gunsch/06/06_AM_tilted_yTstep_T2_Bn100/"
 
-B_fields = paths["110"].keys()
-if B_fields != paths["-110"].keys():
+B_fields = paths["1-10"].keys()
+if B_fields != paths["110"].keys():
     raise AttributeError("Conflicting keys!")
 
 directions = paths.keys()
-field_strengths = sorted(paths["110"].keys(), reverse=False)
-assert field_strengths == sorted(paths["-110"].keys(), reverse=False)
+field_strengths = sorted(paths["1-10"].keys(), reverse=False)
+assert field_strengths == sorted(paths["110"].keys(), reverse=False)
 
 data_A = {
-    "110": dict(),
-    "-110": dict()
+    "1-10": dict(),
+    "110": dict()
 }
 data_B = {
-    "110": dict(),
-    "-110": dict()
+    "1-10": dict(),
+    "110": dict()
 }
 
 magnetization = {
-    "110": dict(),
-    "-110": dict()
+    "1-10": dict(),
+    "110": dict()
 }
 
 def initialize_data():
+    data_A["1-10"], data_B["1-10"] = mag_util.npy_files_from_dict(paths["1-10"])
     data_A["110"], data_B["110"] = mag_util.npy_files_from_dict(paths["110"])
-    data_A["-110"], data_B["-110"] = mag_util.npy_files_from_dict(paths["-110"])
     for direction in directions:
         for B in field_strengths:
             magnetization[direction][B] = physics.magnetization(
-                mag_util.get_component(data_A[direction][B], "z", 15),
-                mag_util.get_component(data_B[direction][B], "z", 15), True)
+                mag_util.get_component(data_A[direction][B], "z", 0),
+                mag_util.get_component(data_B[direction][B], "z", 0), True)
 
 
 # %% INTRODUCTION OF A STATIC MAGNETIC FIELD (MAGNETIZATION)
@@ -89,6 +89,7 @@ def plot_magn_Bfield(magn_dict, ylabel=r"magnetization $\langle S^z \rangle$", x
         warnings.warn(f"{len(field_strengths_)} field strengths are a lot to plot... Messy, huh?")
 
     fig, ax = plt.subplots()
+    ax.axhline(0, color="gray", linestyle="-", marker="", linewidth=0.5)
 
     max_val = - np.inf
     min_val = np.inf
@@ -99,7 +100,7 @@ def plot_magn_Bfield(magn_dict, ylabel=r"magnetization $\langle S^z \rangle$", x
 
     for direction in directions:
         for B, color in zip(field_strengths_, colors):
-            # label = r"$\num{" + str(B) + r"}{}$" if direction == "110" else None
+            # label = r"$\num{" + str(B) + r"}{}$" if direction == "1-10" else None
             label = r"$\num{" + str(B) + r"}{}$"
             _line, = ax.plot(magn_dict[direction][B], **plot_kwargs_dict[direction],
                             label=label, color=color)
@@ -117,9 +118,9 @@ def plot_magn_Bfield(magn_dict, ylabel=r"magnetization $\langle S^z \rangle$", x
     ax.set_xlim(*xlim)
     ax.set_ylim(min_val - pad * val_range, max_val + pad * val_range)
 
-    legend1 = plt.legend(handles=lines["110"], ncols=2, title=f"\\hkl[110]: " + r"$B$ (\si{\tesla})",
+    legend1 = plt.legend(handles=lines["1-10"], ncols=2, title=f"\\hkl[1-10]: " + r"$B$ (\si{\tesla})",
                          fontsize="small", loc="upper right")
-    legend2 = plt.legend(handles=lines["-110"], ncols=2, title=f"\\hkl[-110]: " + r"$B$ (\si{\tesla})",
+    legend2 = plt.legend(handles=lines["110"], ncols=2, title=f"\\hkl[110]: " + r"$B$ (\si{\tesla})",
                          fontsize="small", loc="lower right")
     ax.add_artist(legend1)
     ax.add_artist(legend2)
@@ -168,8 +169,8 @@ def sse_magnaccum_Bfield():
     step_pos = helper.get_absolute_T_step_index(0.49, 256)
 
     magnon_accumulation = {
-        "110": dict(),
-        "-110": dict()
+        "1-10": dict(),
+        "110": dict()
     }
 
     for direction in directions:
@@ -191,12 +192,12 @@ def peak_dependence():
     area_slice = slice(helper.get_index_first_cold(0.49, 256), None)
 
     abs_max_func = {
-        "110": np.max,
-        "-110": np.min
+        "1-10": np.max,
+        "110": np.min
     }
     peaks = {
-        "110": dict(),
-        "-110": dict()
+        "1-10": dict(),
+        "110": dict()
     }
 
     for direction in directions:
@@ -228,11 +229,11 @@ def peak_dependence():
 
     sign = + 1
 
-    ax.plot(field_strengths, linear_func(field_strengths, *popt["110"]), linestyle="-", marker="", color="k")
-    ax.plot(field_strengths, sign * linear_func(field_strengths, *popt["-110"]), linestyle="-", marker="", color="k")
+    ax.plot(field_strengths, linear_func(field_strengths, *popt["1-10"]), linestyle="-", marker="", color="k")
+    ax.plot(field_strengths, sign * linear_func(field_strengths, *popt["110"]), linestyle="-", marker="", color="k")
 
-    ax.plot(field_strengths, [peaks["110"][B] for B in field_strengths], label=r"\hkl[110]", linestyle="", marker="o")
-    ax.plot(field_strengths, [sign * peaks["-110"][B] for B in field_strengths], label=r"\hkl[-110]", linestyle="", marker="s")
+    ax.plot(field_strengths, [peaks["1-10"][B] for B in field_strengths], label=r"\hkl[1-10]", linestyle="", marker="o")
+    ax.plot(field_strengths, [sign * peaks["110"][B] for B in field_strengths], label=r"\hkl[110]", linestyle="", marker="s")
 
     ax.legend(loc="upper left")
 
@@ -244,7 +245,7 @@ def peak_dependence():
 
 
 
-# %% Compare for different directions for one magnetic field strength: magnetization for [100], [110], [-110]
+# %% Compare for different directions for one magnetic field strength: magnetization for [100], [1-10], [110]
 def direction_comparison():
     path_100 = "/data/scc/marian.gunsch/13/13_AM_xTstep_T2_B100/"
     # path_100 = "/data/scc/marian.gunsch/13/13_AM_xTstep_T2_Bn100/"
@@ -268,19 +269,19 @@ def direction_comparison():
     tempA, tempB = mag_util.npy_files(path_100)
     data_A_ = {
         "100": tempA,
-        "110": data_A["110"][B_strength],
-        "-110": data_A["-110"][B_strength]
+        "1-10": data_A["1-10"][B_strength],
+        "110": data_A["110"][B_strength]
     }
     data_B_ = {
         "100": tempB,
-        "110": data_B["110"][B_strength],
-        "-110": data_B["-110"][B_strength]
+        "1-10": data_B["1-10"][B_strength],
+        "110": data_B["110"][B_strength]
     }
 
     lattice_const = {
         "100": physics.lattice_constant,
-        "110": physics.lattice_constant_tilted,
-        "-110": physics.lattice_constant_tilted
+        "1-10": physics.lattice_constant_tilted,
+        "110": physics.lattice_constant_tilted
     }
 
     directions_ = data_A_.keys()
@@ -319,8 +320,8 @@ def direction_comparison():
         ax2.set_ylim(min_accu - pad * accu_range, max_accu + pad * accu_range)
 
         custom_plot_kwargs = plot_kwargs_dict.copy()
-        custom_plot_kwargs["110"].update(dict(linestyle="-", marker="s", markersize=1.2))
-        custom_plot_kwargs["-110"].update(dict(linestyle="-", marker="D", markersize=1.2))
+        custom_plot_kwargs["1-10"].update(dict(linestyle="-", marker="s", markersize=1.2))
+        custom_plot_kwargs["110"].update(dict(linestyle="-", marker="D", markersize=1.2))
         custom_plot_kwargs["100"].update(dict(linestyle="-", marker="o", markersize=1.2))
 
         for direction in directions_:
@@ -356,7 +357,7 @@ def direction_comparison():
 
 
 
-# %% Propagation lengths for [110] and [-110] for different B-fields
+# %% Propagation lengths for [1-10] and [110] for different B-fields
 def propagation_lengths():
     x0 = 3
     start = helper.get_index_first_cold(0.49, 256) + x0
@@ -421,16 +422,19 @@ def propagation_lengths():
     fit_func = mono_exp()
 
     def plot():
-        x_axis = np.arange(len(magnetization["110"][0]))
+        x_axis = np.arange(len(magnetization["1-10"][0]))
         x_fit = np.linspace(0, fit_area.stop - fit_area.start, 300)
 
         fig, ax = plt.subplots()
 
+        print(field_strengths)
         for direction in directions:
             for B in field_strengths:
-                ax.plot(x_axis, magnetization[direction][B], linestyle="", marker="o", markersize=0.2)
+                ax.plot(x_axis, magnetization[direction][B], linestyle="", marker="o", markersize=0.2,
+                        label=f"[{direction}], {B=}")
                 ax.plot(x_fit + fit_area.start, fit_func(x_fit, *popt[direction][B]), linestyle="-", marker="",
                         linewidth=0.2, color="k")
+                ax.legend(loc="upper right", fontsize="x-small")
 
         ax.set_xlim(120, 200)
         ax.set_ylim(-0.002, 0.002)
@@ -473,18 +477,20 @@ def propagation_lengths():
 # %% SPIN CURRENTS
 def sse_spin_currents(from_profile=True, xlim=(-111.5, 141.5)):
 
+    normed_units = True
+
     warnings.warn("Use updated paths, once simulations are finished running.")
     paths = {       # if starts running: -2 with 128 z layers to reduce noise
         "100": "/data/scc/marian.gunsch/16/AM_xTstep_T2-2/",        # with or without _noABC? (makes no difference)
         "010": "/data/scc/marian.gunsch/16/AM_yTstep_T2-2/",          # Not sure whether to use at all
-        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_T2-2/",
-        "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
+        "1-10": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_T2-2/",
+        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
     }
 
     if from_profile:
         dataA_, dataB_ = mag_util.npy_files_from_dict(paths)
     else:
-        curr_dir = { "100": "x", "110": "x", "010": "y", "-110":"y"}
+        curr_dir = { "100": "x", "1-10": "x", "010": "y", "110":"y"}
         conf_data = spinconf_util.npy_file_from_dict(paths)
 
     shift = 0.5     # this is needed because we are working with currents (in between two layers/atoms)
@@ -496,11 +502,11 @@ def sse_spin_currents(from_profile=True, xlim=(-111.5, 141.5)):
 
     for direction in directions_:
         if from_profile:
-            currents[direction] = mag_util.spin_current(dataA_[direction], dataB_[direction], direction, normed_units=False)
+            currents[direction] = mag_util.spin_current(dataA_[direction], dataB_[direction], direction, normed_units=normed_units)
             N = mag_util.get_component(dataA_[direction], "x").shape[1]
         else:
             currents[direction] = spinconf_util.spin_current(conf_data[direction], curr_dir[direction], direction, curr_dir[direction],
-                                                             normed_units=False)
+                                                             normed_units=normed_units)
             N[direction] = conf_data[direction].shape[0] if curr_dir[direction] == "x" else conf_data[direction].shape[1]
 
     Tstep_pos = dict()
@@ -514,7 +520,8 @@ def sse_spin_currents(from_profile=True, xlim=(-111.5, 141.5)):
 
     fig, ax = plt.subplots()
     ax.set_xlabel("position $x/a$")
-    ax.set_ylabel(r"spin current $j^{\mathrm{L}}$ (\si{\meter\per\second})")
+    # ax.set_ylabel(r"spin current $j^{\mathrm{L}}$ (\si{\meter\per\second})")
+    ax.set_ylabel(r"spin current $j^{\mathrm{L}}$ ($\tfrac{\gamma_{\mathrm{e}} \, a \, J_1}{\mu_{\mathrm{B}}}$)")
     ax.set_xlim(*xlim)
 
     lines = []
@@ -537,7 +544,7 @@ def sse_spin_currents(from_profile=True, xlim=(-111.5, 141.5)):
     save_path = f"{save_base_path}sse_spin_currents{suffix}.pdf"
     fig.savefig(save_path)
     save_util.source_paths(save_path, paths)
-    shared_description = ("Longitudinal spin current for crystallographic directions. x values for 110 and -110 have "
+    shared_description = ("Longitudinal spin current for crystallographic directions. x values for 1-10 and 110 have "
                           "been corrected for the appropriate lattice constant.")
     if from_profile:
         save_util.description(save_path, f"Used profile data to calculate spin current. {shared_description}")
@@ -548,18 +555,20 @@ def sse_spin_currents(from_profile=True, xlim=(-111.5, 141.5)):
 
 
 def sse_spin_currents_comparison(xlim=(-101.5, 126.5)):
+    normed_units = True
+
     paths = {
         False : {
             "100": "/data/scc/marian.gunsch/16/AM_xTstep_T2-2/",
             "010": "/data/scc/marian.gunsch/16/AM_yTstep_T2-2/",
-            "110": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_T2-2/",
-            "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
+            "1-10": "/data/scc/marian.gunsch/04/04_AM_tilted_xTstep_T2-2/",
+            "110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstep_T2-2/"
         },
         True : {
             "100": "/data/scc/marian.gunsch/13/13_AM_xTstep_T2_B100/",
             "010": "/data/scc/marian.gunsch/13/13_AM_yTstep_T2_B100/",
-            "110": "/data/scc/marian.gunsch/05/05_AM_tilted_xTstep_T2_B100/",
-            "-110": "/data/scc/marian.gunsch/05/05_AM_tilted_yTstep_T2_B100/"
+            "1-10": "/data/scc/marian.gunsch/05/05_AM_tilted_xTstep_T2_B100/",
+            "110": "/data/scc/marian.gunsch/05/05_AM_tilted_yTstep_T2_B100/"
         }
     }
 
@@ -567,7 +576,7 @@ def sse_spin_currents_comparison(xlim=(-101.5, 126.5)):
 
     field_strengths = paths.keys()
     directions = paths[False].keys()
-    curr_dir = {"100": "x", "110": "x", "010": "y", "-110": "y"}
+    curr_dir = {"100": "x", "1-10": "x", "010": "y", "110": "y"}
 
     conf_data = {B: spinconf_util.npy_file_from_dict(paths[B]) for B in field_strengths}
 
@@ -580,7 +589,7 @@ def sse_spin_currents_comparison(xlim=(-101.5, 126.5)):
         for d in directions:
             currents[B][d] = spinconf_util.spin_current(conf_data[B][d] , curr_dir[d], d,
                                                              curr_dir[d],
-                                                             normed_units=False)
+                                                             normed_units=normed_units)
             N = conf_data[B][d].shape[0] if curr_dir[d] == "x" else conf_data[B][d] .shape[1]
 
             Tstep_pos = helper.get_actual_Tstep_pos(0.49, N)
@@ -597,7 +606,13 @@ def sse_spin_currents_comparison(xlim=(-101.5, 126.5)):
     axs_dict = { False: axs[0], True: axs[1] }
     axs[0].set_xlabel("$x/a$")
     axs[1].set_xlabel("$x/a$")
-    axs[0].set_ylabel(r"spin current $j^{\mathrm{L}}$ (\si{\meter\per\second})")
+    axs[0].axhline(0, color="gray", linestyle="-", marker="", linewidth=0.5)
+    axs[1].axhline(0, color="gray", linestyle="-", marker="", linewidth=0.5)
+
+    if normed_units:
+        axs[0].set_ylabel(r"spin current $j^{\mathrm{L}}$ ($\tfrac{\gamma_{\mathrm{e}} \, a \, J_1}{\mu_{\mathrm{B}}}$)")
+    else:
+        axs[0].set_ylabel(r"spin current $j^{\mathrm{L}}$ (\si{\meter\per\second})")
     axs[0].set_xlim(*xlim)
 
     axs_dict[False].set_title(r"$B = 0$")
@@ -623,7 +638,7 @@ def sse_spin_currents_comparison(xlim=(-101.5, 126.5)):
     save_path = f"{save_base_path}sse_spin_currents_comparison.pdf"
     fig.savefig(save_path)
     save_util.source_paths(save_path, paths)
-    shared_description = ("Longitudinal spin current for crystallographic directions. x values for 110 and -110 have "
+    shared_description = ("Longitudinal spin current for crystallographic directions. x values for 1-10 and 110 have "
                           "been corrected for the appropriate lattice constant.")
     save_util.description(save_path, f"Used config data to calculate spin current. {shared_description}")
 
@@ -635,15 +650,15 @@ def sse_spin_currents_comparison(xlim=(-101.5, 126.5)):
 def main():
     initialize_data()
 
-    # sse_magnetization_Bfield()
-    # sse_magnaccum_Bfield()
-    #
-    # peak_dependence()
+    sse_magnetization_Bfield()
+    sse_magnaccum_Bfield()
 
-    # direction_comparison()
+    peak_dependence()
 
-    # propagation_lengths()
-    #
-    # sse_spin_currents(False)
+    direction_comparison()
+
+    propagation_lengths()
+
+    sse_spin_currents(False)
     sse_spin_currents_comparison()
 

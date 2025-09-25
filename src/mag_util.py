@@ -556,7 +556,13 @@ def npy_files(dat_path: str, npy_path=None, slice_index=-100_000, force=default_
     if not npy_path:
         folder_list = data_path_A.split("/")
         index0 = folder_list.index("marian.gunsch")
-        save_name = f"{folder_list[index0 + 1].zfill(2)}_{folder_list[index0 + 2]}"
+        save_name = f"{folder_list[index0 + 1].zfill(2)}"
+        for i in range(2, 5):
+            if folder_list[index0 + i].startswith("spin-configs"):
+                break
+            save_name += f"_{folder_list[index0 + 2]}"
+        else:
+            warnings.warn("High number of nested folders!")
         npy_path = f"{base_folder}{save_name}"
         print(f"Chose npy base path '{npy_path}' based on the given data path.")
     elif npy_path.endswith(".npy"):

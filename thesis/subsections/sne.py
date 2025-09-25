@@ -25,9 +25,9 @@ from src.save_util import description
 save_base_path = "out/thesis/sne/"
 
 # spectrum_data_points = 1_000
-spectrum_data_points = 1_000_000
+spectrum_data_points = 300_000
 
-if spectrum_data_points < 100_000:
+if spectrum_data_points < 10_000:
     warnings.warn("Running with limited amount of data points!")
 
 
@@ -372,16 +372,16 @@ def spin_accu_config(tilted_data, direction):
     x_space = np.arange(0.5, magnetization.shape[0], 1)
     y_space = np.arange(0.5, magnetization.shape[1], 1)
 
-    if direction == "-110":
+    if direction == "110":
         s = spin_accu_config_plot(magnetization.T, y_space, x_space, magn_profile_y, magn_profile_x,
-                              x_space_label=r"position $x / \tilde{a}$ in direction \hkl[-110]",
-                              y_space_label=r"position $y / \tilde{a}$ in direction \hkl[-1-10]",
-                              save_suffix="_-110")
-    elif direction == "110":
-        s = spin_accu_config_plot(magnetization, x_space, y_space, magn_profile_x, magn_profile_y,
                               x_space_label=r"position $x / \tilde{a}$ in direction \hkl[110]",
                               y_space_label=r"position $y / \tilde{a}$ in direction \hkl[-110]",
                               save_suffix="_110")
+    elif direction == "1-10":
+        s = spin_accu_config_plot(magnetization, x_space, y_space, magn_profile_x, magn_profile_y,
+                              x_space_label=r"position $x / \tilde{a}$ in direction \hkl[1-10]",
+                              y_space_label=r"position $y / \tilde{a}$ in direction \hkl[110]",
+                              save_suffix="_1-10")
     else:
         raise ValueError(f"Direction '{direction}' not valid.")
 
@@ -393,7 +393,7 @@ def spin_accu_config(tilted_data, direction):
 
 def sne_accumulation_profile_plot(x_space, magnetization, profile_dirs, a_labels=None,
                                   absdistance=24, abspad=1.2, save_name=None):
-    a_labels = a_labels or {"100": r"a", "010": r"a", "110": r"\tilde{a}", "-110": r"\tilde{a}"}
+    a_labels = a_labels or {"100": r"a", "010": r"a", "1-10": r"\tilde{a}", "110": r"\tilde{a}"}
 
     Tdirections = magnetization.keys()
 
@@ -418,15 +418,15 @@ def sne_accumulation_profile_plot(x_space, magnetization, profile_dirs, a_labels
     axs["100"] = (temp, fig.add_subplot(gs[0, 1], sharey=temp))
     axs["010"] = (fig.add_subplot(gs[0, 3], sharey=temp), fig.add_subplot(gs[0, 4], sharey=temp))
     temp = fig.add_subplot(gs[1, 0])
-    axs["110"] = (temp, fig.add_subplot(gs[1, 1], sharey=temp))
-    axs["-110"] = (fig.add_subplot(gs[1, 3], sharey=temp), fig.add_subplot(gs[1, 4], sharey=temp))
+    axs["1-10"] = (temp, fig.add_subplot(gs[1, 1], sharey=temp))
+    axs["110"] = (fig.add_subplot(gs[1, 3], sharey=temp), fig.add_subplot(gs[1, 4], sharey=temp))
 
     def remove_spines():
         for d in Tdirections:
             axs[d][0].spines.right.set_visible(False)
             axs[d][1].spines.left.set_visible(False)
             axs[d][1].tick_params(left=False, labelleft=False)
-        for d in ["010", "-110"]:
+        for d in ["010", "110"]:
             axs[d][0].tick_params(labelleft=False)
 
     def broken_axes_markings():
@@ -438,7 +438,7 @@ def sne_accumulation_profile_plot(x_space, magnetization, profile_dirs, a_labels
             util.add_axis_break_marking(axs[d][1], "bottom left", "horizontal", size)
 
     def place_axes_labels(pad=0.055):
-        for d in ["100", "110"]:
+        for d in ["100", "1-10"]:
             axs[d][0].set_ylabel(r"$\langle S^z \rangle$")
         for d in Tdirections:
             y = axs[d][0].get_position().get_points()[0][1]
@@ -482,28 +482,28 @@ def sne_spin_accumulation_profilsubtract():
     paths = {
         "100": f"/data/scc/marian.gunsch/08/08_xTstep/T{T}/",
         "010": f"/data/scc/marian.gunsch/08/08_yTstep/T{T}/",
-        "110": f"/data/scc/marian.gunsch/00/AM_tiltedX_Tstep_nernst/AM_tiltedX_Tstep_nernst_T{T}/",
-        "-110": f"/data/scc/marian.gunsch/08/08_tilted_yTstep/T{T}/",
+        "1-10": f"/data/scc/marian.gunsch/00/AM_tiltedX_Tstep_nernst/AM_tiltedX_Tstep_nernst_T{T}/",
+        "110": f"/data/scc/marian.gunsch/08/08_tilted_yTstep/T{T}/",
     }
 
     # equi_paths_middle = {
     #     "100": "/data/scc/marian.gunsch/11/AM_xTstep_y/",
     #     "010": "/data/scc/marian.gunsch/11/AM_yTstep_x/",
-    #     "110": "/data/scc/marian.gunsch/11/AM_tilt_xTstep_y/",
-    #     "-110": "/data/scc/marian.gunsch/11/AM_tilt_yTstep_x/"
+    #     "1-10": "/data/scc/marian.gunsch/11/AM_tilt_xTstep_y/",
+    #     "110": "/data/scc/marian.gunsch/11/AM_tilt_yTstep_x/"
     # }
 
     equi_paths_bound = {
         "010": "/data/scc/marian.gunsch/12/AM_Tstairs_x_T2_openbou/",
         "100": "/data/scc/marian.gunsch/12/AM_Tstairs_y_T2_openbou/",
-        "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_Tstairs_T2_openbou/",
-        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstairs_T2_openbou/"
+        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_Tstairs_T2_openbou/",
+        "1-10": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstairs_T2_openbou/"
     }
 
     directions = paths.keys()
-    profile_direction_cryst = { "100": "010", "110": "-110", "-110": "-1-10", "010": "-100" }
-    reverse_profile = {"100": False, "110": False, "-110": True, "010": True}
-    temp_direction = { "100" : "x", "110" : "x", "-110" : "y", "010" : "y" }
+    profile_direction_cryst = { "100": "010", "1-10": "110", "110": "-110", "010": "-100" }
+    reverse_profile = {"100": False, "1-10": False, "110": True, "010": True}
+    temp_direction = { "100" : "x", "1-10" : "x", "110" : "y", "010" : "y" }
     temp_shape_index = { "x":0, "y":1 }
 
     dataA, dataB = mag_util.npy_files_from_dict(paths)
@@ -569,23 +569,23 @@ def sne_spin_accumulation(plot_config=True, component="z"):
     paths = {
         "100": f"/data/scc/marian.gunsch/08/08_xTstep/T{T}/",
         "010": f"/data/scc/marian.gunsch/08/08_yTstep/T{T}/",
-        "110": f"/data/scc/marian.gunsch/00/AM_tiltedX_Tstep_nernst/AM_tiltedX_Tstep_nernst_T{T}/",
-        "-110": f"/data/scc/marian.gunsch/08/08_tilted_yTstep/T{T}/",
+        "1-10": f"/data/scc/marian.gunsch/00/AM_tiltedX_Tstep_nernst/AM_tiltedX_Tstep_nernst_T{T}/",
+        "110": f"/data/scc/marian.gunsch/08/08_tilted_yTstep/T{T}/",
     }
 
     # for cold region
     equi_T0_paths = {
         "100": "/data/scc/marian.gunsch/12/AM_Tstairs_x_T0_openbou/",
         "010": "/data/scc/marian.gunsch/12/AM_Tstairs_y_T0_openbou/",
-        "110": "/data/scc/marian.gunsch/12/AM_tilt_Tstairs_x_T0_openbou/",
-        "-110": "/data/scc/marian.gunsch/12/AM_tilt_Tstairs_y_T0_openbou/"
+        "1-10": "/data/scc/marian.gunsch/12/AM_tilt_Tstairs_x_T0_openbou/",
+        "110": "/data/scc/marian.gunsch/12/AM_tilt_Tstairs_y_T0_openbou/"
     }
 
     is_tilted = {
         "100": False,
         "010": False,
-        "110": True,
-        "-110": True
+        "1-10": True,
+        "110": True
     }
 
     directions = paths.keys()
@@ -594,21 +594,21 @@ def sne_spin_accumulation(plot_config=True, component="z"):
 
     # Config plots: To get an idea of what the profile plots later on show
     if plot_config:
-        save_name = spin_accu_config(conf_data["-110"], "-110")
-        save_util.source_paths(save_name, paths["-110"])
-
         save_name = spin_accu_config(conf_data["110"], "110")
         save_util.source_paths(save_name, paths["110"])
+
+        save_name = spin_accu_config(conf_data["1-10"], "1-10")
+        save_util.source_paths(save_name, paths["1-10"])
 
 
 
     # Profile plots
-    profile_direction = { "100": "y", "110": "y", "-110": "x", "010": "x" }
+    profile_direction = { "100": "y", "1-10": "y", "110": "x", "010": "x" }
     # The crystallographic profile direction for the respective gradient T directions
-    profile_direction_cryst = { "100": "010", "110": "-110", "-110": "-1-10", "010": "-100" }
-    reverse_profile = { "100": False, "110": False, "-110": True, "010": True }
-    # profile_direction_cryst = {"100": "010", "110": "-110", "-110": "110", "010": "100"}
-    # reverse_profile = {"100": False, "110": False, "-110": False, "010": False}
+    profile_direction_cryst = { "100": "010", "1-10": "110", "110": "-110", "010": "-100" }
+    reverse_profile = { "100": False, "1-10": False, "110": True, "010": True }
+    # profile_direction_cryst = {"100": "010", "1-10": "110", "110": "1-10", "010": "100"}
+    # reverse_profile = {"100": False, "1-10": False, "110": False, "010": False}
 
     # from profiles
     profilesA, profilesB = mag_util.npy_files_from_dict(paths)
@@ -652,6 +652,8 @@ def sne_spin_accumulation(plot_config=True, component="z"):
 # %% Spin currents (transversal)
 
 def transversal_spin_currents(paths, xlim=(-81.5, 1.269 * 81.5), ypad=0.05, save_name=None, **kwargs):
+    normed_current = True
+
     plot_kwargs = dict(marker="", linestyle="-", linewidth=1)
     plot_kwargs.update(kwargs)
 
@@ -659,20 +661,20 @@ def transversal_spin_currents(paths, xlim=(-81.5, 1.269 * 81.5), ypad=0.05, save
     transversal_cryst_directions = {
         "100": "010",
         "010": "-100",
-        "110": "-110",
-        "-110": "-1-10"
+        "1-10": "110",
+        "110": "-110"
     }
     transversal_directions = {
         "100": "y",
         "010": "x",
-        "110": "y",
-        "-110": "x"
+        "1-10": "y",
+        "110": "x"
     }
     profile_directions = {
         "100": "x",
         "010": "y",
-        "110": "x",
-        "-110": "y"
+        "1-10": "x",
+        "110": "y"
     }
 
     confdata = spinconf_util.npy_file_from_dict(paths)
@@ -683,7 +685,7 @@ def transversal_spin_currents(paths, xlim=(-81.5, 1.269 * 81.5), ypad=0.05, save
     for d in Tstep_directions:
         currents[d] = spinconf_util.spin_current(
             confdata[d], transversal_directions[d], transversal_cryst_directions[d],
-            profile_directions[d], False)
+            profile_directions[d], False, normed_units=normed_current)
 
         Tstep_pos[d] = helper.get_actual_Tstep_pos(0.49, currents[d].shape[0])
         x = np.arange(len(currents[d]), dtype=float)
@@ -717,6 +719,11 @@ def transversal_spin_currents(paths, xlim=(-81.5, 1.269 * 81.5), ypad=0.05, save
     pad = (max_ - min_) * ypad
     ax.set_ylim(min_ - pad, max_ + pad)
 
+    ax.set_xlabel(r"$x/a$")
+    ax.set_ylabel(r"spin current $j^{\mathrm{L}}$ ($\tfrac{\gamma_{\mathrm{e}} \, a \, J_1}{\mu_{\mathrm{B}}}$)")
+
+    fig.tight_layout()
+
     save_path = f"{save_base_path}{save_name}.pdf"
     if save_name:
         fig.savefig(save_path)
@@ -732,8 +739,8 @@ def spin_currents_open():
     paths = {
         "100": "/data/scc/marian.gunsch/11/AM_xTstep_y/",
         "010": "/data/scc/marian.gunsch/11/AM_yTstep_x/",
-        "110": "/data/scc/marian.gunsch/11/AM_tilt_xTstep_y/",
-        "-110": "/data/scc/marian.gunsch/11/AM_tilt_yTstep_x/"
+        "1-10": "/data/scc/marian.gunsch/11/AM_tilt_xTstep_y/",
+        "110": "/data/scc/marian.gunsch/11/AM_tilt_yTstep_x/"
     }
     
     save_path = transversal_spin_currents(paths, save_name="sne_spincurrent_periodic")
@@ -742,90 +749,83 @@ def spin_currents_open():
     
 
 
-
-def spin_currents_upperABC():
-    pass
-    # print("Massive problems running simulations.")
-    # print("Jobscripts labelled with '11' ")
-    # now 18
-
-
-def spin_currents_uploABC():
-    pass
-    print("Massive problems running simulations.")
-    print("Jobscripts labelled with '11' ")
-    # now 18
-
-
-
 # %% Magnon spectrum
 
-def sne_spectrum_plot(freq_dict, magnon_density_dict, step_dir, reversed_direct, reverse,
+def sne_spectrum_plot(freq_dict, magnon_density_dict, profile_dir, reverse_profile,
                       xlim=(-0.55, 0.55), yfactor=1.0, xticks=(-0.4, 0.0, 0.4)):
     print("Plotting...")
 
+    nrows = len(freq_dict.keys())
+    nrows_default = 3
+    frac = nrows / nrows_default
+
     plot_kwargs = dict(linewidth=0.07)
 
-    fig = plt.figure(figsize=mpl_config.get_size(1.0, 1.4))
-    gs = fig.add_gridspec(nrows=3, ncols=4, hspace=0.34, width_ratios=[0.5, 2, 2, 2])
+    fig = plt.figure(figsize=mpl_config.get_size(1.0, frac * 1.4))
+    gs = fig.add_gridspec(nrows=nrows, ncols=4, hspace=0.34, width_ratios=[0.5, 2, 2, 2])
 
     freq_unit_factor = 1e15
     freq_unit = r"\SI{e15}{\radian\per\second}"
 
-    axs = dict()
+
+    axs = []
     temp = fig.add_subplot(gs[0, 1])
-    axs["010"] = (temp, fig.add_subplot(gs[0, 2], sharey=temp, sharex=temp),
-                   fig.add_subplot(gs[0, 3], sharey=temp, sharex=temp))
-    axs["-110"] = (fig.add_subplot(gs[1, 1], sharey=temp, sharex=temp), fig.add_subplot(gs[1, 2], sharey=temp, sharex=temp),
-                   fig.add_subplot(gs[1, 3], sharey=temp, sharex=temp))
-    axs["110"] = (fig.add_subplot(gs[2, 1], sharey=temp, sharex=temp), fig.add_subplot(gs[2, 2], sharey=temp, sharex=temp),
-                   fig.add_subplot(gs[2, 3], sharey=temp, sharex=temp))
+    axs.append((temp, fig.add_subplot(gs[0, 2], sharey=temp, sharex=temp),
+                fig.add_subplot(gs[0, 3], sharey=temp, sharex=temp)))
+    for i in range(1, nrows):
+        axs.append((fig.add_subplot(gs[i, 1], sharey=temp, sharex=temp), fig.add_subplot(gs[i, 2], sharey=temp, sharex=temp),
+                    fig.add_subplot(gs[i, 3], sharey=temp, sharex=temp)))
+    temp.set_xlim(*xlim)
 
-
-    axs["010"][0].set_xlim(*xlim)
 
     def handle_ticks():
-        for i in range(3):
-            axs["010"][i].tick_params(bottom=True, labelbottom=False)
-            axs["-110"][i].tick_params(bottom=True, labelbottom=False)
-        for d in freq_dict.keys():
-            axs[d][1].tick_params(left=True, labelleft=False)
-            axs[d][2].tick_params(left=True, labelleft=False)
+        for j in range(nrows - 1):
+            for i in range(3):
+                axs[j][i].tick_params(bottom=True, labelbottom=False)
+                axs[j][i].tick_params(bottom=True, labelbottom=False)
+        for j in range(nrows):
+            axs[j][1].tick_params(left=True, labelleft=False)
+            axs[j][2].tick_params(left=True, labelleft=False)
 
         for i in range(3):
-            axs["110"][i].set_xticks(xticks)
+            axs[-1][i].set_xticks(xticks)
 
 
     def gradient_direction():
-        for direction in freq_dict.keys():
+        for i, direction in enumerate(freq_dict.keys()):
             pad = 0.11
-            x = axs[direction][0].get_position().get_points()[0][0]
-            y1 = axs[direction][1].get_position().get_points()[0][1]
-            y2 = axs[direction][1].get_position().get_points()[1][1]
-            fig.text(x - pad, 0.5 * (y1 + y2), rf"$ - \nabla T \parallel \hkl[{step_dir[direction]}]$", rotation=90,
+            x = axs[i][0].get_position().get_points()[0][0]
+            y1 = axs[i][1].get_position().get_points()[0][1]
+            y2 = axs[i][1].get_position().get_points()[1][1]
+            fig.text(x - pad, 0.5 * (y1 + y2), rf"$ - \nabla T \parallel \hkl[{direction}]$", rotation=90,
                      ha="right", va="center", size=mpl.rcParams["axes.titlesize"])
 
     max_magn_density = - np.inf
-    for direction in axs.keys():
-        for i_, index in enumerate([0, int(magnon_density_dict[direction].shape[1] * 0.5),
-                                   magnon_density_dict[direction].shape[1] - 1]):
+    for i, direction in enumerate(freq_dict.keys()):
+        lattice_positions = [0, magnon_density_dict[direction].shape[1] // 2 - 1, magnon_density_dict[direction].shape[1] - 1]
 
-            i = 2 - i_ if reverse[direction] else i_    # i hate it i hate it i hate it i hate it
-
+        print(f"{direction=}")
+        print(f"{i=}")
+        for j, lattice_pos in enumerate(lattice_positions):
+            j_ = 2 - j if reverse_profile[direction] else j
             freq = freq_dict[direction] / freq_unit_factor
-            magnon_density = magnon_density_dict[direction][:, index]
+            magnon_density = magnon_density_dict[direction][:, lattice_pos]
             max_magn_density = max(max_magn_density, np.max(magnon_density))
-            axs[direction][i].plot(freq, magnon_density, **plot_kwargs)
-            a = r"\tilde{a}" if direction in ["-110", "110"] else "a"
-            axs[direction][i_].set_title(fr"$x_{{\hkl[{reversed_direct[direction]}]}}" + f"= {index}{a}" + r"$",
-                                         pad=9.0)
 
-    axs["010"][0].set_ylim((0.0, max_magn_density * yfactor))
+            print(f"{j_=}")
+            print(f"{lattice_pos=}")
+
+            axs[i][j_].plot(freq, magnon_density, **plot_kwargs)
+            a = r"\tilde{a}" if direction in ["-110", "110", "1-10", "-1-10"] else "a"
+            lattice_pos_label = magnon_density_dict[direction].shape[1] - 1 - lattice_pos if reverse_profile[direction] else lattice_pos
+            axs[i][j_].set_title(fr"$x_{{\hkl[{profile_dir[direction]}]}}" + f"= {lattice_pos_label}{a}" + r"$", pad=9.0)
+
+    temp.set_ylim((0.0, max_magn_density * yfactor))
 
     for i in range(3):
-        axs["110"][i].set_xlabel(rf"$\omega$ ({freq_unit})")
-    for d in freq_dict.keys():
-        axs[d][0].set_ylabel(fr"magn. density (arb. u.)")
+        axs[-1][i].set_xlabel(rf"$\omega$ ({freq_unit})")
+    for j in range(nrows):
+        axs[j][0].set_ylabel(fr"magn. density (arb. u.)")
 
     handle_ticks()  # position important!
     gradient_direction()
@@ -840,29 +840,24 @@ def sne_spectrum_plot(freq_dict, magnon_density_dict, step_dir, reversed_direct,
 
 
 def sne_magnon_spectrum():
-    #TODO: Clean up this mess
 
     # direction of measurement (profile axis)
     paths = {
-        "-110": "/data/scc/marian.gunsch/02/02_AM_tilted_Tstep_hightres/",
+        "100": "/data/scc/marian.gunsch/14/AM_xTstep_y_hightres/",
+        "1-10": "/data/scc/marian.gunsch/02/02_AM_tilted_Tstep_hightres/",
         "110": "/data/scc/marian.gunsch/14/AM_tilt_yTstep_x_hightres/",
-        "010": "/data/scc/marian.gunsch/14/AM_xTstep_y_hightres/"
     }
     # Direction of the temperature step
-    step_dir = {
-        "-110": "110",
-        "110": "-110",
-        "010": "100"
+    profile_dir = {
+        "100": "010",
+        "010": "-100",
+        "1-10": "110",
+        "110": "-110"
     }
-    reversed_direct = {     # I hate what I have done here. It is so needlessly complicated...
-        "-110": "-110",
-        "110": "-1-10",
-        "010": "010"
-    }
-    reverse = {
-        "-110": False,
+    reverse_prof = {
+        "1-10": False,
         "110": True,
-        "010": False
+        "100": False
     }
 
     data_A, data_B = mag_util.npy_files_from_dict(paths, slice_index=-spectrum_data_points,
@@ -875,7 +870,7 @@ def sne_magnon_spectrum():
         data_points = min(data_A[direction].shape[0], data_B[direction].shape[0], spectrum_data_points)
 
         if data_points < spectrum_data_points:
-            warnings.warn(f"T in [{step_dir[direction]}]: Can only run with {data_points} data points.")
+            warnings.warn(f"T in [{direction}]: Can only run with {data_points} data points.")
 
         Sx = physics.magnetization(mag_util.get_component(data_A[direction][:data_points], "x", 0),
                                    mag_util.get_component(data_B[direction][:data_points], "x", 0))
@@ -886,7 +881,7 @@ def sne_magnon_spectrum():
         freq_dict[direction] = f
         magnon_density_dict[direction] = m
 
-    save_path = sne_spectrum_plot(freq_dict, magnon_density_dict, step_dir, reversed_direct, reverse)
+    save_path = sne_spectrum_plot(freq_dict, magnon_density_dict, profile_dir, reverse_prof)
 
     save_util.source_paths(save_path, list(paths.values()))
 
@@ -894,12 +889,11 @@ def sne_magnon_spectrum():
 # %% Main
 
 def main():
-    # sne_spin_accumulation(True)
-    # sne_spin_accumulation(False, "x")
-    # sne_spin_accumulation(False, "y")
-    # sne_spin_accumulation_profilsubtract()
+    sne_spin_accumulation(True)
+    sne_spin_accumulation(False, "x")
+    sne_spin_accumulation(False, "y")
+    sne_spin_accumulation_profilsubtract()
 
-    # spin_currents_open()
-    # spin_currents_upperABC()
-    # spin_currents_uploABC()
-    sne_magnon_spectrum()
+    spin_currents_open()
+
+    # sne_magnon_spectrum()

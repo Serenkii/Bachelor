@@ -36,8 +36,8 @@ def run_spectra(shading):
 def main():
     pass
 
-    run_spectra('auto')
-    # run_spectra('gouraud')
+    # run_spectra('auto')
+    run_spectra('gouraud')
 
     # miscellaneous.main()
 
@@ -62,5 +62,7 @@ if __name__ == '__main__':
     if len(sys.argv) >= 2:
         backend = sys.argv[1]
         ssh = True if len(sys.argv) == 3 and sys.argv[2] == 'True' else False
+
+        mpl_configuration.configure_backends(backend, ssh)
 
     main()
