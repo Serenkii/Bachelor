@@ -236,10 +236,12 @@ def dispersion_relation_dmi(shading='gouraud'):
     if directions != paths.keys():
         raise AttributeError("Conflicting keys!")
 
-    from thesis.subsections.equilibrium import dispersion_comparison_table_data, dispersion_comparison_table_plot
+    from thesis.subsections.equilibrium import dispersion_comparison_table_data, dispersion_comparison_table_plot, band_gap_plot
 
-    k_dict, freq_dict, magnon_density_dict = dispersion_comparison_table_data(paths_nodmi, paths)
-    dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, version=2,
+    k_dict, freq_dict, magnon_density_dict, omega1, omega2, band_gap = dispersion_comparison_table_data(paths_nodmi, paths)
+    band_gap_plot(band_gap)
+    dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, omega1, omega2, vmin_=1e-3, vmax_=1e5,
+                                     version=2,
                                      left_title="no DMI", right_title="DMI",
                                      save_path=f"{save_base_path}dispersion_comparison_dmi_table.pdf",
                                      shading=shading)
@@ -718,11 +720,11 @@ def sse_magnon_accumulation_dmi_B(accumulation=True):
 def main():
     pass
 
-    average_spin_components()
+    # average_spin_components()
 
-    sse_magnon_accumulation_dmi()
+    # sse_magnon_accumulation_dmi()
 
-    sse_magnon_accumulation_dmi_B(True)
+    # sse_magnon_accumulation_dmi_B(True)
 
 
-    # dispersion_relation_dmi()
+    dispersion_relation_dmi()

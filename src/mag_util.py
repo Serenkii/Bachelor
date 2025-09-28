@@ -15,7 +15,7 @@ import src.physics as physics
 
 default_slice_dict = {'t': 0, 'x': 1, 'y': 2, 'z': 3, '1': 1, '2': 2, '3': 3}
 
-default_force_overwrite = False
+default_force_overwrite = True
 read_fewer_lines = False
 
 if default_force_overwrite:
@@ -560,7 +560,7 @@ def npy_files(dat_path: str, npy_path=None, slice_index=-100_000, force=default_
         for i in range(2, 5):
             if folder_list[index0 + i].startswith("spin-configs"):
                 break
-            save_name += f"_{folder_list[index0 + 2]}"
+            save_name += f"_{folder_list[index0 + i]}"
         else:
             warnings.warn("High number of nested folders!")
         npy_path = f"{base_folder}{save_name}"

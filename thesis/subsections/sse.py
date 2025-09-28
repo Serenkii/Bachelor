@@ -89,7 +89,7 @@ def plot_magn_Bfield(magn_dict, ylabel=r"magnetization $\langle S^z \rangle$", x
         warnings.warn(f"{len(field_strengths_)} field strengths are a lot to plot... Messy, huh?")
 
     fig, ax = plt.subplots()
-    ax.axhline(0, color="gray", linestyle="-", marker="", linewidth=0.5)
+    ax.axhline(0, color="gray", linestyle="-", marker="", linewidth=0.3)
 
     max_val = - np.inf
     min_val = np.inf
@@ -650,15 +650,15 @@ def sse_spin_currents_comparison(xlim=(-101.5, 126.5)):
 def main():
     initialize_data()
 
-    sse_magnetization_Bfield()
-    sse_magnaccum_Bfield()
-
-    peak_dependence()
-
-    direction_comparison()
-
-    propagation_lengths()
-
-    sse_spin_currents(False)
-    sse_spin_currents_comparison()
+    # sse_magnetization_Bfield()
+    # sse_magnaccum_Bfield()
+    #
+    # peak_dependence()
+    #
+    # direction_comparison()
+    #
+    # propagation_lengths()
+    #
+    # sse_spin_currents(False)
+    # sse_spin_currents_comparison()
 

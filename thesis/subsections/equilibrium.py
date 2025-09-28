@@ -22,8 +22,8 @@ import thesis.mpl_configuration as mpl_conf
 
 save_base_path = "out/thesis/equilibrium/"
 
-# dispersion_data_points = 1_000
-dispersion_data_points = 300_000
+dispersion_data_points = 1_000
+# dispersion_data_points = 300_000
 
 if dispersion_data_points < 100_000:
     warnings.warn("Running with limited amount of data points!")
@@ -107,7 +107,13 @@ def equilibrium_comparison_Bfield():
 
 # %% Dispersion relation comparison for B=100T
 
-def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, omega1=None, omega2=None, version=2,
+def smooth_dispersion_line(omega):
+    from scipy.signal import savgol_filter
+    smooth = savgol_filter(omega, 35, 2)
+    return smooth
+
+def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, omega1=None, omega2=None, smooth=True,
+                                     version=2,
                                      left_title=r"$B = 0$", right_title=r"$B > 0$",
                                      save_path=None, shading="gouraud", vmin_=None, vmax_=None):
     if not version in [1, 2]:
@@ -201,11 +207,15 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ome
 
             if omega1 and omega2:
                 l = rf"$\omega^{{\hkl[{direction}]}}"
-                w1 = omega1[field][direction]
-                w2 = omega2[field][direction]
-                ax.plot(k_vectors, w1, label=fr"{l}_\mathrm{{A}}$", color="blue", linewidth=0.5)
-                ax.plot(k_vectors, w2, label=fr"{l}_\mathrm{{A}}$", color="red", linewidth=0.5)
-                ax.legend(loc="upper right")
+                w1 = omega1[field][direction] * 1e-15
+                w2 = omega2[field][direction] * 1e-15
+                w1 = smooth_dispersion_line(w1) if smooth else w1
+                w2 = smooth_dispersion_line(w2) if smooth else w2
+                ax.plot(k_vectors, w2, linewidth=0.2, color="blue", #label=fr"{l}_\mathrm{{A}}$"
+                        )
+                ax.plot(k_vectors, w1, color="red", linewidth=0.2, # label=fr"{l}_\mathrm{{B}}$"
+                        )
+                # ax.legend(loc="upper right")
 
             ax.axhline(0, color="gray", linewidth=0.8, linestyle="--")
             ax.axvline(0, color="gray", linewidth=0.8, linestyle="--")
@@ -284,8 +294,10 @@ def band_gap_plot(band_gap):
     fig, ax = plt.subplots()
     for field in band_gap.keys():
         gaps = band_gap[field]
+        print(f"{field}, {gaps=}")
         ax.plot(list(gaps.keys()), [gaps[d] for d in gaps.keys()], label=f"{field=}")
     ax.legend()
+    fig.savefig("out/band_gap.pdf")
     plt.show()
 
 
@@ -419,14 +431,14 @@ def dispersion_comparison_Bfield_table(version=1, shading='gouraud'):
     print("\n\nDISPERSION RELATION COMPARISON: MAGNETIC FIELD")
 
     k_dict, freq_dict, magnon_density_dict, omega1, omega2, band_gap = dispersion_comparison_Bfield_table_data()
+    band_gap_plot(band_gap)
     dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, omega1, omega2, version=version,
                                      save_path=f"{save_base_path}dispersion_comparison_Bfield_table.pdf",
                                      shading=shading, vmin_=1e-3)
-    band_gap_plot(band_gap)
 
 # %% Comparison of dispersion relation for any direction with positive and negative field
 
-def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict, shading='gouraud'):
+def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict, shading='gouraud', vmin_=None, vmax_=None):
     print("Plotting...")
 
     rasterized = True
@@ -460,6 +472,9 @@ def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict, shad
         magnon_density = magnon_density_dict[field]
         min_magn_dens = min(magnon_density.min(), min_magn_dens)
         max_magn_dens = max(magnon_density.max(), max_magn_dens)
+
+    min_magn_dens = vmin_ if vmin_ else min_magn_dens
+    max_magn_dens = vmax_ if vmax_ else max_magn_dens
 
     for field in fields:
         if field == 0:
@@ -544,7 +559,7 @@ def dispersion_comparison_negB(shading='gouraud'):
         freq_dict[Bstrength] = f
         magnon_density_dict[Bstrength] = m
 
-    dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict, shading)
+    dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict, shading, vmin_=1e-3)
 
 
 # %% BOUNDARY EFFECTS
@@ -911,6 +926,6 @@ def main():
 
     equilibrium_comparison_Bfield()
 
-    # dispersion_comparison_Bfield_table(2)
+    dispersion_comparison_Bfield_table(2)
 
     # dispersion_comparison_negB()

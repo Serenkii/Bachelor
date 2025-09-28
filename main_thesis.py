@@ -37,7 +37,7 @@ def main():
     pass
 
     # run_spectra('auto')
-    run_spectra('gouraud')
+    # run_spectra('gouraud')
 
     # miscellaneous.main()
 
