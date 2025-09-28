@@ -44,7 +44,7 @@ def main():
     # equilibrium.main()
     # close_figs()
 
-    # sse.main()
+    sse.main()
     # close_figs()
 
     # sne.main()

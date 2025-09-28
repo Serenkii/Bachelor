@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 from mpl_toolkits.axes_grid1 import ImageGrid
 import matplotlib.colors as colors
 from matplotlib.collections import PolyCollection
@@ -17,6 +18,7 @@ import src.physics as physics
 import src.spinconf_util as spinconf_util
 import src.helper as helper
 import src.save_util as save_util
+import thesis.mpl_configuration as mpl_configuration
 
 # %%
 save_base_path = "out/thesis/sse/"
@@ -52,7 +54,7 @@ B_fields = paths["1-10"].keys()
 if B_fields != paths["110"].keys():
     raise AttributeError("Conflicting keys!")
 
-directions = paths.keys()
+directions = list(paths.keys())
 field_strengths = sorted(paths["1-10"].keys(), reverse=False)
 assert field_strengths == sorted(paths["110"].keys(), reverse=False)
 
@@ -358,8 +360,101 @@ def direction_comparison():
 
 
 # %% Propagation lengths for [1-10] and [110] for different B-fields
+
+def propagation_lengths_plot_mono(popt, perr):
+    fig, ax = plt.subplots()
+
+    ax.set_xlabel(r"$B$ (\si{\tesla})")
+    ax.set_ylabel(r"propagation length $\lambda / \tilde{a}$")
+
+    for direction in directions:
+        length = [popt[direction][B][1] for B in field_strengths]
+        length_unc = [perr[direction][B][1] for B in field_strengths]
+        ax.errorbar(field_strengths, length, yerr=length_unc, marker="_", capsize=2.7, label=rf"\hkl[{direction}]",
+                    # linestyle=(0, (5, 10)), linewidth=0.5
+                    linestyle=""
+                    )
+        print(f"x: {field_strengths}")
+        print(f"y: {np.array(length)}")
+
+    ax.legend(loc="lower center")
+
+    fig.tight_layout()
+
+    fig.savefig(f"{save_base_path}propagation_length_dependence_mono.pdf")
+
+    plt.show()
+
+
+
+def propagation_lengths_plot_bi(popt, perr):
+    color_beta = "red"
+    color_alpha = "blue"
+    do_errorbar = True
+    if do_errorbar:
+        plot_kwargs = dict(marker="_", markersize=4.5, capsize=1.7, linestyle="", )
+    else:
+        plot_kwargs = dict(linestyle="", marker="o", markersize=3.0)
+    legend_pos = { directions[0]: ("upper left", "center right"), directions[1]: ("upper right", "center left") }
+
+    fig, axs = plt.subplots(nrows=2, ncols=2, sharex=True, sharey="row", figsize=mpl_configuration.get_size(1.0))
+
+    axs[0,0].set_ylabel(r"$A$")
+    axs[1,0].set_ylabel(r"$\xi / \tilde{a}$")
+    axs[1,0].set_xlabel(r"$B$ (\si{\tesla})")
+    axs[1,1].set_xlabel(r"$B$ (\si{\tesla})")
+
+    for ax in axs.flatten():
+        ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
+        ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
+
+    axs_dict = { directions[0]: axs[:,0], directions[1]: axs[:,1]}
+
+    for d in directions:
+        A_b = [popt[d][B][0] for B in field_strengths]
+        A_b_err = [perr[d][B][0] for B in field_strengths]
+        A_a = [popt[d][B][2] for B in field_strengths]
+        A_a_err = [perr[d][B][2] for B in field_strengths]
+        length_b = [popt[d][B][1] for B in field_strengths]
+        length_b_err = [perr[d][B][1] for B in field_strengths]
+        length_a = [popt[d][B][3] for B in field_strengths]
+        length_a_err = [perr[d][B][3] for B in field_strengths]
+
+        axs_dict[d][0].set_title(rf"\hkl[{d}]")
+
+        if do_errorbar:
+            axs_dict[d][0].errorbar(field_strengths, A_a, yerr=A_a_err, **plot_kwargs, color=color_alpha,
+                                    label=r"$A_{\alpha}$")
+            axs_dict[d][0].errorbar(field_strengths, A_b, yerr=A_b_err, **plot_kwargs, color=color_beta,
+                                    label=r"$A_{\beta}$")
+            axs_dict[d][1].errorbar(field_strengths, length_a, yerr=length_a_err, **plot_kwargs, color=color_alpha,
+                                    label=r"$\xi_{\alpha}$")
+            axs_dict[d][1].errorbar(field_strengths, length_b, yerr=length_b_err, **plot_kwargs, color=color_beta,
+                                    label=r"$\xi_{\beta}$")
+
+        else:
+            axs_dict[d][0].plot(field_strengths, A_a, **plot_kwargs, color=color_alpha,
+                                    label=r"$A_{\alpha}$")
+            axs_dict[d][0].plot(field_strengths, A_b, **plot_kwargs, color=color_beta,
+                                    label=r"$A_{\beta}$")
+            axs_dict[d][1].plot(field_strengths, length_a, **plot_kwargs, color=color_alpha,
+                                    label=r"$\xi_{\alpha}$")
+            axs_dict[d][1].plot(field_strengths, length_b, **plot_kwargs, color=color_beta,
+                                    label=r"$\xi_{\beta}$")
+
+        axs_dict[d][0].legend(loc=legend_pos[d][0])
+        axs_dict[d][1].legend(loc=legend_pos[d][1])
+
+
+    fig.tight_layout()
+
+    fig.savefig(f"{save_base_path}propagation_length_dependence_bi.pdf")
+
+    plt.show()
+
+
 def propagation_lengths():
-    x0 = 3
+    x0 = 0
     start = helper.get_index_first_cold(0.49, 256) + x0
     fit_area = slice(start, start + 45)
 
@@ -367,9 +462,6 @@ def propagation_lengths():
         x = np.array(x)
         return A * np.exp(-x / l)
 
-    def exp_func5(x, A_beta, lambda_beta, A_alpha, lambda_alpha):
-        x = np.array(x)
-        return A_beta * np.exp(-x / lambda_beta) - A_alpha * np.exp(-x / lambda_alpha)
 
     def exp_func6(x, A_beta, lambda_beta, A_alpha, lambda_alpha):
         x = np.array(x)
@@ -403,8 +495,8 @@ def propagation_lengths():
     def biexp_attempt():
         fit_func = exp_func6
 
-        p0 = (0.995, 50, 0.995, 50)
-        lower = (0.8, 3, 0.8, 3)
+        p0 = (0.002, 1, 0.002, 1)
+        lower = (0.0, 0.001, 0.0, 0.0001)
         upper = (1.0, 100, 1.0, 100)
 
         return attempt(fit_func, lower, upper, p0, log=True)
@@ -419,7 +511,7 @@ def propagation_lengths():
         return attempt(fit_func, lower, upper, p0, log=log)
 
 
-    fit_func = mono_exp()
+    fit_func = biexp_attempt()
 
     def plot():
         x_axis = np.arange(len(magnetization["1-10"][0]))
@@ -427,14 +519,14 @@ def propagation_lengths():
 
         fig, ax = plt.subplots()
 
-        print(field_strengths)
+        ax.axvline(helper.get_index_first_cold(0.49, 256), linestyle="--", color="pink", linewidth=0.5)
         for direction in directions:
             for B in field_strengths:
-                ax.plot(x_axis, magnetization[direction][B], linestyle="", marker="o", markersize=0.2,
+                ax.plot(x_axis, magnetization[direction][B], linestyle="-", linewidth=0.1, marker="o", markersize=0.2,
                         label=f"[{direction}], {B=}")
                 ax.plot(x_fit + fit_area.start, fit_func(x_fit, *popt[direction][B]), linestyle="-", marker="",
                         linewidth=0.2, color="k")
-                ax.legend(loc="upper right", fontsize="x-small")
+                # ax.legend(loc="upper right", fontsize="x-small")
 
         ax.set_xlim(120, 200)
         ax.set_ylim(-0.002, 0.002)
@@ -443,34 +535,12 @@ def propagation_lengths():
 
     plot()
 
-    if fit_func != exp_func1:
-        warnings.warn("I have only implemented a mono-exponential fit.")
-        return
-
-    # Plotting...
-
-    fig, ax = plt.subplots()
-
-    ax.set_xlabel(r"$B$ (\si{\tesla})")
-    ax.set_ylabel(r"propagation length $\lambda / \tilde{a}$")
-
-    for direction in directions:
-        length = [popt[direction][B][1] for B in field_strengths]
-        length_unc = [perr[direction][B][1] for B in field_strengths]
-        ax.errorbar(field_strengths, length, yerr=length_unc, marker="_", capsize=2.7, label=rf"\hkl[{direction}]",
-                    # linestyle=(0, (5, 10)), linewidth=0.5
-                    linestyle=""
-                    )
-        print(f"x: {field_strengths}")
-        print(f"y: {np.array(length)}")
-
-    ax.legend(loc="lower center")
-
-    fig.tight_layout()
-
-    fig.savefig(f"{save_base_path}propagation_length_dependence.pdf")
-
-    plt.show()
+    if fit_func == exp_func1:
+        propagation_lengths_plot_mono(popt, perr)
+    elif fit_func == exp_func6:
+        propagation_lengths_plot_bi(popt, perr)
+    else:
+        raise NotImplementedError("This is weird...")
 
 
 
@@ -657,7 +727,7 @@ def main():
     #
     # direction_comparison()
     #
-    # propagation_lengths()
+    propagation_lengths()
     #
     # sse_spin_currents(False)
     # sse_spin_currents_comparison()
