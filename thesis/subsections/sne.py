@@ -444,7 +444,7 @@ def sne_accumulation_profile_plot(x_space, magnetization, profile_dirs, a_labels
             y = axs[d][0].get_position().get_points()[0][1]
             x1 = axs[d][0].get_position().get_points()[1][0]
             x2 = axs[d][1].get_position().get_points()[0][0]
-            fig.text(0.5 * (x1 + x2), y - pad, rf"position $x/{a_labels[d]}$ in \hkl[{profile_dirs[d]}]", va="top", ha="center")
+            fig.text(0.5 * (x1 + x2), y - pad, rf"position $y/{a_labels[d]}$ in \hkl[{profile_dirs[d]}]", va="top", ha="center")
 
 
     remove_spines()
@@ -457,10 +457,10 @@ def sne_accumulation_profile_plot(x_space, magnetization, profile_dirs, a_labels
 
     for d in Tdirections:
         pad = 0.03
-        y = axs[d][0].get_position().get_points()[0][1]
+        y = axs[d][0].get_position().get_points()[1][1]
         x1 = axs[d][0].get_position().get_points()[1][0]
         x2 = axs[d][1].get_position().get_points()[0][0]
-        fig.text(0.5 * (x1 + x2), y + pad, rf"$- \nabla T \parallel \hkl[{d}]$", va="bottom", ha="center")
+        fig.text(0.5 * (x1 + x2), y - pad, rf"$- \nabla T \parallel \hkl[{d}]$", va="top", ha="center")
 
         axs[d][0].plot(x_space[d], magnetization[d], **plot_kwargs)
         axs[d][1].plot(x_space[d], magnetization[d], **plot_kwargs)
@@ -720,7 +720,7 @@ def transversal_spin_currents(paths, xlim=(-81.5, 1.269 * 81.5), ypad=0.05, save
     ax.set_ylim(min_ - pad, max_ + pad)
 
     ax.set_xlabel(r"$x/a$")
-    ax.set_ylabel(r"spin current $j^{\mathrm{L}}$ ($\tfrac{\gamma_{\mathrm{e}} \, a \, J_1}{\mu_{\mathrm{B}}}$)")
+    ax.set_ylabel(r"spin current $j^{\mathrm{T}}$ ($\tfrac{\gamma_{\mathrm{e}} \, a \, J_1}{\mu_{\mathrm{B}}}$)")
 
     fig.tight_layout()
 
@@ -752,7 +752,7 @@ def spin_currents_open():
 # %% Magnon spectrum
 
 def sne_spectrum_plot(freq_dict, magnon_density_dict, profile_dir, reverse_profile,
-                      xlim=(-0.55, 0.55), yfactor=1.0, xticks=(-0.4, 0.0, 0.4)):
+                      xlim=(-0.55, 0.55), yfactor=1.05, xticks=(-0.4, 0.0, 0.4)):
     print("Plotting...")
 
     nrows = len(freq_dict.keys())
@@ -761,8 +761,9 @@ def sne_spectrum_plot(freq_dict, magnon_density_dict, profile_dir, reverse_profi
 
     plot_kwargs = dict(linewidth=0.07)
 
-    fig = plt.figure(figsize=mpl_config.get_size(1.0, frac * 1.4))
-    gs = fig.add_gridspec(nrows=nrows, ncols=4, hspace=0.34, width_ratios=[0.5, 2, 2, 2])
+    fig = plt.figure(figsize=mpl_config.get_size(1.0, frac * 1.2))
+    gs = fig.add_gridspec(nrows=nrows, ncols=4, hspace=0.34, width_ratios=[0.5, 2, 2, 2],
+                          bottom=0.09, top=0.95, left=0.1, right=0.95)
 
     freq_unit_factor = 1e15
     freq_unit = r"\SI{e15}{\radian\per\second}"
@@ -793,7 +794,7 @@ def sne_spectrum_plot(freq_dict, magnon_density_dict, profile_dir, reverse_profi
 
     def gradient_direction():
         for i, direction in enumerate(freq_dict.keys()):
-            pad = 0.11
+            pad = 0.125
             x = axs[i][0].get_position().get_points()[0][0]
             y1 = axs[i][1].get_position().get_points()[0][1]
             y2 = axs[i][1].get_position().get_points()[1][1]
@@ -802,7 +803,7 @@ def sne_spectrum_plot(freq_dict, magnon_density_dict, profile_dir, reverse_profi
 
     max_magn_density = - np.inf
     for i, direction in enumerate(freq_dict.keys()):
-        lattice_positions = [0, magnon_density_dict[direction].shape[1] // 2 - 1, magnon_density_dict[direction].shape[1] - 1]
+        lattice_positions = [0, (magnon_density_dict[direction].shape[1] - 1) // 2, magnon_density_dict[direction].shape[1] - 1]
 
         print(f"{direction=}")
         print(f"{i=}")
@@ -818,7 +819,7 @@ def sne_spectrum_plot(freq_dict, magnon_density_dict, profile_dir, reverse_profi
             axs[i][j_].plot(freq, magnon_density, **plot_kwargs)
             a = r"\tilde{a}" if direction in ["-110", "110", "1-10", "-1-10"] else "a"
             lattice_pos_label = magnon_density_dict[direction].shape[1] - 1 - lattice_pos if reverse_profile[direction] else lattice_pos
-            axs[i][j_].set_title(fr"$x_{{\hkl[{profile_dir[direction]}]}}" + f"= {lattice_pos_label}{a}" + r"$", pad=9.0)
+            axs[i][j_].set_title(fr"$y_{{\hkl[{profile_dir[direction]}]}}" + f"= {lattice_pos_label}{a}" + r"$", pad=9.0)
 
     temp.set_ylim((0.0, max_magn_density * yfactor))
 
@@ -889,11 +890,11 @@ def sne_magnon_spectrum():
 # %% Main
 
 def main():
-    sne_spin_accumulation(True)
-    sne_spin_accumulation(False, "x")
-    sne_spin_accumulation(False, "y")
-    sne_spin_accumulation_profilsubtract()
+    # sne_spin_accumulation(True)
+    # sne_spin_accumulation(False, "x")
+    # sne_spin_accumulation(False, "y")
+    # sne_spin_accumulation_profilsubtract()
 
-    spin_currents_open()
+    # spin_currents_open()
 
-    # sne_magnon_spectrum()
+    sne_magnon_spectrum()

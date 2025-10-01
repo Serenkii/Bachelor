@@ -1,14 +1,15 @@
 cff-version: 1.2.0
-message: "If you use this repository, code snippets, or ideas for your research, please cite it."
+message: "If you use this repository, code snippets, or ideas for your research, please cite it and my Bachelor's thesis."
 title: "Data Analysis and Plotting for My Bachelor's Thesis 'Computer simulation of altermagnets with relativistic corrections'"
 authors:
   - family-names: "Duelli"
     given-names: "Marian Felix"
+    orcid: "https://orcid.org/0009-0003-9633-1153"
 version: "0.1.0"
-date-released: "2025-09-13"
+date-released: "2025-10-16"
 url: "https://github.com/Serenkii/Bachelor"
 keywords:
   - data analysis
   - plotting
   - thesis
-license: "MIT"
+license: "GNU GPLv3"

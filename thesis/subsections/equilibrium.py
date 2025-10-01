@@ -201,7 +201,6 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ome
             im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading=shading,
                                norm=colors.LogNorm(vmin=min_magn_dens, vmax=max_magn_dens),
                                rasterized=rasterized)
-            # print("Using shading='gouraud'")
 
             im_list.append(im)
 

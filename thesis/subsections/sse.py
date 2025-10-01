@@ -224,10 +224,13 @@ def peak_dependence():
 
     # Plot
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(mpl_configuration.get_width(), mpl_configuration.get_height(0.8)))
 
     ax.set_xlabel(r"$B$ (\si{\tesla})")
-    ax.set_ylabel(r"peak magnon accum. $ \langle \Delta S^z \rangle_{\max}$")
+    ax.set_ylabel(r"peak magn. accum. $ \langle \Delta S^z \rangle_{\max}$")
+
+    # ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
+    ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
 
     sign = + 1
 
@@ -390,7 +393,7 @@ def propagation_lengths_plot_mono(popt, perr):
 def propagation_lengths_plot_bi(popt, perr):
     color_beta = "red"
     color_alpha = "blue"
-    do_errorbar = True
+    do_errorbar = False
     if do_errorbar:
         plot_kwargs = dict(marker="_", markersize=4.5, capsize=1.7, linestyle="", )
     else:
@@ -723,12 +726,12 @@ def main():
     # sse_magnetization_Bfield()
     # sse_magnaccum_Bfield()
     #
-    # peak_dependence()
+    peak_dependence()
     #
     # direction_comparison()
     #
-    propagation_lengths()
+    # propagation_lengths()
     #
     # sse_spin_currents(False)
-    # sse_spin_currents_comparison()
+    sse_spin_currents_comparison()
 

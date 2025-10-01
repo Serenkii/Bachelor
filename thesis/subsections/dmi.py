@@ -102,7 +102,7 @@ def equilibrium_comparison_plot(S, magn, tick_labels):
 
 
 def fancy_equilibrium_comparison_plot(S, magn, titles):
-    arrow_kwargs = dict(arrowstyle="-|>", mutation_scale=18, shrinkA=0, shrinkB=0, lw=1.5)
+    arrow_kwargs = dict(arrowstyle="-|>", mutation_scale=10, shrinkA=0, shrinkB=0, lw=1.0)
 
     DMI = [False, True, "DMI+B", "B"]   # I prefer this order
 
@@ -111,8 +111,9 @@ def fancy_equilibrium_comparison_plot(S, magn, titles):
     axs = axs.flatten()
 
     for i, dmi in enumerate(DMI):
-        axs[i].axhline(-1.0, alpha=0.8, color="grey", linestyle="--", linewidth=0.6)
-        axs[i].axhline(1.0, alpha=0.8, color="grey", linestyle="--", linewidth=0.6)
+        axs[i].axhline(-1.0, alpha=0.8, color="grey", linestyle="--", linewidth=0.5)
+        axs[i].axhline(0.0, alpha=0.8, color="grey", linestyle="--", linewidth=0.5, zorder=0)
+        axs[i].axhline(1.0, alpha=0.8, color="grey", linestyle="--", linewidth=0.5)
 
         start = (0, 0)
 
@@ -124,7 +125,7 @@ def fancy_equilibrium_comparison_plot(S, magn, titles):
         arrowB = FancyArrowPatch(start, endB, **arrow_kwargs, color="red")
         arrow_net = FancyArrowPatch(start, endNet, **arrow_kwargs, color="black")
 
-        point_style = dict(marker="o", markeredgecolor="white", markersize=1.8, linestyle="", linewidth=0.03)
+        point_style = dict(marker="o", markeredgecolor="white", markersize=2.0, linestyle="", linewidth=0.03)
 
         axs[i].add_patch(arrowA)
         axs[i].plot(*endA, color="blue", **point_style)
@@ -136,8 +137,8 @@ def fancy_equilibrium_comparison_plot(S, magn, titles):
 
         # --- Add text labels with slight offsets ---
         label_ = lambda text : r"$\langle \vec{S}_{\mathrm{" + text + r"}} \rangle$"
-        shiftB = 0.1 if dmi == "DMI+B" else 0.06
-        shiftnet = -0.1 if dmi == "B" else -0.02
+        shiftB = 0.1 if dmi == "DMI+B" else 0.04
+        shiftnet = -0.1 if dmi == "B" else -0.06
         axs[i].text(endA[0] - 0.04, 0.8 * endA[1] + 0.06, label_("A"), color="blue", va="center", ha="right")
         axs[i].text(endB[0] + shiftB, 0.8 * endB[1] - 0.06, label_("B"), color="red", va="center", ha="left")
         if dmi:
@@ -149,7 +150,8 @@ def fancy_equilibrium_comparison_plot(S, magn, titles):
         # axs[i].add_patch(circle)
 
 
-    axs[0].set_xlim(-0.34, 0.23)
+    # axs[0].set_xlim(-0.34, 0.23)
+    axs[0].set_xlim(-0.24, 0.17)
     axs[0].set_ylim(-1.1, 1.1)
 
     axs[0].set_xlabel(r"$\langle S^y \rangle$")
@@ -240,7 +242,7 @@ def dispersion_relation_dmi(shading='gouraud'):
 
     k_dict, freq_dict, magnon_density_dict, omega1, omega2, band_gap = dispersion_comparison_table_data(paths_nodmi, paths)
     band_gap_plot(band_gap)
-    dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, omega1, omega2, vmin_=1e-3, vmax_=1e5,
+    dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, vmin_=1e-2, vmax_=1e5,
                                      version=2,
                                      left_title="no DMI", right_title="DMI",
                                      save_path=f"{save_base_path}dispersion_comparison_dmi_table.pdf",
@@ -491,10 +493,10 @@ def sse_plot_magn_dmi_y(x_space, magn, xlim=(-86, 86), ylim=(-0.0019, 0.0019)):
     if ylim:
         axs[False].set_ylim(*ylim)
 
-    create_inset_axes(False, (-4, 1), (-0.0016, -0.0009), [0.03, 0.03, 0.37, 0.33])
-    create_inset_axes(False, (-1, 4), (0.0009, 0.0016), [0.6, 0.64, 0.37, 0.33])
-    create_inset_axes(True, (-4, 1), (-0.0016, -0.0009), [0.6, 0.03, 0.37, 0.33])
-    create_inset_axes(True, (-1, 4), (0.0009, 0.0016), [0.03, 0.64, 0.37, 0.33])
+    create_inset_axes(False, (-4, 1), (-0.0007, -0.00025), [0.03, 0.03, 0.37, 0.33])
+    create_inset_axes(False, (-1, 4), (0.00025, 0.0007), [0.6, 0.64, 0.37, 0.33])
+    create_inset_axes(True, (-4, 1), (-0.0007, -0.00025), [0.6, 0.03, 0.37, 0.33])
+    create_inset_axes(True, (-1, 4), (0.00025, 0.0007), [0.03, 0.64, 0.37, 0.33])
 
     fig.tight_layout()
 
@@ -720,11 +722,11 @@ def sse_magnon_accumulation_dmi_B(accumulation=True):
 def main():
     pass
 
-    # average_spin_components()
+    average_spin_components()
 
     # sse_magnon_accumulation_dmi()
 
-    # sse_magnon_accumulation_dmi_B(True)
+    sse_magnon_accumulation_dmi_B(True)
 
 
     dispersion_relation_dmi()
