@@ -340,7 +340,7 @@ def spin_accu_config_plot(magnetization, x_space, y_space, magn_profile_x, magn_
 
     cm_ax0.pcolormesh(X, Y, magnetization.T, cmap='RdBu_r', vmin=vmin, vmax=vmax)
     im = cm_ax1.pcolormesh(X, Y, magnetization.T, cmap='RdBu_r', vmin=vmin, vmax=vmax)
-    cb = fig.colorbar(im, cax=cax)
+    cb = fig.colorbar(im, cax=cax, extend="both")
     cb.set_label(magn_label)
 
     ax_bottom.plot(x_space, magn_profile_x, **profile_kwargs)
@@ -890,11 +890,11 @@ def sne_magnon_spectrum():
 # %% Main
 
 def main():
-    # sne_spin_accumulation(True)
+    sne_spin_accumulation(True)
     # sne_spin_accumulation(False, "x")
     # sne_spin_accumulation(False, "y")
     # sne_spin_accumulation_profilsubtract()
 
-    # spin_currents_open()
+    spin_currents_open()
 
-    sne_magnon_spectrum()
+    # sne_magnon_spectrum()

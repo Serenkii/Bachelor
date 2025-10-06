@@ -22,11 +22,15 @@ import thesis.mpl_configuration as mpl_conf
 
 save_base_path = "out/thesis/equilibrium/"
 
-dispersion_data_points = 1_000
-# dispersion_data_points = 300_000
+# dispersion_data_points = 1_000
+dispersion_data_points = 300_000
 
 if dispersion_data_points < 100_000:
     warnings.warn("Running with limited amount of data points!")
+
+
+default_vmin = 1e-2
+default_vmax = 4e5
 
 
 # %% INTRODUCTION OF A STATIC MAGNETIC FIELD
@@ -112,10 +116,27 @@ def smooth_dispersion_line(omega):
     smooth = savgol_filter(omega, 35, 2)
     return smooth
 
+
+
+def downsample_y_resize(arr, freqs, target_y=3000):
+    from skimage.transform import resize
+
+    ny, nx = arr.shape
+    if ny <= target_y:
+        return arr
+    out = resize(arr, (target_y, nx), order=3, mode='reflect', anti_aliasing=True, preserve_range=True)
+
+    out_f = resize(freqs, (target_y,), order=3, mode='reflect', anti_aliasing=True, preserve_range=True)
+
+    return out.astype(arr.dtype), out_f.astype(arr.dtype)
+
+
+
 def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, omega1=None, omega2=None, smooth=True,
                                      version=2,
                                      left_title=r"$B = 0$", right_title=r"$B > 0$",
-                                     save_path=None, shading="gouraud", vmin_=None, vmax_=None):
+                                     save_path=None, shading="gouraud", vmin_=default_vmin, vmax_=default_vmax,
+                                     downsample=True, useimshow=True):
     if not version in [1, 2]:
         raise ValueError("version must be 1 or 2")
 
@@ -192,15 +213,26 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ome
             ax = axs_dict[field][direction]
             k_vectors = k_dict[field][direction]
             freqs = freq_dict[field][direction]
+            magnon_density = magnon_density_dict[field][direction]
 
             freqs *= 1e-15
             if not field:
                 ax.set_ylabel(r"$\omega$ (\SI{e15}{\radian\per\second})")
 
-            magnon_density = magnon_density_dict[field][direction]
-            im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading=shading,
+            if downsample:
+                magnon_density, freqs = downsample_y_resize(magnon_density, freqs)
+
+            if useimshow:
+                extent = [k_vectors.min(), k_vectors.max(), freqs.min(), freqs.max()]
+                im = ax.imshow(magnon_density,
+                               aspect="auto", origin="lower",
+                               extent=extent,
                                norm=colors.LogNorm(vmin=min_magn_dens, vmax=max_magn_dens),
-                               rasterized=rasterized)
+                               rasterized=True)
+            else:
+                im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading=shading,
+                                   norm=colors.LogNorm(vmin=min_magn_dens, vmax=max_magn_dens),
+                                   rasterized=rasterized)
 
             im_list.append(im)
 
@@ -245,7 +277,7 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ome
         set_xlabels_2()
 
     print("-", end="")
-    cb = fig.colorbar(im_list[-1], cax=cax, orientation="horizontal")
+    cb = fig.colorbar(im_list[-1], cax=cax, orientation="horizontal", extend="both")
     cb.set_label(r"magnon density $n(\omega, k)$ (arb. unit)")
     print("]")
 
@@ -326,9 +358,30 @@ def temp_ana(k, f, m):
     print(np.sum(nk2))
 
 
+def handle_tilt(data_A, data_B, data_points, tilt_angle):
+    Sx_A = mag_util.get_component(data_A[:data_points], "x")
+    Sx_B = mag_util.get_component(data_B[:data_points], "x")
+
+    Sy_A = mag_util.get_component(data_A[:data_points], "y")
+    Sy_B = mag_util.get_component(data_B[:data_points], "y")
+
+    Sz_A = mag_util.get_component(data_A[:data_points], "z")
+    Sz_B = mag_util.get_component(data_B[:data_points], "z")
+
+    if tilt_angle is None or tilt_angle == 0:
+        return physics.magnetization(Sx_A, Sx_B), physics.magnetization(Sy_A, Sy_B)
+
+    print(f"Applying angle of {np.rad2deg(tilt_angle)}°")
+    Sy_A_new = np.cos(tilt_angle) * Sy_A + np.sin(tilt_angle) * Sz_A
+    # Sz_A_new = - np.sin(tilt_angle) * Sy_A + np.cos(tilt_angle) * Sz_A
+
+    Sy_B_new = np.cos(tilt_angle) * Sy_B - np.sin(tilt_angle) * Sz_B
+    # Sz_B_new = - np.sin(tilt_angle) * Sy_A + np.cos(tilt_angle) * Sz_A
+
+    return physics.magnetization(Sx_A, Sx_B), physics.magnetization(Sy_A_new, Sy_B_new)
 
 
-def dispersion_comparison_table_data(paths_no, paths_yes):
+def dispersion_comparison_table_data(paths_no, paths_yes, tilt_angle=0):
 
     delta_x = {
         "100": physics.lattice_constant,
@@ -384,10 +437,11 @@ def dispersion_comparison_table_data(paths_no, paths_yes):
             if data_points < dispersion_data_points:
                 warnings.warn(f"{magnetic_field}, [{direction}]: Can only run with {data_points} data points.")
 
-            Sx = physics.magnetization(mag_util.get_component(data_A[:data_points], "x"),
-                                       mag_util.get_component(data_B[:data_points], "x"))
-            Sy = physics.magnetization(mag_util.get_component(data_A[:data_points], "y"),
-                                       mag_util.get_component(data_B[:data_points], "y"))
+            if magnetic_field:
+                Sx, Sy = handle_tilt(data_A, data_B, data_points, tilt_angle)
+            else:
+                Sx, Sy = handle_tilt(data_A, data_B, data_points, 0)
+
             dx = delta_x[direction]
             dt = util.get_time_step(paths[magnetic_field][direction])
             k, f, m = physics.dispersion(Sx, Sy, dx, dt)
@@ -431,13 +485,13 @@ def dispersion_comparison_Bfield_table(version=1, shading='gouraud'):
 
     k_dict, freq_dict, magnon_density_dict, omega1, omega2, band_gap = dispersion_comparison_Bfield_table_data()
     band_gap_plot(band_gap)
-    dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, omega1, omega2, version=version,
+    dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, version=version,
                                      save_path=f"{save_base_path}dispersion_comparison_Bfield_table.pdf",
-                                     shading=shading, vmin_=1e-3)
+                                     shading=shading)
 
 # %% Comparison of dispersion relation for any direction with positive and negative field
 
-def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict, shading='gouraud', vmin_=None, vmax_=None):
+def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict, shading='gouraud', vmin_=default_vmin, vmax_=default_vmax, useimshow=True):
     print("Plotting...")
 
     rasterized = True
@@ -497,9 +551,19 @@ def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict, shad
             ax.set_ylabel(r"$\omega$ (\SI{e15}{\radian\per\second})")
 
         magnon_density = magnon_density_dict[field]
-        im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading=shading,
+
+        if useimshow:
+            extent = [k_vectors.min(), k_vectors.max(), freqs.min(), freqs.max()]
+            im = ax.imshow(magnon_density,
+                           aspect="auto", origin="lower",
+                           extent=extent,
                            norm=colors.LogNorm(vmin=min_magn_dens, vmax=max_magn_dens),
-                           rasterized=rasterized)
+                           rasterized=True)
+        else:
+            im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading=shading,
+                               norm=colors.LogNorm(vmin=min_magn_dens, vmax=max_magn_dens),
+                               rasterized=rasterized)
+
         im_list.append(im)
 
         ax.axhline(0, color="gray", linewidth=0.8, linestyle="--")
@@ -508,7 +572,7 @@ def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict, shad
         ax.set_xlabel(r"$k \cdot \tilde{a}$")
 
     print("-", end="")
-    cb = fig.colorbar(im_list[-1], cax=cax, orientation="vertical")
+    cb = fig.colorbar(im_list[-1], cax=cax, orientation="vertical", extend="both")
     cb.set_label(r"$n(\omega, k)$ (arb. unit)")
     print("]")
 
@@ -558,7 +622,7 @@ def dispersion_comparison_negB(shading='gouraud'):
         freq_dict[Bstrength] = f
         magnon_density_dict[Bstrength] = m
 
-    dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict, shading, vmin_=1e-3)
+    dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict, shading)
 
 
 # %% BOUNDARY EFFECTS
@@ -752,7 +816,7 @@ def handle_config_data_aligned(config_data1, config_data2):
     return spinconf_util.average_aligned_data(average_config, "default", True, True)
 
 
-def place_colorbar(fig, axs, pcolormesh, pad=0.02, width=0.02, label=""):
+def place_colorbar(fig, axs, pcolormesh, pad=0.02, width=0.02, label="", extend='neither'):
     # compute bounding box of the 2x2 main grid
     x1 = max(ax.get_position().x1 for ax in axs)
     y0 = min(ax.get_position().y0 for ax in axs)
@@ -763,7 +827,7 @@ def place_colorbar(fig, axs, pcolormesh, pad=0.02, width=0.02, label=""):
     height = y1 - y0
 
     cax = fig.add_axes([left, bottom, width, height])
-    cb = fig.colorbar(pcolormesh, cax=cax)
+    cb = fig.colorbar(pcolormesh, cax=cax, extend=extend)
     cb.set_label(label)
     return cb
 
@@ -815,7 +879,7 @@ def plot_colormap_aligned(fig, axs, x_centered, y_centered, magn_centered, x_shi
         collection = PolyCollection(polys, array=np.array(values),
                                     cmap="RdBu_r", norm=norm)  # , edgecolors="k", linewidth=0.3
         ax.add_collection(collection)
-    place_colorbar(fig, axs, collection, 0.02, 0.02, y_label)
+    place_colorbar(fig, axs, collection, 0.02, 0.02, y_label, extend='both')
 
 
 def boundary_effects(temperature=2):
@@ -922,9 +986,9 @@ def main():
     pass
     boundary_effects(2)
     boundary_effects(0)
-
+    #
     equilibrium_comparison_Bfield()
 
-    dispersion_comparison_Bfield_table(2)
+    # dispersion_comparison_Bfield_table(2)
 
     # dispersion_comparison_negB()

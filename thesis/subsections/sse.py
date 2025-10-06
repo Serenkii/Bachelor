@@ -723,14 +723,14 @@ def sse_spin_currents_comparison(xlim=(-101.5, 126.5)):
 def main():
     initialize_data()
 
-    # sse_magnetization_Bfield()
-    # sse_magnaccum_Bfield()
+    sse_magnetization_Bfield()
+    sse_magnaccum_Bfield()
     #
     peak_dependence()
     #
-    # direction_comparison()
+    direction_comparison()
     #
-    # propagation_lengths()
+    propagation_lengths()
     #
     # sse_spin_currents(False)
     sse_spin_currents_comparison()

@@ -21,15 +21,17 @@ def run_spectra(shading):
     print("Running spectra...")
     print(f"Using shading '{shading}'")
 
-    # equilibrium.dispersion_comparison_Bfield_table(2, shading)
-    # close_figs()
-    # equilibrium.dispersion_comparison_negB(shading)
-    # close_figs()
-    #
-    # # sne.sne_magnon_spectrum()
-    # close_figs()
+    equilibrium.dispersion_comparison_Bfield_table(2, shading)
+    close_figs()
+    equilibrium.dispersion_comparison_negB(shading)
+    close_figs()
 
-    dmi.dispersion_relation_dmi(shading)
+    sne.sne_magnon_spectrum()
+    close_figs()
+
+    dmi.dispersion_relation_dmi(shading, dmi=5)
+    close_figs()
+    dmi.dispersion_relation_dmi(shading, dmi=5, use_angle=True)
     close_figs()
 
 
