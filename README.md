@@ -4,6 +4,8 @@ This repository contains all the Python code I produced in connection to my Bach
 If you use any of the source, or get inspiration from it, I would greatly appreciate to be referenced, 
 as explained in [Cite](#cite).
 
+I plan to upload my thesis here too, as soon as grading is finished.
+
 ## My thesis
 My thesis is based on atomistic spin dynamics simulations of a simple toy model of an emerging class of magnetism, 
 coined 'Altermagnetism'. I studied equilibrium properties and the spin Seebeck effect under the influence of an 
