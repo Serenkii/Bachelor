@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import scipy.constants
 from mpl_toolkits.axes_grid1 import ImageGrid
 import matplotlib.colors as colors
 from matplotlib.collections import PolyCollection
@@ -20,6 +21,16 @@ import thesis.mpl_configuration as mpl_conf
 # %%
 
 save_base_path = "out/thesis/equilibrium/"
+
+# dispersion_data_points = 1_000
+dispersion_data_points = 300_000
+
+if dispersion_data_points < 100_000:
+    warnings.warn("Running with limited amount of data points!")
+
+
+default_vmin = 1e-2
+default_vmax = 4e5
 
 
 # %% INTRODUCTION OF A STATIC MAGNETIC FIELD
@@ -44,20 +55,20 @@ def equilibrium_comparison_Bfield_plot(Sx, Sy, Sz, magn):
 
     ax1.axhline(0, color="gray", linewidth=0.8, linestyle="--")
 
-    ax1.set_ylabel(r"$\langle m_{\mathrm{net}} \rangle$")
+    ax1.set_ylabel(r"$\langle S^z_{\mathrm{net}} \rangle$")
     ax1.plot(fields, [magn[B] for B in fields], label=r"$m_{\mathrm{net}}$", **plot_kwargs)
 
-    ax2.set_ylabel(r"$\langle m_{\mathrm{A}} \rangle$")
+    ax2.set_ylabel(r"$\langle S^z_{\mathrm{A}} \rangle$")
     ax2.plot(fields, [Sz["A"][B] for B in fields], label=r"$m_{\mathrm{A}}$", **plot_kwargs)
 
-    ax3.set_ylabel(r"$- \langle m_{\mathrm{B}} \rangle$")
+    ax3.set_ylabel(r"$- \langle S^z_{\mathrm{B}} \rangle$")
     ax3.plot(fields, [-Sz["B"][B] for B in fields], label=r"$-m_{\mathrm{B}}$", **plot_kwargs)
 
     ax1.label_outer()
     ax2.label_outer()
 
     ax3.set_xticks(fields)
-    ax3.set_xlabel("Magnetic field strength $B$ (T)")
+    ax3.set_xlabel("$B$ (T)")
 
     fig.savefig(f"out/thesis/equilibrium/comparison_B_field.pdf")
 
@@ -100,9 +111,32 @@ def equilibrium_comparison_Bfield():
 
 # %% Dispersion relation comparison for B=100T
 
-def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, version=1,
+def smooth_dispersion_line(omega):
+    from scipy.signal import savgol_filter
+    smooth = savgol_filter(omega, 35, 2)
+    return smooth
+
+
+
+def downsample_y_resize(arr, freqs, target_y=3000):
+    from skimage.transform import resize
+
+    ny, nx = arr.shape
+    if ny <= target_y:
+        return arr
+    out = resize(arr, (target_y, nx), order=3, mode='reflect', anti_aliasing=True, preserve_range=True)
+
+    out_f = resize(freqs, (target_y,), order=3, mode='reflect', anti_aliasing=True, preserve_range=True)
+
+    return out.astype(arr.dtype), out_f.astype(arr.dtype)
+
+
+
+def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, omega1=None, omega2=None, smooth=True,
+                                     version=2,
                                      left_title=r"$B = 0$", right_title=r"$B > 0$",
-                                     save_path=None):
+                                     save_path=None, shading="gouraud", vmin_=default_vmin, vmax_=default_vmax,
+                                     downsample=False, useimshow=True):
     if not version in [1, 2]:
         raise ValueError("version must be 1 or 2")
 
@@ -111,13 +145,15 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ver
     rasterized = True
     j0 = 0 if version == 1 else 1
 
-    fig = plt.figure(figsize=mpl_conf.get_size(1.0, None, False))
+    fig = plt.figure(figsize=(mpl_conf.get_width(1.0), mpl_conf.get_tex_height(0.83)))
+    # fig = plt.figure(figsize=mpl_conf.get_size(1.0, None, False))
 
     if version == 1:
         gs = fig.add_gridspec(nrows=5, ncols=2, height_ratios=[4, 4, 4, 4, 0.2], hspace=0.65, wspace=0.05)
     else:
         gs = fig.add_gridspec(nrows=6, ncols=3, width_ratios=[1.5, 3, 3], height_ratios=[4, 4, 4, 4, 1.2, 0.2],
-                              hspace=0.07, wspace=0.05, left=0.05)
+                              hspace=0.07, wspace=0.05, left=0.05, bottom=0.07, top=0.95, right=0.96
+                              )
 
     axs = np.empty((4, 2), dtype=object)
     for i in range(4):
@@ -163,6 +199,11 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ver
             min_magn_dens = min(magnon_density.min(), min_magn_dens)
             max_magn_dens = max(magnon_density.max(), max_magn_dens)
 
+    if vmin_:
+        min_magn_dens = vmin_
+    if vmax_:
+        max_magn_dens = vmax_
+
     im_list = []
 
     print("[", end="")
@@ -172,18 +213,40 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ver
             ax = axs_dict[field][direction]
             k_vectors = k_dict[field][direction]
             freqs = freq_dict[field][direction]
+            magnon_density = magnon_density_dict[field][direction]
 
             freqs *= 1e-15
             if not field:
                 ax.set_ylabel(r"$\omega$ (\SI{e15}{\radian\per\second})")
 
-            magnon_density = magnon_density_dict[field][direction]
-            im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading='gouraud',
+            if downsample:
+                magnon_density, freqs = downsample_y_resize(magnon_density, freqs)
+
+            if useimshow:
+                extent = [k_vectors.min(), k_vectors.max(), freqs.min(), freqs.max()]
+                im = ax.imshow(magnon_density,
+                               aspect="auto", origin="lower",
+                               extent=extent,
                                norm=colors.LogNorm(vmin=min_magn_dens, vmax=max_magn_dens),
-                               rasterized=rasterized)
-            print("Using shading='gouraud'")
+                               rasterized=True)
+            else:
+                im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading=shading,
+                                   norm=colors.LogNorm(vmin=min_magn_dens, vmax=max_magn_dens),
+                                   rasterized=rasterized)
 
             im_list.append(im)
+
+            if omega1 and omega2:
+                l = rf"$\omega^{{\hkl[{direction}]}}"
+                w1 = omega1[field][direction] * 1e-15
+                w2 = omega2[field][direction] * 1e-15
+                w1 = smooth_dispersion_line(w1) if smooth else w1
+                w2 = smooth_dispersion_line(w2) if smooth else w2
+                ax.plot(k_vectors, w2, linewidth=0.2, color="blue", #label=fr"{l}_\mathrm{{A}}$"
+                        )
+                ax.plot(k_vectors, w1, color="red", linewidth=0.2, # label=fr"{l}_\mathrm{{B}}$"
+                        )
+                # ax.legend(loc="upper right")
 
             ax.axhline(0, color="gray", linewidth=0.8, linestyle="--")
             ax.axvline(0, color="gray", linewidth=0.8, linestyle="--")
@@ -193,12 +256,12 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ver
         for field in fields:
             for direction in directions:
                 ax = axs_dict[field][direction]
-                a = r"\tilde{a}" if direction in ["110", "-110"] else r"a"
+                a = r"\tilde{a}" if direction in ["1-10", "110"] else r"a"
                 ax.set_xlabel(rf"$k \cdot {a}$ in \hkl[{direction}]")
 
     def set_xlabels_2():
         for field in fields:
-            ax = axs_dict[field]["-110"]
+            ax = axs_dict[field]["110"]
             ax.set_xlabel(r"$k \cdot a_{\mathrm{d}}$")
         gs_dict = dict((direction, gs[i, 0]) for direction, i in zip(directions, range(4)))
         for direction in directions:
@@ -214,33 +277,127 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ver
         set_xlabels_2()
 
     print("-", end="")
-    cb = fig.colorbar(im_list[-1], cax=cax, orientation="horizontal")
-    cb.set_label(r"magnon density (arb. unit)")
+    cb = fig.colorbar(im_list[-1], cax=cax, orientation="horizontal", extend="both")
+    cb.set_label(r"magnon density $n(\omega, k)$ (arb. unit)")
     print("]")
 
     if save_path:
         print("Saving fig...")
-        fig.savefig(save_path)
+        fig.savefig(f"{save_path[:-4]}_{shading[:4]}.pdf")
 
-    print("Showing fig...")
+        # from thesis.theoretical_figures import crop_to_size
+        # crop_to_size(save_path)
+
+
+    # print("Showing fig...")
+    # plt.show()
+
+
+def get_band_gap(omega1, omega2):
+    return np.min(np.abs(omega1)) + np.min(np.abs(omega2))
+
+
+def get_omega_k(f, m):
+    h = int(m.shape[0] * 0.5)
+    imax1 = np.argmax(m[:h], axis=0)
+    imax2 = np.argmax(m[-h:], axis=0)
+    omega1 = f[imax1]
+    omega2 = f[-h:][imax2]
+
+    return omega1, omega2
+
+def get_spectral_power(m, min_=1e4):
+    h = int(m.shape[0] * 0.5)
+    return np.sum(m[m>min_][:h]), np.sum(m[m>min_][-h:])
+
+def get_magnon_number_from_rayleighjeans(k, omega_k, TmeV):
+    T = TmeV * scipy.constants.eV * scipy.constants.milli
+    kB = scipy.constants.k
+    hbar = scipy.constants.hbar
+    def rayleigh_jeans(omega_k):
+        return kB * T / (hbar * omega_k)
+
+    n_k = rayleigh_jeans(omega_k)
+    return np.sum(n_k)
+
+
+def band_gap_plot(band_gap):
+    fig, ax = plt.subplots()
+    for field in band_gap.keys():
+        gaps = band_gap[field]
+        print(f"{field}, {gaps=}")
+        ax.plot(list(gaps.keys()), [gaps[d] for d in gaps.keys()], label=f"{field=}")
+    ax.legend()
+    fig.savefig("out/band_gap.pdf")
     plt.show()
 
 
+def temp_ana(k, f, m):
+    print(f"{m.shape}")
+    h = int(m.shape[0] * 0.5)
+    print(f"{np.sum(m[:h])=}")
+    print(f"{np.sum(m[m>1e4][:h])=}")
+    print(f"{np.sum(m[-h:])=}")
+    print(f"{np.sum(m[m>1e4][-h:])=}")
 
-def dispersion_comparison_table_data(paths_no, paths_yes):
+    imax1 = np.argmax(m[:h], axis=0)
+    imax2 = np.argmax(m[-h:], axis=0)
+    omega1 = f[imax1]
+    omega2 = f[-h:][imax2]
+    # fig, ax = plt.subplots()
+    # ax.plot(k, omega1)
+    # ax.plot(k, omega2)
+    # plt.show()
+
+    Sk1 = m[imax1]
+    Sk2 = m[-h:][imax2]
+
+    nk1 = Sk1 / omega1
+    print(np.sum(nk1))
+    nk2 = Sk2 / omega2
+    print(np.sum(nk2))
+
+
+def handle_tilt(data_A, data_B, data_points, tilt_angle):
+    Sx_A = mag_util.get_component(data_A[:data_points], "x")
+    Sx_B = mag_util.get_component(data_B[:data_points], "x")
+
+    Sy_A = mag_util.get_component(data_A[:data_points], "y")
+    Sy_B = mag_util.get_component(data_B[:data_points], "y")
+
+    Sz_A = mag_util.get_component(data_A[:data_points], "z")
+    Sz_B = mag_util.get_component(data_B[:data_points], "z")
+
+    if tilt_angle is None or tilt_angle == 0:
+        return physics.magnetization(Sx_A, Sx_B), physics.magnetization(Sy_A, Sy_B)
+
+    print(f"Applying angle of {np.rad2deg(tilt_angle)}°")
+    Sy_A_new = np.cos(tilt_angle) * Sy_A + np.sin(tilt_angle) * Sz_A
+    # Sz_A_new = - np.sin(tilt_angle) * Sy_A + np.cos(tilt_angle) * Sz_A
+
+    Sy_B_new = np.cos(tilt_angle) * Sy_B - np.sin(tilt_angle) * Sz_B
+    # Sz_B_new = - np.sin(tilt_angle) * Sy_A + np.cos(tilt_angle) * Sz_A
+
+    return physics.magnetization(Sx_A, Sx_B), physics.magnetization(Sy_A_new, Sy_B_new)
+
+
+def dispersion_comparison_table_data(paths_no, paths_yes, tilt_angle=0):
 
     delta_x = {
         "100": physics.lattice_constant,
         "010": physics.lattice_constant,
-        "110": physics.lattice_constant,
-        "-110": physics.lattice_constant
+        "1-10": physics.lattice_constant,
+        "110": physics.lattice_constant
     }
-
 
     directions = paths_yes.keys()
 
-    dataA_no, dataB_no = mag_util.npy_files_from_dict(paths_no)
-    dataA_yes, dataB_yes = mag_util.npy_files_from_dict(paths_yes)
+    dataA_no, dataB_no = mag_util.npy_files_from_dict(paths_no, slice_index=-dispersion_data_points,
+                                                  max_rows=dispersion_data_points + 10000)
+    dataA_yes, dataB_yes = mag_util.npy_files_from_dict(paths_yes, slice_index=-dispersion_data_points,
+                                                  max_rows=dispersion_data_points + 10000)
+
+    print("Finished loading data. Processing...")
 
     data_dict = {
         False: dict(A=dataA_no, B=dataB_no),  # No magnetic field
@@ -265,33 +422,45 @@ def dispersion_comparison_table_data(paths_no, paths_yes):
         True: dict()
     }
 
-    # warnings.warn("Running with limited amount of datapoints!")   # TODO
-    # min_data_points = 10_000
-    min_data_points = 10_000_000
+    omega1 = { False: dict(), True: dict()}
+    omega2 = { False: dict(), True: dict()}
+    band_gap = { False: dict(), True: dict()}
 
     for magnetic_field in data_dict.keys():
         for direction in directions:
+            print(f"{magnetic_field=}, {direction=}")
             data_A = data_dict[magnetic_field]["A"][direction]
             data_B = data_dict[magnetic_field]["B"][direction]
 
-            data_points = min(data_A.shape[0], data_B.shape[0], min_data_points)
+            data_points = min(data_A.shape[0], data_B.shape[0], dispersion_data_points)
 
-            print(f"{paths[magnetic_field][direction]=}")
-            print(f"{data_A.shape=}")
-            print(f"{data_B.shape=}")
+            if data_points < dispersion_data_points:
+                warnings.warn(f"{magnetic_field}, [{direction}]: Can only run with {data_points} data points.")
 
-            Sx = physics.magnetization(mag_util.get_component(data_A[:data_points], "x", 10),
-                                       mag_util.get_component(data_B[:data_points], "x", 10))
-            Sy = physics.magnetization(mag_util.get_component(data_A[:data_points], "y", 10),
-                                       mag_util.get_component(data_B[:data_points], "y", 10))
+            if magnetic_field:
+                Sx, Sy = handle_tilt(data_A, data_B, data_points, tilt_angle)
+            else:
+                Sx, Sy = handle_tilt(data_A, data_B, data_points, 0)
+
             dx = delta_x[direction]
             dt = util.get_time_step(paths[magnetic_field][direction])
             k, f, m = physics.dispersion(Sx, Sy, dx, dt)
+
+            temp_ana(k, f, m)
+
+            omega1[magnetic_field][direction], omega2[magnetic_field][direction] = get_omega_k(f, m)
+            band_gap[magnetic_field][direction] = get_band_gap(omega1[magnetic_field][direction],
+                                                               omega2[magnetic_field][direction])
+            print(f"{get_magnon_number_from_rayleighjeans(k, omega1[magnetic_field][direction], 2)=}")
+            print(f"{get_magnon_number_from_rayleighjeans(k, omega2[magnetic_field][direction], 2)=}")
+            print(f"{get_spectral_power(m, 1e4)=}")
+            print(f"{get_spectral_power(m, 0)=}")
+
             k_dict[magnetic_field][direction] = k
             freq_dict[magnetic_field][direction] = f
             magnon_density_dict[magnetic_field][direction] = m
 
-    return k_dict, freq_dict, magnon_density_dict
+    return k_dict, freq_dict, magnon_density_dict, omega1, omega2, band_gap
 
 
 
@@ -299,29 +468,30 @@ def dispersion_comparison_Bfield_table_data():
     paths_noB = {
         "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x-2/",
         "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y-2/",
-        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
-        "-110": f"/data/scc/marian.gunsch/10/AM__tilt_Tstairs_T2_y-2/"  # oups
+        "1-10": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x-2/",
+        "110": f"/data/scc/marian.gunsch/10/AM__tilt_Tstairs_T2_y-2/"  # oups
     }
     paths_B = {
         "100": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_x_B100-2/",
         "010": f"/data/scc/marian.gunsch/10/AM_Tstairs_T2_y_B100-2/",
-        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_B100-2/",
-        "-110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_y_B100-2/"
+        "1-10": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_x_B100-2/",
+        "110": f"/data/scc/marian.gunsch/10/AM_tilt_Tstairs_T2_y_B100-2/"
     }
     return dispersion_comparison_table_data(paths_noB, paths_B)
 
 
-def dispersion_comparison_Bfield_table(version=1):
+def dispersion_comparison_Bfield_table(version=1, shading='gouraud'):
     print("\n\nDISPERSION RELATION COMPARISON: MAGNETIC FIELD")
 
-    k_dict, freq_dict, magnon_density_dict = dispersion_comparison_Bfield_table_data()
+    k_dict, freq_dict, magnon_density_dict, omega1, omega2, band_gap = dispersion_comparison_Bfield_table_data()
+    band_gap_plot(band_gap)
     dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, version=version,
-                                     save_path=f"{save_base_path}dispersion_comparison_Bfield_table_{version}.pdf")
-
+                                     save_path=f"{save_base_path}dispersion_comparison_Bfield_table.pdf",
+                                     shading=shading)
 
 # %% Comparison of dispersion relation for any direction with positive and negative field
 
-def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict):
+def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict, shading='gouraud', vmin_=default_vmin, vmax_=default_vmax, useimshow=True):
     print("Plotting...")
 
     rasterized = True
@@ -356,6 +526,9 @@ def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict):
         min_magn_dens = min(magnon_density.min(), min_magn_dens)
         max_magn_dens = max(magnon_density.max(), max_magn_dens)
 
+    min_magn_dens = vmin_ if vmin_ else min_magn_dens
+    max_magn_dens = vmax_ if vmax_ else max_magn_dens
+
     for field in fields:
         if field == 0:
             axs_dict[field].set_title(r"$B = 0$")
@@ -378,10 +551,19 @@ def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict):
             ax.set_ylabel(r"$\omega$ (\SI{e15}{\radian\per\second})")
 
         magnon_density = magnon_density_dict[field]
-        im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading='gouraud',
+
+        if useimshow:
+            extent = [k_vectors.min(), k_vectors.max(), freqs.min(), freqs.max()]
+            im = ax.imshow(magnon_density,
+                           aspect="auto", origin="lower",
+                           extent=extent,
                            norm=colors.LogNorm(vmin=min_magn_dens, vmax=max_magn_dens),
-                           rasterized=rasterized)
-        print("Using shading='gouraud'")
+                           rasterized=True)
+        else:
+            im = ax.pcolormesh(k_vectors, freqs, magnon_density, shading=shading,
+                               norm=colors.LogNorm(vmin=min_magn_dens, vmax=max_magn_dens),
+                               rasterized=rasterized)
+
         im_list.append(im)
 
         ax.axhline(0, color="gray", linewidth=0.8, linestyle="--")
@@ -390,19 +572,19 @@ def dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict):
         ax.set_xlabel(r"$k \cdot \tilde{a}$")
 
     print("-", end="")
-    cb = fig.colorbar(im_list[-1], cax=cax, orientation="vertical")
-    cb.set_label(r"Magnon density (arb. unit)")
+    cb = fig.colorbar(im_list[-1], cax=cax, orientation="vertical", extend="both")
+    cb.set_label(r"$n(\omega, k)$ (arb. unit)")
     print("]")
 
     print("Saving fig...")
-    fig.savefig(f"{save_base_path}dispersion_comparison_negBfield.pdf")
+    fig.savefig(f"{save_base_path}dispersion_comparison_negBfield_{shading[:4]}.pdf")
 
-    print("Showing fig...")
-    plt.show()
+    # print("Showing fig...")
+    # plt.show()
 
 
 
-def dispersion_comparison_negB():
+def dispersion_comparison_negB(shading='gouraud'):
     print("\n\nDISPERSION RELATION COMPARISON: POSITIVE AND NEGATIVE MAGNETIC FIELD FIELD")
 
     paths = {
@@ -413,18 +595,18 @@ def dispersion_comparison_negB():
 
     dx = physics.lattice_constant
 
-    data_A, data_B = mag_util.npy_files_from_dict(paths)
+    data_A, data_B = mag_util.npy_files_from_dict(paths, slice_index=-dispersion_data_points,
+                                                  max_rows=dispersion_data_points + 10000)
 
     k_dict = dict()
     freq_dict = dict()
     magnon_density_dict = dict()
 
-    # warnings.warn("Running with limited amount of datapoints!")   # TODO
-    # min_data_points = 10_000
-    min_data_points = 10_000_000
-
     for Bstrength in paths.keys():
-        data_points = min(data_A[Bstrength].shape[0], data_B[Bstrength].shape[0], min_data_points)
+        data_points = min(data_A[Bstrength].shape[0], data_B[Bstrength].shape[0], dispersion_data_points)
+
+        if data_points < dispersion_data_points:
+            warnings.warn(f"{Bstrength}: Can only run with {data_points} data points.")
 
         print(f"{paths[Bstrength]=}")
         print(f"{data_A[Bstrength].shape=}")
@@ -440,7 +622,7 @@ def dispersion_comparison_negB():
         freq_dict[Bstrength] = f
         magnon_density_dict[Bstrength] = m
 
-    dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict)
+    dispersion_comparison_negB_plot(k_dict, freq_dict, magnon_density_dict, shading)
 
 
 # %% BOUNDARY EFFECTS
@@ -634,7 +816,7 @@ def handle_config_data_aligned(config_data1, config_data2):
     return spinconf_util.average_aligned_data(average_config, "default", True, True)
 
 
-def place_colorbar(fig, axs, pcolormesh, pad=0.02, width=0.02, label=""):
+def place_colorbar(fig, axs, pcolormesh, pad=0.02, width=0.02, label="", extend='neither'):
     # compute bounding box of the 2x2 main grid
     x1 = max(ax.get_position().x1 for ax in axs)
     y0 = min(ax.get_position().y0 for ax in axs)
@@ -645,7 +827,7 @@ def place_colorbar(fig, axs, pcolormesh, pad=0.02, width=0.02, label=""):
     height = y1 - y0
 
     cax = fig.add_axes([left, bottom, width, height])
-    cb = fig.colorbar(pcolormesh, cax=cax)
+    cb = fig.colorbar(pcolormesh, cax=cax, extend=extend)
     cb.set_label(label)
     return cb
 
@@ -697,7 +879,7 @@ def plot_colormap_aligned(fig, axs, x_centered, y_centered, magn_centered, x_shi
         collection = PolyCollection(polys, array=np.array(values),
                                     cmap="RdBu_r", norm=norm)  # , edgecolors="k", linewidth=0.3
         ax.add_collection(collection)
-    place_colorbar(fig, axs, collection, 0.02, 0.02, y_label)
+    place_colorbar(fig, axs, collection, 0.02, 0.02, y_label, extend='both')
 
 
 def boundary_effects(temperature=2):
@@ -709,14 +891,14 @@ def boundary_effects(temperature=2):
     paths_T2 = {
         "100": "/data/scc/marian.gunsch/12/AM_Tstairs_x_T2_openbou/",
         "010": "/data/scc/marian.gunsch/12/AM_Tstairs_y_T2_openbou/",
-        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_Tstairs_T2_openbou/",
-        "-110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstairs_T2_openbou/"
+        "1-10": "/data/scc/marian.gunsch/04/04_AM_tilted_Tstairs_T2_openbou/",
+        "110": "/data/scc/marian.gunsch/04/04_AM_tilted_yTstairs_T2_openbou/"
     }
     paths_T0 = {
         "100": "/data/scc/marian.gunsch/12/AM_Tstairs_x_T0_openbou/",
         "010": "/data/scc/marian.gunsch/12/AM_Tstairs_y_T0_openbou/",
-        "110": "/data/scc/marian.gunsch/12/AM_tilt_Tstairs_x_T0_openbou/",
-        "-110": "/data/scc/marian.gunsch/12/AM_tilt_Tstairs_y_T0_openbou/"
+        "1-10": "/data/scc/marian.gunsch/12/AM_tilt_Tstairs_x_T0_openbou/",
+        "110": "/data/scc/marian.gunsch/12/AM_tilt_Tstairs_y_T0_openbou/"
     }
     if temperature == 2:
         paths = paths_T2
@@ -728,8 +910,8 @@ def boundary_effects(temperature=2):
     tilted_dict = {
         "100": False,
         "010": False,
-        "110": True,
-        "-110": True
+        "1-10": True,
+        "110": True
     }
 
     # Profile data
@@ -756,19 +938,19 @@ def boundary_effects(temperature=2):
 
     # TILTED
     print("Plotting tilted...")
-    magn_config = handle_config_data_tilted(config_data["110"], config_data["-110"])
+    magn_config = handle_config_data_tilted(config_data["1-10"], config_data["110"])
 
     fig_tilted, *axs_tilted = broken_axes_boundary_plot(
+        real_space["1-10"], magnetization_profile["1-10"],
         real_space["110"], magnetization_profile["110"],
-        real_space["-110"], magnetization_profile["-110"],
         0, real_space["110"][-1] + physics.index_to_position(0.5, True),
         physics.index_to_position(8.2, True),
-        r"position $x/a$ in direction \hkl[110]",
-        r"position $y/a$ in direction \hkl[-110]",
+        r"position $x/a$ in direction \hkl[1-10]",
+        r"position $y/a$ in direction \hkl[110]",
         r"$\langle S^z \rangle$"
     )
 
-    plot_colormap_tilted(fig_tilted, axs_tilted, real_space["110"], real_space["-110"], magn_config,
+    plot_colormap_tilted(fig_tilted, axs_tilted, real_space["1-10"], real_space["110"], magn_config,
                          r"$\langle S^z \rangle$")
 
     fig_tilted.savefig(f"out/thesis/equilibrium/boundary_tilted_T{temperature}.pdf")
@@ -804,10 +986,9 @@ def main():
     pass
     boundary_effects(2)
     boundary_effects(0)
-
+    #
     equilibrium_comparison_Bfield()
 
-    dispersion_comparison_Bfield_table(1)
-    dispersion_comparison_Bfield_table(2)
+    # dispersion_comparison_Bfield_table(2)
 
-    dispersion_comparison_negB()
+    # dispersion_comparison_negB()

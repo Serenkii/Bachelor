@@ -15,7 +15,7 @@ import src.physics as physics
 
 default_slice_dict = {'t': 0, 'x': 1, 'y': 2, 'z': 3, '1': 1, '2': 2, '3': 3}
 
-default_force_overwrite = True
+default_force_overwrite = False
 read_fewer_lines = False
 
 if default_force_overwrite:
@@ -537,10 +537,10 @@ def infer_data_path(path, also_return_path_B=False):
 
 
 # Untested
-def npy_files(dat_path: str, npy_path=None, slice_index=-100000, force=default_force_overwrite, return_data=True,
+def npy_files(dat_path: str, npy_path=None, slice_index=-100_000, force=default_force_overwrite, return_data=True,
               **load_kwargs):
     if "max_rows" not in load_kwargs.keys():
-        load_kwargs["max_rows"] = 1_000_000
+        load_kwargs["max_rows"] = 110_000
         if read_fewer_lines:
             warnings.warn("Only read 1000 lines!")
             load_kwargs["max_rows"] = 1_000
@@ -556,7 +556,13 @@ def npy_files(dat_path: str, npy_path=None, slice_index=-100000, force=default_f
     if not npy_path:
         folder_list = data_path_A.split("/")
         index0 = folder_list.index("marian.gunsch")
-        save_name = f"{folder_list[index0 + 1].zfill(2)}_{folder_list[index0 + 2]}"
+        save_name = f"{folder_list[index0 + 1].zfill(2)}"
+        for i in range(2, 5):
+            if folder_list[index0 + i].startswith("spin-configs"):
+                break
+            save_name += f"_{folder_list[index0 + i]}"
+        else:
+            warnings.warn("High number of nested folders!")
         npy_path = f"{base_folder}{save_name}"
         print(f"Chose npy base path '{npy_path}' based on the given data path.")
     elif npy_path.endswith(".npy"):
@@ -573,7 +579,12 @@ def npy_files(dat_path: str, npy_path=None, slice_index=-100000, force=default_f
             print(f"File {npy_path} already exists. Nothing will be overwritten.")
         else:
             print(f"Reading data from {dat_path}...")
-            data = np.loadtxt(dat_path, **load_kwargs)[slice_index:]
+            temp = np.loadtxt(dat_path, **load_kwargs)
+            data = temp[slice_index:]
+            if temp.shape[0] - data.shape[0] < 200:
+                warnings.warn("Slicing did not cut off time steps to equilibriate. Therefore, automatically cutting "
+                              "off the first 200 time steps...")
+                data = data[200:]
             print(f"Saving data to {npy_path}...")
             np.save(npy_path, data)
             if return_data:
@@ -590,6 +601,12 @@ def npy_files(dat_path: str, npy_path=None, slice_index=-100000, force=default_f
     if data_dict["A"].shape[0] < 300 or data_dict["B"].shape[0] < 300:
         warnings.warn("Very few time steps might skew data. Proceed with care!"
                       "Consider using force=True once.")
+    elif (data_dict["A"].shape[0] < 10000 or data_dict["B"].shape[0] < 10000) and not read_fewer_lines:
+        warnings.warn(f"The simulation appears to have less than 10000 time steps. Proceed with care!."
+                      "Check simulation!\n"
+                      f"{data_dict["A"].shape[0]=}, {data_dict["B"].shape[0]=}\n"
+                      f"{dat_path=}")
+
 
     print("\n")
 

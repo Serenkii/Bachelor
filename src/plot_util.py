@@ -81,8 +81,10 @@ def multiple_of_pi_over_2(x, pos):
         return fr"${n}\tfrac{{\pi}}{{2}}$"
 
 
-def place_Tstep_marking(ax, x, label=r"$\Delta T$", **kwargs):
-    plot_kwargs = dict(color="green", linestyle="--", marker="", linewidth=1, label=label)
+def place_Tstep_marking(ax, x, label=r"$\Delta T$", behind=True, **kwargs):
+    plot_kwargs = dict(color="lightslategray", linestyle="--", marker="", linewidth=0.7, label=label)
+    if behind:
+        plot_kwargs["zorder"] = 0
     plot_kwargs.update(kwargs)
 
     line = ax.axvline(x, **plot_kwargs)

@@ -134,7 +134,14 @@ def dispersion_from_path(pathA, pathargv, tilted: bool, time_steps=100000, facto
 
 
 
-def handle_spin_current_unit_prefactor(tilted, normed=False):
+def handle_spin_current_unit_prefactor(tilted, normed=False, norm_with_aligned_a=True):
+    """
+
+    :param tilted:
+    :param normed:
+    :param norm_with_aligned_a: If False, the norm differs between tilted and nontilted direction, i.e. it is normed with the respective lattice vectors.
+    :return:
+    """
     gamma = cnst.physical_constants["electron gyromag. ratio"][0]
     muB = cnst.physical_constants["Bohr magneton"][0]
 
@@ -145,7 +152,8 @@ def handle_spin_current_unit_prefactor(tilted, normed=False):
 
     if normed:
         warnings.warn("Because J1 is negative, this will flip the sign!")
-        return 1.0 / J1
+        a = a if norm_with_aligned_a else a_aligned
+        return a / (a_aligned * J1)
     else:
         return gamma / muB * a
 

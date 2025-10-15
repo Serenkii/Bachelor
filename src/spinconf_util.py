@@ -485,13 +485,13 @@ def spin_current(grid_data, current_direction, cryst_direction, profile_return=N
 
 
     tilted = False if cryst_direction in ["100", "010", "-100", "0-10"] else True
-    sign = +1 if cryst_direction in ["100", "010", "110", "-110"] else -1
+    sign = +1 if cryst_direction in ["100", "010", "1-10", "110"] else -1
 
 
     def handle_tilted():
         Ja = physics.J2b
         Jb = physics.J2a
-        if cryst_direction in ["-110", "1-10"]:
+        if cryst_direction in ["110", "-1-10"]:
             Ja, Jb = Jb, Ja
 
         se = select_SL_and_component

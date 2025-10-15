@@ -8,7 +8,13 @@ tex_linewidth_pts = 404.02908
 tex_linewidth_inch = tex_linewidth_pts * inches_per_pt
 
 tex_height_pts = 693.49821
-tex_height_inch = tex_linewidth_pts * inches_per_pt
+tex_height_inch = tex_height_pts * inches_per_pt
+
+
+def get_tex_height(fraction=0.8):
+    if fraction > 0.8:
+        warnings.warn("Figure height might be very large!")
+    return fraction * tex_height_inch
 
 
 def inches_to_pts(inches):
@@ -117,6 +123,7 @@ def alt_configure():
 
 def default_configure():
     configure_backends("module://backend_interagg", ssh=False)  # "Qt5Agg"
+    # configure_backends("PDF", ssh=False)  # "Qt5Agg"
     configure()
 
 
