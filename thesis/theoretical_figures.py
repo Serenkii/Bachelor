@@ -472,7 +472,7 @@ def dmi1(save_name=None):
 def dmi2(save_name=None):
     font_size = "medium"
 
-    b = 0.1
+    b = -0.1
     D = 0.5
     S = 1
     S1 = np.array([0, b, S])
@@ -843,14 +843,14 @@ def toy_model(save_name=None):
         paths_x = dict(
             J1=[[4, 4], [3, 5],
                 [3, 3], [2, 3]],
-            J2_1=[[3, 5], [2, 4]],
-            J2_2=[[3, 5], [3, 5]]
+            J2_2=[[3, 5], [2, 4]],
+            J2_1=[[3, 5], [3, 5]]
         )
         paths_y = dict(
             J1=[[0, -2], [-1, -1],
                 [0, -2], [-1, -1]],
-            J2_1=[[0, -2], [-2, 0]],
-            J2_2=[[-2, 0], [-1, -3]]
+            J2_2=[[0, -2], [-2, 0]],
+            J2_1=[[-2, 0], [-1, -3]]
         )
         paths_kwargs = dict(
             J1=[dict(color=color_J1, lw=2), dict(color=color_J1, lw=2),
@@ -872,11 +872,11 @@ def toy_model(save_name=None):
         ax.text(3.5, -1 + d, r"$J_1$", va="bottom", ha="center", color=color_J1, size=text_size)
         ax.text(4 - d, -1.5, r"$J_1$", va="center", ha="right", color=color_J1, size=text_size)
 
-        ax.text(4.75 + d_, -0.25 - d_, r"$J_2'$", va="top", ha="left", color=color_J2_2, size=text_size)
-        ax.text(3.25 + d_, -1.75 - d_, r"$J_2'$", va="top", ha="left", color=color_J2_2, size=text_size)
+        ax.text(4.75 + d_, -0.25 - d_, r"$J_2$", va="top", ha="left", color=color_J2_1, size=text_size)
+        ax.text(3.25 + d_, -1.75 - d_, r"$J_2$", va="top", ha="left", color=color_J2_1, size=text_size)
 
-        ax.text(4.75 - d_, -1.75 - d_, r"$J_2$", va="top", ha="right", color=color_J2_1, size=text_size)
-        ax.text(3.25 + d_, -0.25 + d_, r"$J_2$", va="bottom", ha="left", color=color_J2_1, size=text_size)
+        ax.text(4.75 - d_, -1.75 - d_, r"$J_2'$", va="top", ha="right", color=color_J2_2, size=text_size)
+        ax.text(3.25 + d_, -0.25 + d_, r"$J_2'$", va="bottom", ha="left", color=color_J2_2, size=text_size)
 
     def add_circular_arrow(center, radius, theta1, theta2,
                            color='black', lw=0.7, delta_angle=6, mutation_scale=7, zorder=5):
@@ -1023,8 +1023,8 @@ def create_imagegrid_config(tilted, kwargs_empty, kwargs_A, kwargs_B, point_kwar
         axs[i, 1].plot([0, ], [1 - i, ], transform=axs[i, 1].transAxes, **kwargs)
 
     # axis labels
-    x_dir = "110" if tilted else "100"
-    y_dir = "-110" if tilted else "010"
+    x_dir = "1-10" if tilted else "100"
+    y_dir = "110" if tilted else "010"
     fig.text(0.5, 0.01, rf"$i \parallel \hkl[{x_dir}]$", ha="center", va="bottom", size='large')
     fig.text(0.01, 0.5, rf"$j \parallel \hkl[{y_dir}]$", ha="left", va="center", size='large', rotation=90)
 
@@ -1371,9 +1371,11 @@ def spin_nernst_effect(save_path=None):
     # add_arrow3d(ax, (0.6 * Lx, Ly + 0.6, z), (0.6 * Lx, -0.6, z), color="purple")
 
     ax.text(4.7, ycenter + 0.15, z, r"$- \nabla T$", ha="left", size=mpl.rcParams['axes.titlesize'])
+    ax.text(4.5, ycenter - 0.7, z, r"$\vec{j}_S^{\,\mathrm{SSE}}$", color="darkorange", ha="left", va="top",
+            size=mpl.rcParams['axes.titlesize'])
     # ax.text(0.53 * Lx, -0.9, z, r"$j_S^{\mathrm{SNE}}$", color="purple", ha="right",
     #         size=mpl.rcParams['axes.titlesize'])
-    ax.text(0.53 * Lx, Ly + 0.7, z, r"$j_S^{\mathrm{SNE}}$", color="purple", ha="right",
+    ax.text(0.53 * Lx, Ly + 0.7, z, r"$\vec{j}_S^{\,\mathrm{SNE}}$", color="purple", ha="right",
             size=mpl.rcParams['axes.titlesize'])
 
     ax.set_xlim([-1, 5])
@@ -1402,11 +1404,11 @@ if __name__ == '__main__':
     # llg_equation("out/theoretical_figures_/llg_equation_T.pdf", 2)
 
     # dmi1("out/theoretical_figures_/dmi1.pdf")
-    #
+
     # dmi2("out/theoretical_figures_/dmi2.pdf")
-    #
+
     # spin_waves("out/theoretical_figures_/spin_wave.pdf")
-    #
+
     # afm_modes("out/theoretical_figures_/afm_modes.pdf")
 
     # toy_model("out/theoretical_figures_/toy_model.pdf")

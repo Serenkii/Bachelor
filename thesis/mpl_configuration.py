@@ -52,6 +52,35 @@ def configure_backends(backend="Qt5Agg", ssh=False):
     # See here: https://matplotlib.org/stable/users/explain/figure/backends.html
 
 
+def configure_for_presentation():
+    latex_preamble = r"""
+    \usepackage{cmbright}        % sans-serif math and text
+    \usepackage{fontspec}
+    \setmainfont{Arial}          % Arial for text
+    \setsansfont{Arial}          % Arial for sans text
+    \setmonofont{Arial}
+    \usepackage{siunitx}
+    \usepackage{amsmath}
+    \usepackage{miller}
+    \renewcommand{\familydefault}{\sfdefault}  % use sans-serif by default
+    \everymath{\sf}  % ensure math is sans-serif
+    \everydisplay{\sf}
+    """
+
+    mpl.rcParams.update({
+        "pgf.rcfonts": False,
+        "pgf.texsystem": "xelatex",
+        "font.family": "sans-serif",
+        "font.sans-serif": ["Arial"],
+        "font.size": 11,
+        "figure.dpi": 300,
+        "text.latex.preamble": latex_preamble,
+    })
+
+    if mpl.rcParams["figure.dpi"] < 300:
+        warnings.warn("Default figure dpi is below 300.")
+
+
 def configure():
     latex_preamble = (r"\usepackage{miller}"
                       r"\usepackage{siunitx}"
@@ -89,3 +118,9 @@ def alt_configure():
 def default_configure():
     configure_backends("module://backend_interagg", ssh=False)  # "Qt5Agg"
     configure()
+
+
+def presentation_configure():
+    mpl.use("pgf")
+    configure_for_presentation()
+
