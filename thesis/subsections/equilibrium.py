@@ -136,7 +136,7 @@ def dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict, ome
                                      version=2,
                                      left_title=r"$B = 0$", right_title=r"$B > 0$",
                                      save_path=None, shading="gouraud", vmin_=default_vmin, vmax_=default_vmax,
-                                     downsample=True, useimshow=True):
+                                     downsample=False, useimshow=True):
     if not version in [1, 2]:
         raise ValueError("version must be 1 or 2")
 

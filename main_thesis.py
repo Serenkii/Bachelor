@@ -29,9 +29,9 @@ def run_spectra(shading):
     sne.sne_magnon_spectrum()
     close_figs()
 
-    dmi.dispersion_relation_dmi(shading, dmi=5)
+    dmi.dispersion_relation_dmi(shading, dmi_strength=5)
     close_figs()
-    dmi.dispersion_relation_dmi(shading, dmi=5, use_angle=True)
+    dmi.dispersion_relation_dmi(shading, dmi_strength=5, use_angle=True)
     close_figs()
 
 

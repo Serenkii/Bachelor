@@ -142,10 +142,10 @@ def fancy_equilibrium_comparison_plot(S, magn, titles, dmi_strength):
 
         # --- Add text labels with slight offsets ---
         label_ = lambda text : r"$\langle \vec{S}_{\mathrm{" + text + r"}} \rangle$"
-        shiftB = 0.1 if dmi == "DMI+B" else 0.04
+        shiftB = 0.08 if dmi == "DMI+B" else 0.035
         shiftnet = -0.1 if dmi == "B" else -0.06
-        axs[i].text(endA[0] - 0.04, 0.8 * endA[1] + 0.06, label_("A"), color="blue", va="center", ha="right")
-        axs[i].text(endB[0] + shiftB, 0.8 * endB[1] - 0.06, label_("B"), color="red", va="center", ha="left")
+        axs[i].text(endA[0] - 0.035, 0.7 * endA[1] + 0.06, label_("A"), color="blue", va="center", ha="right")
+        axs[i].text(endB[0] + shiftB, 0.7 * endB[1] - 0.06, label_("B"), color="red", va="center", ha="left")
         if dmi:
             axs[i].text(endNet[0] + shiftnet, endNet[1] + 0.06, label_("net"), color="black", va="bottom", ha="center")
 
@@ -154,10 +154,23 @@ def fancy_equilibrium_comparison_plot(S, magn, titles, dmi_strength):
         # circle = Circle(start, radius=1, fill=False, alpha=0.8, color="grey", linestyle="--")
         # axs[i].add_patch(circle)
 
+
+    box = dict(
+        boxstyle="round",
+        facecolor="white",
+        alpha=0.8,
+        edgecolor="none",
+        pad=0.009
+    )
+    pad = 0.015
+    for ax, label in zip(axs, "abcd"):
+        fig.text(0.0 + pad, 1.0 - pad, f"({label})", transform=ax.transAxes, va="top", ha="left", bbox=box)
+
+
     if dmi_strength == 5:
         axs[0].set_xlim(-0.34, 0.23)
     elif dmi_strength == 2:
-        axs[0].set_xlim(-0.24, 0.17)
+        axs[0].set_xlim(-0.26, 0.17)
     axs[0].set_ylim(-1.1, 1.1)
 
     axs[0].set_xlabel(r"$\langle S^y \rangle$")
@@ -167,6 +180,7 @@ def fancy_equilibrium_comparison_plot(S, magn, titles, dmi_strength):
     axs[0].set_ylabel(r"$\langle S^z \rangle$")
 
     fig.tight_layout()
+    fig.subplots_adjust(wspace=0.1)
 
     save_path = f"{save_base_path}equi_dmi{dmi_strength}_components_fancy.pdf"
     fig.savefig(save_path)
@@ -194,18 +208,18 @@ def average_spin_components(dmi_strength=2):
     else:
         raise ValueError()
 
-    # labels = {
-    #     False: "$D = 0$, $B = 0$",
-    #     True: "$D > 0$, $B = 0$",
-    #     "DMI+B": "$D > 0$, $B > 0$",
-    #     "B": "$D=0$, $B > 0$"
-    # }
     labels = {
         False: "$D = 0$, $B = 0$",
-        True: rf"$D = \SI{{{dmi_strength}}}{{\meV}}$, $B = 0$",
-        "DMI+B": rf"$D = \SI{{{dmi_strength}}}{{\meV}}$, $B > 0$",
+        True: "$D > 0$, $B = 0$",
+        "DMI+B": "$D > 0$, $B > 0$",
         "B": "$D=0$, $B > 0$"
     }
+    # labels = {
+    #     False: "$D = 0$, $B = 0$",
+    #     True: rf"$D = \SI{{{dmi_strength}}}{{\meV}}$, $B = 0$",
+    #     "DMI+B": rf"$D = \SI{{{dmi_strength}}}{{\meV}}$, $B > 0$",
+    #     "B": "$D=0$, $B > 0$"
+    # }
 
     dataA, dataB = mag_util.npy_files_from_dict(paths)
     data = dict(A=dataA, B=dataB)
@@ -243,16 +257,30 @@ def average_spin_components(dmi_strength=2):
     # Think about what exactly to compare? Dmi/no DMI for different temperatures? Or just one temperature?
 
 
-def dispersion_relation_dmi(shading='gouraud', dmi=2, use_angle=False):
+
+def project_on_positive_frequencies(magnon_density, frequencies):
+
+    N = frequencies.shape[0]
+
+    new_frequencies = frequencies[N // 2:]
+    new_magnon_density = magnon_density[N // 2:] + magnon_density[:N // 2:][::-1]
+
+    print("project on positive")
+
+    return new_magnon_density, new_frequencies
+
+
+
+def dispersion_relation_dmi(shading='gouraud', dmi_strength=2, use_angle=False, make_positive=False):
     # TODO!
-    if dmi == 2:
+    if dmi_strength == 2:
         paths = {
             "100": "/data/scc/marian.gunsch/20/AM_Tstairs_DMI2_T2_x/",     # not sure whether to use
             "010": "/data/scc/marian.gunsch/20/AM_Tstairs_DMI2_T2_y/",     # not sure whether to use
             "1-10": "/data/scc/marian.gunsch/20/AM_tilt_Tstairs_DMI2_T2_x/",
             "110": "/data/scc/marian.gunsch/20/AM_tilt_Tstairs_DMI2_T2_y/"      # TODO
         }
-    elif dmi == 5:
+    elif dmi_strength == 5:
         paths = {
             "100": "/data/scc/marian.gunsch/15/AM_DMI_Tstairs_T2_x/",  # not sure whether to use
             "010": "/data/scc/marian.gunsch/15/AM_DMI_Tstairs_T2_y/",  # not sure whether to use
@@ -273,27 +301,36 @@ def dispersion_relation_dmi(shading='gouraud', dmi=2, use_angle=False):
     if directions != paths.keys():
         raise AttributeError("Conflicting keys!")
 
-    from thesis.subsections.equilibrium import dispersion_comparison_table_data, dispersion_comparison_table_plot, band_gap_plot
+    from thesis.subsections.equilibrium import dispersion_comparison_table_data, dispersion_comparison_table_plot, band_gap_plot, default_vmin, default_vmax
 
     if use_angle:
-        k_dict, freq_dict, magnon_density_dict, omega1, omega2, band_gap = dispersion_comparison_table_data(paths_nodmi, paths, tilt_angle=angle[dmi])
-        band_gap_plot(band_gap)
-        dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict,
-                                         version=2,
-                                         # left_title="no DMI", right_title="DMI",
-                                         left_title=r"$D = 0$", right_title=rf"$D = \SI{{{dmi}}}{{\meV}}$",
-                                         save_path=f"{save_base_path}dispersion_comparison_dmi{dmi}_table_angl.pdf",
-                                         shading=shading)
+        k_dict, freq_dict, magnon_density_dict, omega1, omega2, band_gap = dispersion_comparison_table_data(paths_nodmi, paths, tilt_angle=angle[dmi_strength])
+        save_addon = "angl"
+    else:
+        k_dict, freq_dict, magnon_density_dict, omega1, omega2, band_gap = dispersion_comparison_table_data(paths_nodmi,
+                                                                                                            paths,
+                                                                                                            tilt_angle=0)
+        save_addon = "noangl"
 
-    k_dict, freq_dict, magnon_density_dict, omega1, omega2, band_gap = dispersion_comparison_table_data(paths_nodmi,
-                                                                                                        paths)
+    vmin = default_vmin
+    vmax = default_vmax
+    if make_positive:
+        vmin *= 2
+        vmax *= 2
+        for dmi in magnon_density_dict.keys():
+            for direction in magnon_density_dict[dmi].keys():
+                m, f = project_on_positive_frequencies(magnon_density_dict[dmi][direction], freq_dict[dmi][direction])
+                magnon_density_dict[dmi][direction], freq_dict[dmi][direction] = m, f
+
     band_gap_plot(band_gap)
     dispersion_comparison_table_plot(k_dict, freq_dict, magnon_density_dict,
                                      version=2,
                                      # left_title="no DMI", right_title="DMI",
-                                     left_title=r"$D = 0$", right_title=rf"$D = \SI{{{dmi}}}{{\meV}}$",
-                                     save_path=f"{save_base_path}dispersion_comparison_dmi{dmi}_table_noangl.pdf",
-                                     shading=shading)
+                                     left_title=r"$D = 0$", right_title=rf"$D = \SI{{{dmi_strength}}}{{\meV}}$",
+                                     save_path=f"{save_base_path}dispersion_comparison_dmi{dmi_strength}_table_{save_addon}.pdf",
+                                     shading=shading, vmin_=vmin, vmax_=vmax)
+
+
 
 
 
@@ -1062,15 +1099,16 @@ def main():
 
     average_spin_components(dmi_strength=2)
     average_spin_components(dmi_strength=5)
+    #
+    # sse_magnon_accumulation_dmi_B(True, dmi_strength=2)
+    # sse_magnon_accumulation_dmi_B(True, dmi_strength=5)
+    #
+    # sse_magnon_accumulation_dmi_B_2()
 
-    sse_magnon_accumulation_dmi_B(True, dmi_strength=2)
-    sse_magnon_accumulation_dmi_B(True, dmi_strength=5)
+    # dispersion_relation_dmi(dmi_strength=2, use_angle=True, make_positive=True)
+    # dispersion_relation_dmi(dmi_strength=5, use_angle=True, make_positive=True)
 
-    sse_magnon_accumulation_dmi_B_2()
-
-    # dispersion_relation_dmi(dmi=2)
-    # dispersion_relation_dmi(dmi=5, use_angle=True)
-
-    # dispersion_relation_dmi(dmi=5, use_angle=False)
+    # dispersion_relation_dmi(dmi_strength=2, use_angle=False)
+    # dispersion_relation_dmi(dmi_strength=5, use_angle=False)
 
 
